@@ -1,0 +1,284 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── CSS vars → Tailwind tokens ─────────────────────────── */
+@theme inline {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+  --color-sidebar:              var(--sidebar);
+  --color-sidebar-foreground:   var(--sidebar-foreground);
+  --color-sidebar-primary:      var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:       var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border:       var(--sidebar-border);
+  --color-sidebar-ring:         var(--sidebar-ring);
+
+  --radius-sm:  calc(var(--radius) * 0.625);
+  --radius-md:  calc(var(--radius) * 0.833);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.667);
+}
+
+/* ── Palette — COIN2GAME admin style ────────────────────── */
+:root {
+  --radius: 12px;
+
+  --background:           #04111f;
+  --foreground:           #e8ecff;
+  --card:                 #07192e;
+  --card-foreground:      #e8ecff;
+  --popover:              #0d1e35;
+  --popover-foreground:   #e8ecff;
+
+  --primary:              #865fff;
+  --primary-foreground:   #ffffff;
+
+  --secondary:            #07192e;
+  --secondary-foreground: #e8ecff;
+
+  --muted:                rgba(255,255,255,0.04);
+  --muted-foreground:     #92a2d4;
+
+  --accent:               rgba(134,95,255,0.15);
+  --accent-foreground:    #c4acff;
+
+  --destructive:          #ff4655;
+  --border:               rgba(255,255,255,0.07);
+  --input:                rgba(255,255,255,0.05);
+  --ring:                 #865fff;
+
+  --sidebar:              #07192e;
+  --sidebar-foreground:   #92a2d4;
+  --sidebar-primary:      #865fff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:       rgba(134,95,255,0.15);
+  --sidebar-accent-foreground: #c4acff;
+  --sidebar-border:       rgba(255,255,255,0.07);
+  --sidebar-ring:         #865fff;
+}
+
+/* ── Base ────────────────────────────────────────────────── */
+@layer base {
+  * { @apply border-border; }
+
+  html { @apply font-sans; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #e8ecff;
+    background-color: #04111f;
+    background-image:
+      radial-gradient(circle at top left,  rgba(96, 89, 255, 0.18), transparent 32%),
+      radial-gradient(circle at bottom right, rgba(244, 143, 27, 0.18), transparent 28%),
+      linear-gradient(180deg, #050e1a 0%, #08172c 100%);
+    background-attachment: fixed;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+}
+
+/* ── shadcn overrides ────────────────────────────────────── */
+@layer components {
+
+  /* Card */
+  .card {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 16px !important;
+  }
+
+  /* Button primary → purple gradient */
+  .btn-primary, [data-slot="button"][class*="bg-primary"] {
+    background: linear-gradient(135deg, #865fff, #5b3fd4) !important;
+    border: none !important;
+    color: #fff !important;
+  }
+
+  /* Input */
+  input, textarea, [data-slot="input"], [data-slot="textarea"] {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 10px !important;
+    color: #e8ecff !important;
+    font-size: 0.9rem !important;
+  }
+  input:focus, textarea:focus,
+  [data-slot="input"]:focus, [data-slot="textarea"]:focus {
+    border-color: rgba(134,95,255,0.5) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(134,95,255,0.1) !important;
+  }
+  input::placeholder, textarea::placeholder { color: #92a2d4 !important; opacity: 0.7; }
+
+  /* Select */
+  [data-slot="select-trigger"] {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 10px !important;
+    color: #e8ecff !important;
+  }
+  [data-slot="select-content"] {
+    background: #07192e !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+  }
+  [data-slot="select-item"]:hover,
+  [data-slot="select-item"][data-highlighted] {
+    background: rgba(134,95,255,0.15) !important;
+    color: #c4acff !important;
+  }
+
+  /* Dialog / Sheet */
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    background: #0d1e35 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 20px !important;
+  }
+
+  /* Popover */
+  [data-slot="popover-content"] {
+    background: #0d1e35 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+  }
+
+  /* Table */
+  [data-slot="table-header"] th,
+  thead th {
+    background: rgba(255,255,255,0.02) !important;
+    color: #92a2d4 !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+    padding: 12px 16px !important;
+  }
+  [data-slot="table-cell"] td,
+  tbody td {
+    padding: 10px 16px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    font-size: 0.875rem !important;
+    color: #e8ecff !important;
+  }
+  tbody tr:hover td {
+    background: rgba(255,255,255,0.02) !important;
+  }
+
+  /* Tabs */
+  [data-slot="tabs-list"] {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 10px !important;
+  }
+  [data-slot="tabs-trigger"][data-state="active"] {
+    background: rgba(134,95,255,0.2) !important;
+    color: #c4acff !important;
+    border-radius: 8px !important;
+  }
+  [data-slot="tabs-trigger"] {
+    color: #92a2d4 !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Badge */
+  [data-slot="badge"] {
+    border-radius: 6px !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+  }
+
+  /* Alert dialog */
+  [data-slot="alert-dialog-content"] {
+    background: #0d1e35 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 20px !important;
+  }
+
+  /* Separator */
+  [data-slot="separator"] {
+    background: rgba(255,255,255,0.07) !important;
+  }
+
+  /* Sidebar */
+  [data-sidebar="sidebar"] {
+    background: #07192e !important;
+    border-right: 1px solid rgba(255,255,255,0.07) !important;
+  }
+}
+
+/* ── Utilities ───────────────────────────────────────────── */
+.c2g-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+}
+
+.c2g-badge-purple {
+  background: rgba(134,95,255,0.15);
+  color: #a87fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.c2g-badge-orange {
+  background: rgba(244,143,27,0.15);
+  color: #f4a840;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.c2g-badge-green {
+  background: rgba(46,204,113,0.15);
+  color: #2ecc71;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.c2g-badge-red {
+  background: rgba(255,70,85,0.15);
+  color: #ff4655;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}

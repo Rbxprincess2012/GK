@@ -1,0 +1,57 @@
+export async function up(knex) {
+  await knex.schema.createTable('clients', (t) => {
+    t.increments('id').primary()
+    t.enu('type', ['ooo', 'ip']).notNullable()
+    t.text('legal_name').notNullable()
+    t.text('inn'); t.text('kpp'); t.text('ogrn'); t.text('legal_address')
+    t.text('bank_name'); t.text('bank_account'); t.text('bik'); t.text('corr_account')
+    t.text('nickname'); t.text('email'); t.text('phone')
+    t.enu('default_payment_method', ['cashless', 'cash']).notNullable().defaultTo('cashless')
+    t.boolean('requires_photo').notNullable().defaultTo(false)
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+  await knex.schema.createTable('objects', (t) => {
+    t.increments('id').primary()
+    t.integer('client_id').references('clients.id').notNullable()
+    t.integer('street_id').references('streets.id').nullable()
+    t.integer('district_id').references('districts.id').nullable()
+    t.text('address_raw'); t.text('house'); t.text('building')
+    t.text('informal_name')
+    t.boolean('requires_photo').nullable()
+    t.decimal('lat', 9, 6); t.decimal('lng', 9, 6)
+    t.text('note')
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+  await knex.schema.createTable('vehicles', (t) => {
+    t.increments('id').primary()
+    t.text('gov_number').notNullable().unique()
+    t.integer('capacity_slots').notNullable().defaultTo(3)
+    t.decimal('fuel_norm', 6, 2)
+    t.enu('status', ['active', 'broken', 'repair']).notNullable().defaultTo('active')
+    t.integer('mileage').defaultTo(0)
+    t.text('model')
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+  await knex.schema.createTable('drivers', (t) => {
+    t.increments('id').primary()
+    t.text('name').notNullable()
+    t.text('phone')
+    t.boolean('is_active').notNullable().defaultTo(true)
+    t.integer('default_vehicle_id').references('vehicles.id').nullable()
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+  await knex.schema.createTable('containers', (t) => {
+    t.increments('id').primary()
+    t.text('number').notNullable().unique()
+    t.integer('type_id').references('container_types.id').notNullable()
+    t.enu('state', ['empty', 'full']).notNullable().defaultTo('empty')
+    t.enu('location', ['warehouse', 'object', 'in_transit']).notNullable().defaultTo('warehouse')
+    t.integer('object_id').references('objects.id').nullable()
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+}
+
+export async function down(knex) {
+  for (const tbl of ['containers', 'drivers', 'vehicles', 'objects', 'clients'])
+    await knex.schema.dropTableIfExists(tbl)
+}

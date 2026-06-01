@@ -1,0 +1,10 @@
+# Бэкенд диспетчера. БД — внешний managed PostgreSQL (Timeweb), в compose не входит.
+services:
+  api:
+    build: .
+    image: dispatcher-api
+    container_name: dispatcher-api
+    restart: unless-stopped
+    env_file: .env.production
+    ports:
+      - "3000:3000"

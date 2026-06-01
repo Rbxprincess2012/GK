@@ -1,0 +1,55 @@
+export async function up(knex) {
+  await knex.schema.createTable('orders', (t) => {
+    t.increments('id').primary()
+    t.specificType('number', 'serial').notNullable()
+    t.unique('number')
+    t.integer('client_id').references('clients.id').notNullable()
+    t.integer('object_id').references('objects.id').notNullable()
+    t.enu('payment_method', ['cashless', 'cash']).notNullable()
+    t.date('desired_date'); t.time('desired_time')
+    t.enu('status', ['new', 'assigned', 'in_progress', 'done', 'closed', 'cancelled'])
+      .notNullable().defaultTo('new')
+    t.integer('assigned_driver_id').references('drivers.id').nullable()
+    t.integer('vehicle_id').references('vehicles.id').nullable()
+    t.date('shift_date'); t.enu('shift_type', ['day', 'night']).nullable()
+    t.text('note')
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+    t.timestamp('done_at'); t.timestamp('closed_at')
+  })
+  await knex.schema.createTable('order_items', (t) => {
+    t.increments('id').primary()
+    t.integer('order_id').references('orders.id').onDelete('CASCADE').notNullable()
+    t.enu('action', ['place', 'replace', 'haul']).notNullable()
+    t.integer('container_type_id').references('container_types.id').notNullable()
+    t.integer('quantity').notNullable().defaultTo(1)
+    t.enu('waste_class', ['4', '5']).nullable()
+  })
+  // опц.: заказчик назвал конкретные контейнеры по номеру (подмножество quantity)
+  await knex.schema.createTable('order_item_containers', (t) => {
+    t.increments('id').primary()
+    t.integer('order_item_id').references('order_items.id').onDelete('CASCADE').notNullable()
+    t.integer('container_id').references('containers.id').notNullable()
+    t.unique(['order_item_id', 'container_id'])
+  })
+  await knex.schema.createTable('container_movements', (t) => {
+    t.increments('id').primary()
+    t.integer('order_id').references('orders.id').notNullable()
+    t.integer('container_id').references('containers.id').notNullable()
+    t.enu('direction', ['delivered', 'picked_up']).notNullable()
+    t.integer('object_id').references('objects.id').notNullable()
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+  await knex.schema.createTable('attachments', (t) => {
+    t.increments('id').primary()
+    t.integer('order_id').references('orders.id').onDelete('CASCADE').notNullable()
+    t.enu('kind', ['photo', 'audio', 'text']).notNullable()
+    t.text('file_url'); t.text('transcript')
+    t.integer('author_driver_id').references('drivers.id').nullable()
+    t.timestamp('created_at').defaultTo(knex.fn.now())
+  })
+}
+
+export async function down(knex) {
+  for (const tbl of ['attachments', 'container_movements', 'order_item_containers', 'order_items', 'orders'])
+    await knex.schema.dropTableIfExists(tbl)
+}

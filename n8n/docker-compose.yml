@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: tatyana_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tatyana
+      POSTGRES_PASSWORD: tatyana_pass
+      POSTGRES_DB: tatyana
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: tatyana_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # фронт крутится на 5174 — разрешаем ему CORS
+      N8N_CORS_ALLOW_ORIGIN: "http://localhost:5174"
+      GENERIC_TIMEZONE: "Europe/Moscow"
+      N8N_SECURE_COOKIE: "false"
+      # n8n хранит свои воркфлоу в SQLite (по умолчанию) — этого для локалки достаточно.
+      # Внутри ноды Postgres host укажите "postgres" (имя сервиса в этой сети).
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - postgres
+
+volumes:
+  pg_data:
+  n8n_data:

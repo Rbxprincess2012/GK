@@ -1,0 +1,24 @@
+{
+  "name": "dispatcher-server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "migrate": "knex migrate:latest",
+    "rollback": "knex migrate:rollback",
+    "seed:streets": "node src/seeds/import-streets.js",
+    "seed:superuser": "node src/seeds/superuser.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "knex": "^3.2.10",
+    "pg": "^8.21.0",
+    "supertest": "^7.2.2",
+    "unzipper": "^0.12.3",
+    "vitest": "^4.1.7",
+    "zod": "^4.4.3"
+  }
+}

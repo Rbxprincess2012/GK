@@ -1,0 +1,62 @@
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'
+import request from 'supertest'
+import { createApp } from '../src/app.js'
+import { db } from '../src/db.js'
+import { resetDb } from './reset.js'
+
+const app = createApp()
+beforeEach(resetDb)
+afterAll(() => db.destroy())
+
+async function fixtures({ payment = 'cashless' } = {}) {
+  const [cl] = await db('clients')
+    .insert({ type: 'ooo', legal_name: 'ООО Тест', default_payment_method: payment }).returning('*')
+  const [obj] = await db('objects').insert({ client_id: cl.id }).returning('*')
+  const [ct] = await db('container_types').insert({ name: 'Стандартный' }).returning('*')
+  return { cl, obj, ct }
+}
+
+describe('orders create', () => {
+  it('создаёт заявку с позициями; number и payment_method из клиента', async () => {
+    const { obj, ct } = await fixtures({ payment: 'cashless' })
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [{ action: 'place', container_type_id: ct.id, quantity: 2, waste_class: '4' }],
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.number).toBeGreaterThanOrEqual(1)
+    expect(res.body.status).toBe('new')
+    expect(res.body.payment_method).toBe('cashless')
+    expect(res.body.items).toHaveLength(1)
+  })
+
+  it('payment_method переопределяется на заявке', async () => {
+    const { obj, ct } = await fixtures({ payment: 'cashless' })
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id, payment_method: 'cash',
+      items: [{ action: 'haul', container_type_id: ct.id, quantity: 1 }],
+    })
+    expect(res.body.payment_method).toBe('cash')
+  })
+
+  it('requested_container_ids на объекте → привязка; не на объекте → 409', async () => {
+    const { obj, ct } = await fixtures()
+    const [onObj] = await db('containers')
+      .insert({ number: 'K-1', type_id: ct.id, location: 'object', object_id: obj.id }).returning('*')
+
+    const ok = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [{ action: 'haul', container_type_id: ct.id, quantity: 1, requested_container_ids: [onObj.id] }],
+    })
+    expect(ok.status).toBe(201)
+    expect(ok.body.items[0].requested_container_ids).toEqual([onObj.id])
+
+    const [warehouse] = await db('containers')
+      .insert({ number: 'K-2', type_id: ct.id, location: 'warehouse' }).returning('*')
+    const bad = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [{ action: 'haul', container_type_id: ct.id, quantity: 1, requested_container_ids: [warehouse.id] }],
+    })
+    expect(bad.status).toBe(409)
+  })
+})

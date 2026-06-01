@@ -1,0 +1,12 @@
+
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "type": "http",
+      "url": "https://clockerinfo.app.n8n.cloud/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMDQ5MmUzMS05OWE0LTQwM2YtYTYwOS03ZDdiOGNjNzYxMTkiLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6IjM2MzBmYmRiLTNkODQtNGQwYS1hZmI5LWMyYjI4M2UyNGJhZSIsImlhdCI6MTc4MDI1NDgyNn0.RG55y96xZt4QXibxqDd8GVbXEE_XcHCYymUOHxHXcSQ"
+      }
+    }
+  }
+}

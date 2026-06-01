@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.production.example
+test
+.git
+.gitignore
+*.md
