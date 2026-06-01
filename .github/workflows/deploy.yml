@@ -1,0 +1,35 @@
+name: Deploy backend
+
+# Деплой бэкенда на сервер Timeweb по SSH после успешного пуша в main.
+# Требует секреты репозитория (Settings → Secrets and variables → Actions):
+#   SSH_HOST     — IP/домен сервера
+#   SSH_USER     — пользователь (напр. root)
+#   SSH_KEY      — приватный SSH-ключ (с доступом на сервер)
+#   SSH_PORT     — порт SSH (опц., по умолчанию 22)
+# Предполагается, что на сервере уже сделан первичный деплой:
+#   /opt/dispatcher/server — git-клон этого репо, заполнен .env.production (см. docs/deploy-timeweb.md)
+
+on:
+  workflow_dispatch:      # ручной запуск из вкладки Actions
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/dispatcher/server
+            git pull --ff-only
+            docker compose build
+            docker compose run --rm api npm run migrate
+            docker compose up -d
+            docker compose logs --tail=15 api
