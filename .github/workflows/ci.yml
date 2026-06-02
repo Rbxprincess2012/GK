@@ -53,3 +53,19 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run build
+
+  # Промоут: только зелёный main едет на сервер. Сервер пуллит ветку `deploy`,
+  # а сюда коммит попадает лишь после успешных тестов и сборки. Inbound SSH не нужен —
+  # это исходящий push раннера в GitHub (разрешён), сервер тоже тянет из GitHub (разрешён).
+  promote:
+    needs: [backend-tests, frontend-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: main -> deploy (fast-forward)
+        run: git push origin HEAD:deploy
