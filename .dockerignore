@@ -1,0 +1,14 @@
+# Контекст сборки фронта (deploy/Dockerfile.web) — исключаем лишнее.
+node_modules
+dist
+.git
+.github
+server
+docs
+memory
+n8n
+*.docx
+*.tar.gz
+.env
+.env.local
+.env.*.local

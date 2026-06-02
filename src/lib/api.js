@@ -18,7 +18,7 @@ api.interceptors.response.use(
     const isAuthProbe = url.includes('/auth/login') || url.includes('/auth/me')
     if (err.response?.status === 401 && !isAuthProbe) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      window.location.href = `${import.meta.env.BASE_URL}login`
     }
     return Promise.reject(err)
   }

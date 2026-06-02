@@ -1,0 +1,32 @@
+{
+	# Контакт для Let's Encrypt (необязательно; уведомления об истечении).
+	email admin@putevo.su
+}
+
+# Основной домен: админка (/admin) + API (/api). Caddy сам выпускает и продлевает HTTPS.
+putevo.su {
+	encode zstd gzip
+
+	# API → контейнер бэкенда
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	# Админка: статика собранного фронта (Vite base = /admin/)
+	handle_path /admin/* {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Корень и всё остальное → в админку
+	handle {
+		redir /admin/ 302
+	}
+}
+
+# n8n на отдельном поддомене (сюда Telegram шлёт webhook).
+n8n.putevo.su {
+	encode zstd gzip
+	reverse_proxy n8n:5678
+}

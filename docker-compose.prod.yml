@@ -1,0 +1,59 @@
+# Боевой стек: бэкенд (api) + фронт/обратный прокси с авто-HTTPS (web/Caddy) + n8n.
+# БД — внешний managed PostgreSQL (в compose не входит).
+# Запускать ТОЛЬКО когда DNS putevo.su и n8n.putevo.su уже указывают на сервер
+# (Caddy при старте выпускает сертификаты Let's Encrypt — нужны живые A-записи + порты 80/443).
+#
+# Команды (на сервере, из /opt/dispatcher):
+#   docker compose -f docker-compose.prod.yml build
+#   docker compose -f docker-compose.prod.yml run --rm api npm run migrate
+#   docker compose -f docker-compose.prod.yml up -d
+services:
+  api:
+    build: ./server
+    image: dispatcher-api
+    container_name: dispatcher-api
+    restart: unless-stopped
+    env_file: ./server/.env.production
+    expose:
+      - "3000"
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    image: dispatcher-web
+    container_name: dispatcher-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data      # сертификаты Let's Encrypt (персистентно)
+      - caddy_config:/config
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: dispatcher-n8n
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: ./server/.env.n8n
+    environment:
+      - N8N_HOST=n8n.putevo.su
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.putevo.su/
+      - N8N_PROXY_HOPS=1
+      - GENERIC_TIMEZONE=Europe/Moscow
+      - TZ=Europe/Moscow
+    expose:
+      - "5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  caddy_data:
+  caddy_config:
+  n8n_data:
