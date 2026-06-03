@@ -4,7 +4,11 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# РФ→registry.npmjs.org таймаутит на скачивании тарболов (трансграничная фильтрация),
+# поэтому ставим зависимости через зеркало npm, доступное из РФ, + ретраи/таймауты.
+RUN npm ci --no-audit --no-fund \
+    --registry=https://registry.npmmirror.com \
+    --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-timeout=600000
 COPY . .
 # Прод-адрес API зашивается в сборку фронта.
 ARG VITE_API_URL=https://putevo.su/api
