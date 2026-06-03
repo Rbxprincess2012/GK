@@ -1,13 +1,14 @@
 # Многоступенчатая сборка: Caddy с DNS-01 плагином + фронт (админка) → итоговый образ.
 # Контекст сборки — корень репозитория (см. docker-compose.prod.yml).
 
-# Caddy с плагином caddy-dns/cloudflare для DNS-01. LE не может валидировать РФ-сервер
+# Caddy с плагином caddy-dns/timeweb для DNS-01. LE не может валидировать РФ-сервер
 # входящим соединением (трансгран. фильтрация рвёт http-01/tls-alpn-01), поэтому
-# подтверждаем домен через DNS TXT-запись (входящие не нужны). Go-модули тянем через
-# зеркало goproxy.cn — РФ→proxy.golang.org нестабилен, как и npm.
+# подтверждаем домен через DNS TXT-запись (входящие не нужны). DNS домена хостится
+# в Timeweb — ставим TXT через Timeweb API, NS/регистратора (NIC) не трогаем.
+# Go-модули тянем через зеркало goproxy.cn — РФ→proxy.golang.org нестабилен, как и npm.
 FROM caddy:2-builder AS caddybuild
 ENV GOPROXY=https://goproxy.cn,direct
-RUN xcaddy build --with github.com/caddy-dns/cloudflare
+RUN xcaddy build --with github.com/caddy-dns/timeweb
 
 FROM node:22-alpine AS build
 WORKDIR /app

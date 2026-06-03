@@ -1,10 +1,11 @@
 {
 	# Контакт для Let's Encrypt (необязательно; уведомления об истечении).
 	email admin@putevo.su
-	# DNS-01 через Cloudflare: домен подтверждается TXT-записью, а не входящим
-	# соединением к серверу (РФ режет inbound от валидаторов LE). Токен — в env
-	# контейнера web (CF_API_TOKEN, см. docker-compose.prod.yml + /opt/dispatcher/.env).
-	acme_dns cloudflare {env.CF_API_TOKEN}
+	# DNS-01 через Timeweb: домен подтверждается TXT-записью, а не входящим
+	# соединением к серверу (РФ режет inbound от валидаторов LE). DNS хостится в
+	# Timeweb, NS/NIC не трогаем. Токен — в env контейнера web (TW_TOKEN, JWT из
+	# timeweb.cloud/my/api-keys; см. docker-compose.prod.yml + /opt/dispatcher/.env).
+	acme_dns timeweb {env.TW_TOKEN}
 }
 
 # Основной домен: админка (/admin) + API (/api). Caddy сам выпускает и продлевает HTTPS.
