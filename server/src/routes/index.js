@@ -5,6 +5,7 @@ import refs from './refs.js'
 import objects from './objects.js'
 import shifts from './shifts.js'
 import orders from './orders.js'
+import drafts from './drafts.js'
 import channels from './channels.js'
 import inbound from './inbound.js'
 import outbox from './outbox.js'
@@ -79,6 +80,7 @@ api.use('/containers', crudRouter('containers', {
 api.use('/objects', objects)
 api.use('/shifts', shifts)
 api.use('/orders', orders)
+api.use('/drafts', drafts)
 api.use('/channels', channels)
 api.use('/inbound', inbound)
 api.use('/outbox', outbox)
