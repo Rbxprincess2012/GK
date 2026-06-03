@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext'
 import AdminShell from '@/components/admin/AdminShell'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
+import Inbox from '@/pages/Inbox'
 import Orders from '@/pages/Orders'
 import Drivers from '@/pages/Drivers'
 import Vehicles from '@/pages/Vehicles'
@@ -51,6 +52,7 @@ function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AdminShell />}>
           <Route path="/"          element={<Dashboard />} />
+          <Route path="/inbox"     element={<Inbox />} />
           <Route path="/orders"    element={<Orders />} />
           <Route path="/distribution" element={<Distribution />} />
           <Route path="/drivers"   element={<Drivers />} />

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
-  LayoutDashboard, Shuffle, ClipboardList, Building2, MapPin,
+  LayoutDashboard, Inbox, Shuffle, ClipboardList, Building2, MapPin,
   Container, User, Truck, CalendarDays, BarChart3, UserCog, Settings, LogOut,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -12,6 +12,7 @@ const EXPANDED = 220
 
 const NAV = [
   { to: '/', label: 'Сводка', Icon: LayoutDashboard, end: true },
+  { to: '/inbox', label: 'Входящие', Icon: Inbox },
   { to: '/distribution', label: 'Распределение', Icon: Shuffle },
   { to: '/orders', label: 'Заявки', Icon: ClipboardList },
   { to: '/clients', label: 'Клиенты', Icon: Building2 },
