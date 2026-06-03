@@ -26,6 +26,10 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    # Токен Cloudflare для DNS-01 (Zone:DNS:Edit на putevo.su). Лежит в /opt/dispatcher/.env
+    # (CF_API_TOKEN=...), который compose читает автоматически. Не коммитим.
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN:-}
     ports:
       - "80:80"
       - "443:443"

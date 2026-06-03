@@ -1,5 +1,13 @@
-# Многоступенчатая сборка: фронт (админка) → Caddy с авто-HTTPS (reverse proxy + статика).
+# Многоступенчатая сборка: Caddy с DNS-01 плагином + фронт (админка) → итоговый образ.
 # Контекст сборки — корень репозитория (см. docker-compose.prod.yml).
+
+# Caddy с плагином caddy-dns/cloudflare для DNS-01. LE не может валидировать РФ-сервер
+# входящим соединением (трансгран. фильтрация рвёт http-01/tls-alpn-01), поэтому
+# подтверждаем домен через DNS TXT-запись (входящие не нужны). Go-модули тянем через
+# зеркало goproxy.cn — РФ→proxy.golang.org нестабилен, как и npm.
+FROM caddy:2-builder AS caddybuild
+ENV GOPROXY=https://goproxy.cn,direct
+RUN xcaddy build --with github.com/caddy-dns/cloudflare
 
 FROM node:22-alpine AS build
 WORKDIR /app
@@ -15,5 +23,6 @@ ARG VITE_API_URL=https://putevo.su/api
 RUN printf 'VITE_API_URL=%s\n' "$VITE_API_URL" > .env.production && npm run build
 
 FROM caddy:2-alpine
+COPY --from=caddybuild /usr/bin/caddy /usr/bin/caddy
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv/admin
