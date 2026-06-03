@@ -1,16 +1,21 @@
+# Сайт работает ЗА Cloudflare (оранжевое облако, режим SSL = Flexible).
+# Почему так: прямой HTTPS (443) к РФ-IP этого сервера режется на сетевом уровне
+# (DPI/ТСПУ рвёт TLS-handshake — и изнутри РФ, и из-за рубежа), а порт 80 ходит
+# стабильно. Поэтому TLS терминируется на чистых IP Cloudflare, а до origin
+# Cloudflare ходит по HTTP:80. Свой ACME/HTTPS на сервере отключаем — он не нужен
+# и всё равно не доходит до клиентов.
 {
-	# Контакт для Let's Encrypt (необязательно; уведомления об истечении).
-	email admin@putevo.su
-	# DNS-01 через Timeweb: домен подтверждается TXT-записью, а не входящим
-	# соединением к серверу (РФ режет inbound от валидаторов LE). DNS хостится в
-	# Timeweb, NS/NIC не трогаем. Токен — в env контейнера web (TW_TOKEN, JWT из
-	# timeweb.cloud/my/api-keys; см. docker-compose.prod.yml + /opt/dispatcher/.env).
-	acme_dns timeweb {env.TW_TOKEN}
+	auto_https off
 }
 
-# Основной домен: админка (/admin) + API (/api). Caddy сам выпускает и продлевает HTTPS.
-putevo.su {
+# Общие настройки для всех сайтов.
+(common) {
 	encode zstd gzip
+}
+
+# Основной домен: админка (/admin) + API (/api). Только HTTP — TLS делает Cloudflare.
+http://putevo.su, http://www.putevo.su {
+	import common
 
 	# API → контейнер бэкенда
 	handle /api/* {
@@ -30,8 +35,8 @@ putevo.su {
 	}
 }
 
-# n8n на отдельном поддомене (сюда Telegram шлёт webhook).
-n8n.putevo.su {
-	encode zstd gzip
+# n8n на отдельном поддомене (сюда Telegram шлёт webhook). Тоже за Cloudflare по HTTP.
+http://n8n.putevo.su {
+	import common
 	reverse_proxy n8n:5678
 }
