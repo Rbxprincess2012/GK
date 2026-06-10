@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# Pull-деплой прода. Безопасен для запуска по cron каждые N минут:
-# пересборка и перезапуск происходят ТОЛЬКО когда в origin/main появились новые коммиты.
-# Запуск вручную:  bash deploy/deploy.sh   (или из cron — см. docs)
+# Pull-деплой прода. Безопасен для запуска по cron каждые N минут.
+# Сервер пуллит ветку `deploy` (НЕ main): туда коммит попадает только после
+# зелёного CI (.github/workflows/ci.yml промоутит main -> deploy). Сломанный код
+# на прод не доходит. Пересборка происходит ТОЛЬКО при новом коммите в origin/deploy.
+# Запуск вручную:  bash deploy/deploy.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."   # → корень репозитория (/opt/dispatcher)
 
 git fetch --quiet --all
 LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
+REMOTE=$(git rev-parse origin/deploy)
 if [ "$LOCAL" = "$REMOTE" ]; then
   exit 0   # изменений нет — тихо выходим (важно для частого cron)
 fi
 
 echo "== Новые коммиты: $LOCAL -> $REMOTE =="
-git reset --hard origin/main
+git reset --hard origin/deploy
 
 # Caddy с DNS-плагином собираем ТОЛЬКО если образа ещё нет (редкая операция ~13 мин).
 if ! docker image inspect dispatcher-caddy:local >/dev/null 2>&1; then
