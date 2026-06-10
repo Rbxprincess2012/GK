@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useObjectsStore } from '@/store/objectsStore'
 import { useClientsStore } from '@/store/clientsStore'
 import { useRefsStore } from '@/store/refsStore'
@@ -14,6 +15,7 @@ export default function Objects() {
   const { objects, fetchAll, loading } = useObjectsStore()
   const { fetchInventory } = useClientsStore()
   const { districts, fetchDistricts } = useRefsStore()
+  const navigate = useNavigate()
   const [districtId, setDistrictId] = useState('')
   const [search, setSearch] = useState('')
   const [inv, setInv] = useState({})
@@ -54,9 +56,13 @@ export default function Objects() {
           </thead>
           <tbody>
             {filtered.map((o) => (
-              <tr key={o.id}>
+              <tr key={o.id} style={{ cursor: 'pointer' }} title="Открыть объект на редактирование (в «Клиентах»)"
+                onClick={() => navigate(`/clients?client=${o.client_id}&object=${o.id}`)}>
                 <td style={{ fontWeight: 600 }}>{objLabel(o)}</td>
-                <td className="a-muted">{clientName(o)}</td>
+                <td className="a-muted">
+                  <a className="a-maplink" onClick={(e) => { e.stopPropagation(); navigate(`/clients?client=${o.client_id}`) }}
+                    title="Перейти к клиенту">{clientName(o)}</a>
+                </td>
                 <td className="a-muted">
                   {[o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`].filter(Boolean).join(', ') || '—'}
                 </td>

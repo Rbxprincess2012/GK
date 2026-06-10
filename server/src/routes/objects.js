@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { db } from '../db.js'
 import { makeCrud } from '../services/crud.js'
-import { createObject, inventory } from '../services/objects.js'
+import { createObject, updateObject, inventory, trustedPersonsAgg, sectionsAgg } from '../services/objects.js'
+import { geocodeObject, backfillObjects } from '../services/geocoding.js'
 import { objectCreate, objectUpdate } from '../validators/object.js'
 
 const svc = makeCrud('objects')
@@ -16,6 +17,7 @@ r.get('/', async (req, res, next) => {
       .select(
         'o.*', 's.name as street_name', 'd.name as district', 'd.alias as district_alias',
         'c.legal_name as client_legal_name', 'c.nickname as client_nickname',
+        trustedPersonsAgg('o'), sectionsAgg('o'),
       )
       .orderBy('o.id')
     for (const f of ['client_id', 'district_id']) {
@@ -43,7 +45,7 @@ r.post('/', async (req, res, next) => {
 
 r.patch('/:id', async (req, res, next) => {
   try {
-    const row = await svc.update(Number(req.params.id), objectUpdate.parse(req.body))
+    const row = await updateObject(Number(req.params.id), objectUpdate.parse(req.body))
     if (!row) return res.status(404).json({ error: 'not_found' })
     res.json(row)
   } catch (e) { next(e) }
@@ -51,6 +53,16 @@ r.patch('/:id', async (req, res, next) => {
 
 r.delete('/:id', async (req, res, next) => {
   try { await svc.remove(Number(req.params.id)); res.status(204).end() } catch (e) { next(e) }
+})
+
+// Принудительно геокодировать объект (не трогает ручные координаты).
+r.post('/:id/geocode', async (req, res, next) => {
+  try { res.json(await geocodeObject(Number(req.params.id), { force: true })) } catch (e) { next(e) }
+})
+
+// Догеокодировать все объекты без координат.
+r.post('/geocode-all', async (_req, res, next) => {
+  try { res.json(await backfillObjects()) } catch (e) { next(e) }
 })
 
 export default r

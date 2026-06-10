@@ -6,17 +6,20 @@ import { useToast } from '@/components/admin/Toast'
 import { Draggable, Droppable } from '@/components/admin/dnd'
 import { DayModal } from '@/components/admin/DayModal'
 
-const DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-const STATUS_ORDER = ['present', 'sick', 'vacation']
+const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'] // getDay(): 0=Вс
+const MON_GEN = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+const WINDOW_DAYS = 21 // сегодня + 20 следующих (в архиве — 21-дневными блоками назад)
+// По умолчанию все на смене (present). Клик отмечает отсутствие:
+//   Смена → Выходной (absent) → Болеет (sick) → снова Смена.
+const NEXT_STATUS = { present: 'absent', absent: 'sick', sick: 'present', vacation: 'present' }
 const STATUS = {
   present: ['Смена', '#2ecc71'],
+  absent: ['Выходной', '#7c8db5'],
   sick: ['Болеет', '#ff4655'],
   vacation: ['Отпуск', '#f48f1b'],
 }
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-function mondayOf(d) { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); x.setHours(0, 0, 0, 0); return x }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 function surname(name) { return (name || '').trim().split(/\s+/)[0] || name }
 
@@ -24,18 +27,21 @@ export default function Schedule() {
   const { shifts, fetchRange, upsertShift, removeShift } = useShiftsStore()
   const { drivers, fetchDrivers } = useDriversStore()
   const toast = useToast()
-  const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d })
-  const [shiftType, setShiftType] = useState('day')
+  const [shiftType] = useState('day') // смена одна (день/ночь убраны)
   const [activeDrag, setActiveDrag] = useState(null)
   const [dayOpen, setDayOpen] = useState(null)
+  // 0 = текущее окно (сегодня + 20). >0 = архив: N-й 21-дневный блок в прошлом.
+  const [pastPage, setPastPage] = useState(0)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
-  // 6-недельная сетка от понедельника
-  const gridStart = useMemo(() => mondayOf(month), [month])
-  const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)), [gridStart])
+  const today0 = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
+  // Окно: текущее = сегодня…+20; архив = блок из 21 дня, заканчивающийся вчера и глубже.
+  const startDate = useMemo(() => addDays(today0, -pastPage * WINDOW_DAYS), [today0, pastPage])
+  const cells = useMemo(() => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(startDate, i)), [startDate])
+  const isArchive = pastPage > 0
   const from = ymd(cells[0])
-  const to = ymd(cells[41])
+  const to = ymd(cells[WINDOW_DAYS - 1])
 
   const reload = useCallback(() => fetchRange(from, to), [fetchRange, from, to])
   useEffect(() => { fetchDrivers() }, [fetchDrivers])
@@ -46,30 +52,31 @@ export default function Schedule() {
     () => drivers.filter((d) => d.is_active).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
     [drivers])
 
-  // shifts текущего типа, сгруппированные по дню, фамилии — по алфавиту
-  const byDay = useMemo(() => {
+  // Явные записи (отсутствия/переопределения) текущего типа: ключ `date|driver_id` → статус.
+  const statusByKey = useMemo(() => {
     const m = {}
     for (const s of shifts) {
       if (s.shift_type !== shiftType) continue
-      const key = s.date?.slice(0, 10)
-      ;(m[key] ||= []).push(s)
+      m[`${s.date?.slice(0, 10)}|${s.driver_id}`] = s.status
     }
-    for (const k in m) m[k].sort((a, b) => driverName(a.driver_id).localeCompare(driverName(b.driver_id), 'ru'))
     return m
-  }, [shifts, shiftType, driverName])
+  }, [shifts, shiftType])
 
   const todayStr = ymd(new Date())
 
   const place = async (driverId, date, status = 'present') => {
     try { await upsertShift({ driver_id: driverId, date, shift_type: shiftType, status }); reload() }
-    catch { toast.error('Не удалось добавить в смену') }
+    catch { toast.error('Не удалось обновить смену') }
   }
   const remove = async (driverId, date) => {
-    try { await removeShift(driverId, date, shiftType) } catch { toast.error('Не удалось убрать') }
+    try { await removeShift(driverId, date, shiftType); reload() } catch { toast.error('Не удалось убрать') }
   }
-  const cycleStatus = async (s) => {
-    const next = STATUS_ORDER[(STATUS_ORDER.indexOf(s.status) + 1) % STATUS_ORDER.length]
-    await place(s.driver_id, s.date.slice(0, 10), next)
+  // Клик по водителю в дне: Смена → Выходной → Болеет → Смена.
+  // «Смена» по умолчанию = отсутствие записи, поэтому возврат к ней удаляет запись.
+  const cycleStatus = async (driverId, date, status) => {
+    const next = NEXT_STATUS[status] || 'absent'
+    if (next === 'present') await remove(driverId, date)
+    else await place(driverId, date, next)
   }
 
   const onDragStart = ({ active }) => {
@@ -81,6 +88,7 @@ export default function Schedule() {
   }
   const onDragEnd = async ({ active, over }) => {
     setActiveDrag(null)
+    if (isArchive) return // архив только для просмотра
     const a = active.data.current
     if (!a) return
     const overId = over?.id
@@ -109,20 +117,27 @@ export default function Schedule() {
     >
       <div className="a-page">
         <div className="a-page-header">
-          <h2>График смен</h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>←</button>
-            <span style={{ minWidth: 150, textAlign: 'center', fontWeight: 600 }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</span>
-            <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>→</button>
-            <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); setMonth(d) }}>Сегодня</button>
+          <h2>График смен {isArchive && <span className="a-badge a-badge--orange" style={{ verticalAlign: 'middle' }}>Архив</span>}</h2>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span className="a-muted" style={{ fontWeight: 600 }}>
+              {cells[0].getDate()} {MON_GEN[cells[0].getMonth()]} — {cells[WINDOW_DAYS - 1].getDate()} {MON_GEN[cells[WINDOW_DAYS - 1].getMonth()]}
+              {!isArchive && ' · сегодня + 20 дней'}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setPastPage((p) => p + 1)} title="Раньше (на 21 день назад)">← раньше</button>
+              <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setPastPage((p) => Math.max(0, p - 1))} disabled={pastPage === 0} title="Позже">позже →</button>
+              {isArchive
+                ? <button className="a-btn a-btn--primary a-btn--sm" onClick={() => setPastPage(0)}>К текущему</button>
+                : <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setPastPage(1)} title="Смотреть прошедшие графики">Архив</button>}
+            </div>
           </div>
         </div>
 
         <div className="a-chip-bar">
-          <button className={'a-chip' + (shiftType === 'day' ? ' active' : '')} onClick={() => setShiftType('day')}>☀ Дневная</button>
-          <button className={'a-chip' + (shiftType === 'night' ? ' active' : '')} onClick={() => setShiftType('night')}>☾ Ночная</button>
           <span className="a-muted" style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>
-            Перетащите фамилию в день · клик по фамилии — статус · вытащите в пул, чтобы убрать
+            {isArchive
+              ? 'Архив: только просмотр. «План дня» (⤢) — заявки этого дня.'
+              : 'Все на смене по умолчанию · клик по фамилии: Смена → Выходной → Болеет · перетаскивание тоже работает'}
           </span>
         </div>
 
@@ -142,38 +157,47 @@ export default function Schedule() {
             </div>
           </Droppable>
 
-          {/* Месячная сетка */}
+          {/* Сетка: сегодня + 14 дней */}
           <div>
-            <div className="a-daygrid" style={{ marginBottom: 8 }}>
-              {DOW.map((d) => <div key={d} className="a-daygrid-dow">{d}</div>)}
-            </div>
             <div className="a-daygrid">
               {cells.map((d) => {
                 const key = ymd(d)
-                const inMonth = d.getMonth() === month.getMonth()
-                const list = byDay[key] || []
+                // По умолчанию все активные водители на смене; статус берём из явной записи.
+                const roster = activeDrivers.map((dr) => ({ driver_id: dr.id, status: statusByKey[`${key}|${dr.id}`] || 'present' }))
+                const onShift = roster.filter((r) => r.status === 'present').length
                 return (
                   <Droppable key={key} id={`day:${key}`}
-                    className={'a-daycell' + (inMonth ? '' : ' a-daycell--out') + (key === todayStr ? ' a-daycell--today' : '')}>
+                    className={'a-daycell' + (key === todayStr ? ' a-daycell--today' : '') + (isArchive ? ' a-daycell--archive' : '')}>
                     <div className="a-daycell-head">
-                      <span>{d.getDate()}</span>
+                      <span className="a-daycell-date">
+                        <b>{d.getDate()}</b> {MON_GEN[d.getMonth()]}
+                        <span className="a-daycell-dow">{DOW[d.getDay()]}</span>
+                      </span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {list.length > 0 && <span className="a-count">{list.length}</span>}
+                        <span className="a-count" title="на смене">{onShift}</span>
                         <button className="a-daycell-btn" title="План дня"
                           onClick={() => setDayOpen(key)}>⤢</button>
                       </span>
                     </div>
                     <div className="a-daycell-body">
-                      {list.length === 0
+                      {roster.length === 0
                         ? <div className="a-daycell-empty">—</div>
-                        : list.map((s) => {
+                        : roster.map((s) => {
                             const [label, color] = STATUS[s.status] || STATUS.present
+                            // В архиве — только просмотр: статичный чип без drag и клика.
+                            if (isArchive) return (
+                              <div key={s.driver_id} className={`a-namechip a-namechip--day a-namechip--${s.status}`}
+                                title={`${driverName(s.driver_id)} · ${label}`} style={{ cursor: 'default' }}>
+                                <span className="a-namechip-dot" style={{ background: color }} />
+                                {surname(driverName(s.driver_id))}
+                              </div>
+                            )
                             return (
                               <Draggable key={s.driver_id} id={`cell:${s.driver_id}:${key}`}
                                 data={{ kind: 'cell', driverId: s.driver_id, date: key, status: s.status }}
                                 className={`a-drag a-namechip a-namechip--day a-namechip--${s.status}`}
-                                title={`${driverName(s.driver_id)} · ${label} (клик — сменить)`}
-                                onClick={() => cycleStatus(s)}>
+                                title={`${driverName(s.driver_id)} · ${label} (клик — сменить статус)`}
+                                onClick={() => cycleStatus(s.driver_id, key, s.status)}>
                                 <span className="a-namechip-dot" style={{ background: color }} />
                                 {surname(driverName(s.driver_id))}
                               </Draggable>

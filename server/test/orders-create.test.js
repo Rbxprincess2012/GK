@@ -39,6 +39,27 @@ describe('orders create', () => {
     expect(res.body.payment_method).toBe('cash')
   })
 
+  it('section_id у позиции: свой участок объекта сохраняется, чужой → null (весь объект)', async () => {
+    const { cl, obj } = await fixtures()
+    const [sec] = await db('sections').insert({ object_id: obj.id, name: 'Участок 58' }).returning('*')
+    // участок другого объекта того же клиента — для позиции нашего объекта он невалиден
+    const [obj2] = await db('objects').insert({ client_id: cl.id }).returning('*')
+    const [foreign] = await db('sections').insert({ object_id: obj2.id, name: 'Чужой' }).returning('*')
+
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [
+        { action: 'replace', quantity: 1, section_id: sec.id },
+        { action: 'replace', quantity: 1, section_id: foreign.id },
+      ],
+    })
+    expect(res.status).toBe(201)
+    const bySec = res.body.items.map((i) => i.section_id)
+    expect(bySec).toContain(sec.id)        // свой участок принят
+    expect(bySec).toContain(null)          // чужой участок обнулён → весь объект
+    expect(res.body.items.find((i) => i.section_id === sec.id).section_name).toBe('Участок 58')
+  })
+
   it('requested_container_ids на объекте → привязка; не на объекте → 409', async () => {
     const { obj, ct } = await fixtures()
     const [onObj] = await db('containers')

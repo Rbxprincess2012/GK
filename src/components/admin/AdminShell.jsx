@@ -2,28 +2,53 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
-  LayoutDashboard, Inbox, Shuffle, ClipboardList, Building2, MapPin,
-  Container, User, Truck, CalendarDays, BarChart3, UserCog, Settings, LogOut,
+  LayoutDashboard, Inbox, Shuffle, ClipboardList, ClipboardCheck, PackageCheck, FileCheck2, Archive, Building2, MapPin,
+  Container, User, Truck, CalendarDays, BarChart3, UserCog, Settings, LogOut, Map, Camera,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 
 const COLLAPSED = 56
 const EXPANDED = 220
 
+// Навигация делится на смысловые группы:
+//  • Работа — ежедневный поток заявок (вверху, без заголовка)
+//  • Справочники — библиотеки сущностей (клиенты, объекты, водители…)
+//  • Система — администрирование (только директор/суперпользователь)
 const NAV = [
-  { to: '/', label: 'Сводка', Icon: LayoutDashboard, end: true },
-  { to: '/inbox', label: 'Входящие', Icon: Inbox },
-  { to: '/distribution', label: 'Распределение', Icon: Shuffle },
-  { to: '/orders', label: 'Заявки', Icon: ClipboardList },
-  { to: '/clients', label: 'Клиенты', Icon: Building2 },
-  { to: '/objects', label: 'Объекты', Icon: MapPin },
-  { to: '/containers', label: 'Контейнеры', Icon: Container },
-  { to: '/drivers', label: 'Водители', Icon: User },
-  { to: '/vehicles', label: 'Машины', Icon: Truck },
-  { to: '/schedule', label: 'График', Icon: CalendarDays },
-  { to: '/reports', label: 'Отчёты', Icon: BarChart3 },
-  { to: '/users', label: 'Пользователи', Icon: UserCog, roles: ['director', 'superuser'] },
-  { to: '/settings', label: 'Настройки', Icon: Settings, roles: ['director', 'superuser'] },
+  {
+    items: [
+      { to: '/incoming', label: 'Входящие', Icon: Inbox },
+      { to: '/orders', label: 'Заявки в работе', Icon: ClipboardList },
+      { to: '/distribution', label: 'Распределение', Icon: Shuffle },
+      { to: '/map', label: 'Карта смены', Icon: Map },
+      { to: '/review', label: 'На проверке', Icon: ClipboardCheck },
+      { to: '/inwork', label: 'В работе', Icon: PackageCheck },
+      { to: '/proof-review', label: 'Проверка пруфов', Icon: Camera, roles: ['manager', 'director', 'superuser'] },
+      { to: '/reconcile', label: 'Сверка с водителем', Icon: FileCheck2 },
+      { to: '/journal', label: 'Журнал', Icon: Archive },
+      { to: '/reports', label: 'Отчёты', Icon: BarChart3 },
+      { to: '/', label: 'Сводка', Icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    label: 'Справочники',
+    items: [
+      { to: '/clients', label: 'Клиенты', Icon: Building2 },
+      { to: '/objects', label: 'Объекты', Icon: MapPin },
+      { to: '/containers', label: 'Контейнеры', Icon: Container },
+      { to: '/drivers', label: 'Водители', Icon: User },
+      { to: '/vehicles', label: 'Машины', Icon: Truck },
+      { to: '/schedule', label: 'График', Icon: CalendarDays },
+    ],
+  },
+  {
+    label: 'Система',
+    bottom: true,
+    items: [
+      { to: '/users', label: 'Пользователи', Icon: UserCog, roles: ['director', 'superuser'] },
+      { to: '/settings', label: 'Настройки', Icon: Settings, roles: ['manager', 'director', 'superuser'] },
+    ],
+  },
 ]
 
 const roleLabels = { superuser: 'Суперпользователь', director: 'Директор', manager: 'Менеджер' }
@@ -32,7 +57,9 @@ export default function AdminShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
-  const visible = NAV.filter((n) => !n.roles || n.roles.includes(user?.role))
+  const groups = NAV
+    .map((g) => ({ ...g, items: g.items.filter((n) => !n.roles || n.roles.includes(user?.role)) }))
+    .filter((g) => g.items.length > 0)
 
   return (
     <div className="a-shell">
@@ -60,16 +87,25 @@ export default function AdminShell() {
         </div>
 
         <nav className="a-nav">
-          {visible.map(({ to, label, Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) => 'a-nav-item' + (isActive ? ' active' : '')}
-            >
-              <Icon size={18} style={{ flexShrink: 0 }} />
-              {expanded && <span style={{ marginLeft: 12, whiteSpace: 'nowrap' }}>{label}</span>}
-            </NavLink>
+          {groups.map((group, gi) => (
+            <div key={gi} className={'a-nav-group' + (group.bottom ? ' a-nav-group--bottom' : '')}>
+              {group.label && (
+                expanded
+                  ? <div className="a-nav-group-label">{group.label}</div>
+                  : <div className="a-nav-sep" />
+              )}
+              {group.items.map(({ to, label, Icon, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) => 'a-nav-item' + (isActive ? ' active' : '')}
+                >
+                  <Icon size={18} style={{ flexShrink: 0 }} />
+                  {expanded && <span style={{ marginLeft: 12, whiteSpace: 'nowrap' }}>{label}</span>}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 

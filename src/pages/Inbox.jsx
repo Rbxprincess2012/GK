@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Mic, FileText, AlertTriangle } from 'lucide-react'
 import { useDraftsStore } from '@/store/draftsStore'
 import { useObjectsStore } from '@/store/objectsStore'
-import { useContainersStore } from '@/store/containersStore'
 import { Modal } from '@/components/admin/Modal'
+import { ItemsEditor } from '@/components/admin/ItemsEditor'
 import { useToast } from '@/components/admin/Toast'
 
-const emptyItem = { action: 'haul', container_type_id: '', quantity: 1, waste_class: '' }
+const emptyItem = { action: 'haul', quantity: 1 }
 const isUrgent = (t) => /срочн|кровь из носу|сегодня|asap/i.test(t || '')
 
 function objName(o) {
@@ -17,12 +17,11 @@ function objName(o) {
 export default function Inbox() {
   const { drafts, fetchDrafts } = useDraftsStore()
   const { objects, fetchAll } = useObjectsStore()
-  const { types, fetchTypes } = useContainersStore()
   const [active, setActive] = useState(null)
 
   const refresh = useCallback(() => fetchDrafts(), [fetchDrafts])
   useEffect(() => { refresh() }, [refresh])
-  useEffect(() => { fetchAll(); fetchTypes() }, [fetchAll, fetchTypes])
+  useEffect(() => { fetchAll() }, [fetchAll])
 
   return (
     <div className="a-page">
@@ -58,7 +57,7 @@ export default function Inbox() {
 
       {active && (
         <ReviewDraft
-          draft={active} objects={objects} types={types}
+          draft={active} objects={objects}
           onClose={() => setActive(null)}
           onDone={() => { setActive(null); refresh() }}
         />
@@ -68,7 +67,7 @@ export default function Inbox() {
 }
 
 // ── Согласование черновика менеджером ──
-function ReviewDraft({ draft, objects, types, onClose, onDone }) {
+function ReviewDraft({ draft, objects, onClose, onDone }) {
   const { promote, reject } = useDraftsStore()
   const toast = useToast()
   const [form, setForm] = useState({
@@ -78,7 +77,7 @@ function ReviewDraft({ draft, objects, types, onClose, onDone }) {
     desired_time: draft.desired_time?.slice(0, 5) || '',
     note: draft.task_text || '',
   })
-  const [items, setItems] = useState([{ ...emptyItem, container_type_id: types[0]?.id ?? '' }])
+  const [items, setItems] = useState([{ ...emptyItem }])
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
@@ -88,23 +87,19 @@ function ReviewDraft({ draft, objects, types, onClose, onDone }) {
     () => (draft.client_id ? objects.filter((o) => o.client_id === draft.client_id) : objects),
     [objects, draft.client_id],
   )
+  // Участки выбранного объекта — для привязки позиций.
+  const sections = useMemo(
+    () => clientObjects.find((o) => o.id === Number(form.object_id))?.sections || [],
+    [clientObjects, form.object_id],
+  )
 
-  const setItem = (i, patch) => setItems((arr) => arr.map((it, j) => (j === i ? { ...it, ...patch } : it)))
-  const addItem = () => setItems((arr) => [...arr, { ...emptyItem, container_type_id: types[0]?.id ?? '' }])
-  const delItem = (i) => setItems((arr) => arr.filter((_, j) => j !== i))
-
-  const valid = form.object_id && items.every((it) => it.container_type_id && it.quantity > 0)
+  const valid = form.object_id && items.every((it) => it.quantity > 0)
 
   const doPromote = async () => {
     setBusy(true)
     const payload = {
       object_id: Number(form.object_id),
-      items: items.map((it) => ({
-        action: it.action,
-        container_type_id: Number(it.container_type_id),
-        quantity: Number(it.quantity),
-        ...(it.waste_class ? { waste_class: it.waste_class } : {}),
-      })),
+      items: items.map((it) => ({ action: it.action, quantity: Number(it.quantity), section_id: it.section_id ? Number(it.section_id) : null })),
       ...(form.payment_method ? { payment_method: form.payment_method } : {}),
       ...(form.desired_date ? { desired_date: form.desired_date } : {}),
       ...(form.desired_time ? { desired_time: form.desired_time } : {}),
@@ -167,32 +162,7 @@ function ReviewDraft({ draft, objects, types, onClose, onDone }) {
           </label>
 
           <div className="a-section-title">Позиции</div>
-          {items.map((it, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-              <label className="a-field" style={{ flex: '0 0 120px' }}><span>Действие</span>
-                <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
-                  <option value="place">Установить</option>
-                  <option value="replace">Заменить</option>
-                  <option value="haul">Вывезти</option>
-                </select>
-              </label>
-              <label className="a-field" style={{ flex: 1 }}><span>Тип</span>
-                <select className="a-select" value={it.container_type_id} onChange={(e) => setItem(i, { container_type_id: e.target.value })}>
-                  {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </label>
-              <label className="a-field" style={{ flex: '0 0 64px' }}><span>Кол-во</span>
-                <input className="a-input" type="number" min={1} value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} />
-              </label>
-              <label className="a-field" style={{ flex: '0 0 80px' }}><span>Класс</span>
-                <select className="a-select" value={it.waste_class} onChange={(e) => setItem(i, { waste_class: e.target.value })}>
-                  <option value="">—</option><option value="4">4</option><option value="5">5</option>
-                </select>
-              </label>
-              {items.length > 1 && <button className="a-btn a-btn--danger a-btn--sm" style={{ marginBottom: 2 }} onClick={() => delItem(i)}>✕</button>}
-            </div>
-          ))}
-          <button className="a-btn a-btn--ghost a-btn--sm" onClick={addItem}>+ Позиция</button>
+          <ItemsEditor items={items} onChange={setItems} sections={sections} />
 
           <div className="a-section-title">Детали</div>
           <div className="a-field-row">

@@ -40,5 +40,11 @@ export const useDriversStore = create((set, get) => ({
     set((s) => ({ drivers: s.drivers.filter((d) => d.id !== id) }))
   },
 
+  // Личная ссылка привязки бота: { code, url }. Менеджер отправляет водителю.
+  botLink: async (id) => {
+    const { data } = await api.post(`/drivers/${id}/bot-link`)
+    return data
+  },
+
   getActiveDrivers: () => get().drivers.filter((d) => d.is_active),
 }))

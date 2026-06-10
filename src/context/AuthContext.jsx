@@ -34,6 +34,15 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
+  // Включить сессию по готовому JWT (после установки пароля по приглашению).
+  const activateSession = async (token) => {
+    localStorage.setItem('token', token)
+    const { data } = await api.get('/auth/me')
+    setUser(data.user)
+    setAssignableRoles(data.assignable_roles || [])
+    return data.user
+  }
+
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
@@ -41,7 +50,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, assignableRoles, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, assignableRoles, login, logout, activateSession, loading }}>
       {children}
     </AuthContext.Provider>
   )

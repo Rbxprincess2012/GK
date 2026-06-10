@@ -20,7 +20,7 @@ r.patch('/:id', async (req, res, next) => {
 })
 
 r.post('/:id/reset-password', async (req, res, next) => {
-  try { res.json({ password: await svc.resetPassword(Number(req.params.id), actorRole(req)) }) } catch (e) { next(e) }
+  try { res.json({ invite_url: await svc.resetPassword(Number(req.params.id), actorRole(req)) }) } catch (e) { next(e) }
 })
 
 r.delete('/:id', async (req, res, next) => {

@@ -5,15 +5,19 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "bot": "node src/bot.js",
+    "bot:dev": "node --watch src/bot.js",
     "test": "vitest run",
     "migrate": "knex migrate:latest",
     "rollback": "knex migrate:rollback",
     "seed:streets": "node src/seeds/import-streets.js",
-    "seed:superuser": "node src/seeds/superuser.js"
+    "seed:superuser": "node src/seeds/superuser.js",
+    "seed:orders": "node src/seeds/random-orders.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "grammy": "^1.43.0",
     "knex": "^3.2.10",
     "pg": "^8.21.0",
     "supertest": "^7.2.2",

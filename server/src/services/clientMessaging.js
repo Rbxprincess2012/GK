@@ -1,0 +1,202 @@
+import { randomUUID } from 'node:crypto'
+import { db } from '../db.js'
+import { enqueue } from './outbox.js'
+import { config } from '../config.js'
+import { getSetting } from './settings.js'
+
+const BASE_URL = config.APP_URL || 'https://putevo.su'
+
+// ── Чистые функции (без БД) ──
+
+// Неугадываемый токен публичного отчёта (24 hex-символа).
+export function buildReportToken() {
+  return randomUUID().replace(/-/g, '').slice(0, 24)
+}
+
+export function reportUrl(token) { return `${BASE_URL}/r/${token}` }
+
+// Подстановка плейсхолдеров {key}. Неизвестные/пустые — оставляем как есть.
+export function renderTemplate(body, vars) {
+  return String(body || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m))
+}
+
+// Диплинк в личный чат по номеру. Telegram по номеру ?text= НЕ подставляет — текст копируется отдельно.
+export function buildDeepLink(phone, messenger = 'telegram') {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (!digits) return null
+  const intl = digits.startsWith('8') ? '7' + digits.slice(1) : digits
+  if (messenger === 'max') return `https://max.ru/u/+${intl}`
+  return `https://t.me/+${intl}`
+}
+
+// ── Сборка сообщения и приёмка (с БД) ──
+
+const DEFAULT_BODY = [
+  'Здравствуйте, {client}!',
+  '',
+  'Заявка №{number} от {date} — выполнено ✅',
+  '',
+  'Объект: {address}',
+  'Водитель: {driver}',
+  '',
+  'По участкам:',
+  '{sections}',
+  '',
+  'Сумма: {amount}',
+  '',
+  'Фотоотчёт: {report_url}',
+].join('\n')
+
+function fmtDate(d) {
+  if (!d) return ''
+  const s = typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)
+  const [y, m, day] = s.split('-')
+  return `${day}.${m}.${y}`
+}
+
+function addressOf(o) {
+  return [o.city, o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`]
+    .filter(Boolean).join(', ') || (o.informal_name || '—')
+}
+
+function amountOf(o) {
+  if (o.payment_method === 'cash') return `${o.amount != null ? Number(o.amount) : 0} ₽ (наличными)`
+  return 'безналичный расчёт'
+}
+
+function driverOf(o) {
+  if (!o.driver_name) return '—'
+  const veh = [o.veh_model, o.veh_gov].filter(Boolean).join(' ')
+  return veh ? `${o.driver_name} · ${veh}` : o.driver_name
+}
+
+// Под-задачи с именами участков (для отчёта и текста сообщения).
+async function sectionRows(orderId, conn) {
+  return conn('order_subtasks as st')
+    .leftJoin('sections as s', 's.id', 'st.section_id')
+    .where('st.order_id', orderId).orderBy('st.sub_no')
+    .select('st.id', 'st.sub_no', 'st.section_id', 'st.status', 'st.reason_code', 'st.comment', 's.name as section_name')
+}
+
+function sectionsText(rows) {
+  return rows.map((r) => {
+    const name = r.section_name || 'Объект'
+    if (r.status === 'done') return `• ${name} — вывезено 🟩`
+    return `• ${name} — не выполнен${r.comment ? `: ${r.comment}` : ''}`
+  }).join('\n')
+}
+
+// Заголовочные данные заявки (объект/клиент/водитель/машина) одним запросом.
+// where — объект с условием ({ 'o.id': N } или { 'o.public_token': '…' }).
+async function orderHead(where, conn) {
+  return conn('orders as o')
+    .leftJoin('objects as ob', 'ob.id', 'o.object_id')
+    .leftJoin('streets as s', 's.id', 'ob.street_id')
+    .leftJoin('clients as cl', 'cl.id', 'ob.client_id')
+    .leftJoin('drivers as d', 'd.id', 'o.assigned_driver_id')
+    .leftJoin('vehicles as v', 'v.id', 'o.vehicle_id')
+    .where(where)
+    .select(
+      'o.*', 'ob.city', 'ob.house', 'ob.building', 'ob.informal_name', 's.name as street_name',
+      'cl.nickname as client_nickname', 'cl.legal_name as client_legal_name',
+      'd.name as driver_name', 'v.model as veh_model', 'v.gov_number as veh_gov',
+    ).first()
+}
+
+async function activeTemplateBody(templateId) {
+  const tpls = (await getSetting('client_message_templates')) || []
+  const t = templateId ? tpls.find((x) => x.id === templateId) : (tpls.find((x) => x.id === 'report') || tpls[0])
+  return t?.body || DEFAULT_BODY
+}
+
+// Собрать текст сообщения клиенту по заявке (для админки — превью/копирование).
+export async function buildClientMessage(orderId, { templateId, token } = {}, conn = db) {
+  const head = await orderHead({ 'o.id': orderId }, conn)
+  if (!head) return null
+  const rows = await sectionRows(orderId, conn)
+  const tok = token || head.public_token
+  const vars = {
+    client: head.client_nickname || head.client_legal_name || `Клиент #${head.id}`,
+    number: head.number ?? head.id,
+    date: fmtDate(head.desired_date),
+    address: addressOf(head),
+    driver: driverOf(head),
+    sections: sectionsText(rows),
+    amount: amountOf(head),
+    report_url: tok ? reportUrl(tok) : '',
+  }
+  const body = renderTemplate(await activeTemplateBody(templateId), vars)
+  const results = rows.map((r) => ({ sub_no: r.sub_no, section_id: r.section_id, status: r.status }))
+  return { body, results, vars, head }
+}
+
+// Гарантировать public_token у заявки (создать, если ещё нет). Идемпотентно.
+// Нужно для ручной отправки клиенту даже по частично выполненной заявке (есть failed-участок),
+// где автоприёмка не срабатывает.
+export async function ensurePublicToken(orderId, conn = db) {
+  const o = await conn('orders').where({ id: orderId }).first()
+  if (!o) return null
+  if (o.public_token) return o.public_token
+  const token = buildReportToken()
+  await conn('orders').where({ id: orderId }).update({ public_token: token })
+  return token
+}
+
+// Хук приёмки заявки: один раз — public_token, событие боту, лог. Идемпотентно по event_key.
+export async function onOrderAccepted(orderId, { userId = null, channels = 'outbox', templateId } = {}, conn = db) {
+  const order = await conn('orders').where({ id: orderId }).first()
+  if (!order) return null
+  let token = order.public_token
+  if (!token) {
+    token = buildReportToken()
+    await conn('orders').where({ id: orderId }).update({ public_token: token })
+  }
+  const msg = await buildClientMessage(orderId, { templateId, token }, conn)
+  await enqueue(conn, {
+    event_type: 'client_report_ready', order_id: orderId,
+    payload: { number: order.number, public_token: token, report_url: reportUrl(token), body: msg.body, results: msg.results },
+    event_key: `report:${orderId}`,
+  })
+  await conn('client_messages').insert({
+    order_id: orderId, template: templateId || 'report', body: msg.body, public_token: token,
+    sent_by: userId || null, channels,
+  })
+  return { token, body: msg.body, report_url: reportUrl(token) }
+}
+
+// Зафиксировать факт ручной отправки менеджером (диплинк скопирован/открыт).
+export async function logClientMessage(orderId, { userId = null, body, templateId = null, channels = 'copied' }) {
+  const order = await db('orders').where({ id: orderId }).first()
+  if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+  const [row] = await db('client_messages').insert({
+    order_id: orderId, template: templateId, body, public_token: order.public_token,
+    sent_by: userId || null, channels,
+  }).returning('*')
+  return row
+}
+
+// Публичный фотоотчёт по токену (без авторизации). null — если токена нет.
+export async function publicReport(token) {
+  if (!token) return null
+  const head = await orderHead({ 'o.public_token': token }, db)
+  if (!head) return null
+  const rows = await sectionRows(head.id, db)
+  const atts = await db('attachments').where({ order_id: head.id }).orderBy('id')
+  return {
+    number: head.number ?? head.id,
+    client: head.client_nickname || head.client_legal_name || `Клиент #${head.id}`,
+    date: fmtDate(head.desired_date),
+    address: addressOf(head),
+    driver: driverOf(head),
+    amount: amountOf(head),
+    sections: rows.map((r) => ({
+      sub_no: r.sub_no,
+      name: r.section_name || 'Объект',
+      status: r.status,
+      comment: r.comment,
+      attachments: atts.filter((a) => a.subtask_id === r.id).map((a) => ({
+        kind: a.kind, url: a.file_url, transcript: a.transcript,
+      })),
+    })),
+  }
+}

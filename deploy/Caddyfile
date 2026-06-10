@@ -17,6 +17,17 @@ putevo.su {
 		reverse_proxy api:3000
 	}
 
+	# Публичный фотоотчёт клиенту (бэкенд рендерит HTML страницы /r/:token)
+	handle /r/* {
+		reverse_proxy api:3000
+	}
+
+	# Медиа-пруфы (фото/видео/голос) — бэкенд отдаёт их из своего хранилища.
+	# На них ссылается публичный отчёт и карточки в админке.
+	handle /media/* {
+		reverse_proxy api:3000
+	}
+
 	# Админка: статика собранного фронта (Vite base = /admin/)
 	handle_path /admin/* {
 		root * /srv/admin

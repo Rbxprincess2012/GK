@@ -16,6 +16,23 @@ services:
     env_file: ./server/.env.production
     expose:
       - "3000"
+    volumes:
+      - media_data:/app/media     # медиа-пруф (общий с ботом; api отдаёт /media)
+
+  # Водительский Telegram-бот: отдельный процесс, тот же образ.
+  # Токен берётся из Настроек (БД), задаётся в админке. Long-polling, single-instance.
+  # После смены токена в админке — перезапустить сервис: docker compose restart bot
+  bot:
+    build: ./server
+    image: dispatcher-api
+    container_name: dispatcher-bot
+    restart: unless-stopped
+    command: npm run bot
+    env_file: ./server/.env.production
+    depends_on:
+      - api
+    volumes:
+      - media_data:/app/media
 
   web:
     build:
@@ -61,3 +78,4 @@ volumes:
   caddy_data:
   caddy_config:
   n8n_data:
+  media_data:

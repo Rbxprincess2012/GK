@@ -9,7 +9,7 @@ import { Modal } from '@/components/admin/Modal'
 import { OrderModal } from '@/components/admin/OrderModal'
 import { Draggable, Droppable } from '@/components/admin/dnd'
 import { useToast } from '@/components/admin/Toast'
-import { STATUS, clientName, orderTitle } from '@/lib/orderUi'
+import { STATUS, clientLegal, streetLine, objectLine } from '@/lib/orderUi'
 
 const SHIFT_STATUS = { present: ['Смена', '#2ecc71'], sick: ['Болеет', '#ff4655'], vacation: ['Отпуск', '#f48f1b'] }
 
@@ -18,8 +18,9 @@ function OrderLineBody({ o, onOpen }) {
     <div className="a-dayorder">
       <span className="a-orderrow-num" style={{ minWidth: 40 }}>#{o.number}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clientName(o)}</div>
-        <div className="a-muted" style={{ fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{orderTitle(o)}</div>
+        <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{streetLine(o)}</div>
+        <div className="a-muted" style={{ fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{objectLine(o)}</div>
+        <div className="a-muted" style={{ fontSize: '0.74rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clientLegal(o)}</div>
       </div>
       <span className="a-muted" style={{ fontSize: '0.74rem' }} title="слотов">{o.slots || 1}сл</span>
       <span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span>
@@ -50,10 +51,17 @@ export function DayModal({ date, shiftType, onClose, onReload }) {
   }
   const loadOf = (driverId) => (ordersByDriver[driverId] || []).reduce((n, o) => n + (o.slots || 1), 0)
 
-  const dayDrivers = useMemo(() => shifts
-    .filter((s) => s.date?.slice(0, 10) === date && s.shift_type === shiftType)
-    .sort((a, b) => driverName(a.driver_id).localeCompare(driverName(b.driver_id), 'ru')),
-    [shifts, date, shiftType, drivers])
+  // По умолчанию все активные водители на смене; явная запись может отметить отсутствие
+  // (absent/sick/vacation) или переопределить машину. В план дня берём только работающих.
+  const dayDrivers = useMemo(() => {
+    const row = {}
+    for (const s of shifts) if (s.date?.slice(0, 10) === date && s.shift_type === shiftType) row[s.driver_id] = s
+    return drivers
+      .filter((d) => d.is_active)
+      .map((d) => ({ driver_id: d.id, status: row[d.id]?.status || 'present', vehicle_id: row[d.id]?.vehicle_id ?? null }))
+      .filter((s) => s.status === 'present')
+      .sort((a, b) => driverName(a.driver_id).localeCompare(driverName(b.driver_id), 'ru'))
+  }, [shifts, drivers, date, shiftType])
 
   const dayOrders = useMemo(() => orders.filter(
     (o) => o.shift_date?.slice(0, 10) === date && o.shift_type === shiftType),
@@ -96,10 +104,9 @@ export function DayModal({ date, shiftType, onClose, onReload }) {
   return (
     <>
       <Modal
-        title={`План на ${date} · ${shiftType === 'night' ? 'ночь' : 'день'}`}
+        title={`План на ${date}`}
         onClose={onClose}
         width={560}
-        footer={<button className="a-btn a-btn--ghost" onClick={onClose}>Закрыть</button>}
       >
         <DndContext
           sensors={sensors}
@@ -127,7 +134,7 @@ export function DayModal({ date, shiftType, onClose, onReload }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <span className="a-dot" style={{ background: stColor }} />
                   <b style={{ flex: 1 }}>{driverName(s.driver_id)}</b>
-                  <span className="a-muted" style={{ fontSize: '0.78rem' }}>{stLabel}{s.vehicle_id ? ` · машина #${s.vehicle_id}` : ''}</span>
+                  <span className="a-muted" style={{ fontSize: '0.78rem' }}>{stLabel}</span>
                   <span className="a-badge" style={{ background: `${loadColor}22`, color: loadColor, borderColor: `${loadColor}55` }} title="занято/вместимость слотов">{load}/{cap}</span>
                 </div>
                 {list.length === 0

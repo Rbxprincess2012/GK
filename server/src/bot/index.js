@@ -1,0 +1,441 @@
+import { Bot, InlineKeyboard, session } from 'grammy'
+import { db } from '../db.js'
+import { config } from '../config.js'
+import { pgStorage } from './sessionStore.js'
+import { bindByCode, resolveDriverByChat } from '../services/driverAuth.js'
+import { goOnShift, finishShift } from '../services/driverShift.js'
+import { ordersForDriver, orderCardForDriver } from '../services/driverScope.js'
+import { markSubtask, commitOrderByDriver } from '../services/subtasks.js'
+import { putFromTelegram } from '../services/mediaStore.js'
+
+const ACTION = { place: 'Поставить', replace: 'Заменить', haul: 'Забрать' }
+const REASONS = [
+  ['dig', '🚧 Перекопано/нет проезда'],
+  ['mud', '🛻 Не подъехать (грязь)'],
+  ['full', '🗑 Контейнер переполнен'],
+  ['noacc', '🔒 Нет доступа'],
+  ['canc', '✋ Клиент отменил'],
+  ['other', '✍️ Другое'],
+]
+const reasonLabel = (c) => (REASONS.find((r) => r[0] === c)?.[1] || c)
+
+const pad = (n) => String(n).padStart(2, '0')
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const today = () => ymd(new Date())
+const tomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return ymd(d) }
+const dmOf = (s) => { const [, m, d] = s.split('-'); return `${d}.${m}` } // yyyy-mm-dd → дд.мм
+const vehLabel = (v) => (v ? `${v.model ? `${v.model} · ` : ''}${v.gov_number || '—'}` : '—') // модель · госномер
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+async function isOnShift(driverId) {
+  const row = await db('shifts').where({ driver_id: driverId, date: today(), status: 'present' }).whereNull('odometer_end').first()
+  return !!row
+}
+
+// ── Рендер заявки: заголовок (объект/участок/адрес-ссылка) + позиции + команда на базу ──
+function orderText(order) {
+  // Адрес: улица, дом, корпус. «ул.» не дублируем, если уже в названии.
+  const street = order.street_name
+    ? (/^[а-яё]{1,6}\.\s/i.test(order.street_name) ? order.street_name : `ул. ${order.street_name}`)
+    : null
+  const addr = [
+    order.city,
+    street,
+    order.object_house && `д. ${order.object_house}`,
+    order.object_building && `к. ${order.object_building}`,
+  ].filter(Boolean).join(', ') || order.address_raw || '—'
+  const map = (order.lat != null && order.lng != null)
+    ? `https://yandex.ru/maps/?ll=${order.lng},${order.lat}&z=17&pt=${order.lng},${order.lat}` : null
+  const addrLine = map ? `📍 <a href="${map}">${esc(addr)}</a>` : `📍 ${esc(addr)}`
+  const sections = [...new Set((order.items || []).map((it) => it.section_name).filter(Boolean))]
+  // Заявка ещё не отправлена в работу (предпросмотр на завтра/дату) — помечаем явно.
+  const notInWork = order.status && !['in_progress', 'done', 'closed'].includes(order.status)
+  // Желаемое время заезда: пусто → «как можно быстрее», иначе конкретный час.
+  const timeLine = order.desired_time
+    ? `🕐 К ${String(order.desired_time).slice(0, 5)}`
+    : '⚡ Как можно быстрее'
+  const head = [
+    `<b>Заявка №${order.number ?? '—'}</b>`,
+    notInWork ? '🕓 Ещё не в работе' : null,
+    order.object_name ? esc(order.object_name) : null,
+    sections.length ? `Участок: ${sections.map(esc).join(', ')}` : null,
+    addrLine,
+    timeLine,
+  ].filter(Boolean).join('\n')
+  const lines = (order.items || []).map((it) =>
+    `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`)
+  if (!lines.length) lines.push('• позиции не указаны')
+  const E = Number(order.empties) || 0
+  const base = E > 0 ? `\n\nС базы взять: ${'📦'.repeat(Math.min(E, 6))}${E > 6 ? `×${E}` : ''}` : ''
+  const trips = Number(order.trips) > 1 ? `\n🔁 ${order.trips} рейса` : ''
+  // Оплата наличными — показываем явно (водителю нужно взять деньги); с суммой, если задана.
+  const cash = order.payment_method === 'cash'
+    ? `\n\n💵 Оплата НАЛИЧНЫМИ${order.amount != null ? `: ${Number(order.amount)} ₽` : ''}`
+    : ''
+  // Доверенное лицо: ФИО + кликабельный телефон.
+  const contact = order.trusted_person_name
+    ? `\n\n👤 ${esc(order.trusted_person_name)}`
+      + (order.trusted_person_phone ? `\n📞 <a href="tel:${esc(order.trusted_person_phone)}">${esc(order.trusted_person_phone)}</a>` : '')
+    : ''
+  // Возвращённые менеджером на переделку участки — что переснять.
+  const rework = (order.subtasks || []).filter((s) => s.proof_status === 'rejected' && s.status === 'pending')
+  const reworkBlock = rework.length
+    ? '\n\n' + rework.map((s) =>
+      `↩️ Переснять${s.section_name ? ` «${esc(s.section_name)}»` : ''}${s.review_comment ? `: ${esc(s.review_comment)}` : ''}`).join('\n')
+    : ''
+  return `${head}${contact}\n\n${lines.join('\n')}${base}${cash}${trips}${reworkBlock}`
+}
+
+function orderKeyboard(order) {
+  const kb = new InlineKeyboard()
+  for (const st of order.subtasks || []) {
+    const label = st.section_name ? `Уч. ${st.section_name}` : 'Объект'
+    if (st.status === 'done') kb.text(`✅ ${label}`, 'noop').row()
+    else if (st.status === 'failed') kb.text(`⚠️ ${label} — не смог`, 'noop').row()
+    else kb.text(`✅ ${label}`, `sd:${st.id}:${order.id}`).text('⚠️', `sf:${st.id}:${order.id}`).row()
+  }
+  kb.text('🏁 Завершить заявку', `oc:${order.id}`)
+  return kb
+}
+
+function menuKeyboard(onShift) {
+  const kb = new InlineKeyboard()
+  kb.text(`📋 Задачи на сегодня (${dmOf(today())})`, 'tasks').row()
+  kb.text(`🗓 Задачи на завтра (${dmOf(tomorrow())})`, 'tomorrow').row()
+  kb.text('📅 Задачи на дату…', 'datepick').row()
+  if (onShift) kb.text('🏁 Завершить смену', 'fin').row()
+  else kb.text('🚐 Вышел на смену', 'shift').row()
+  kb.text('🚪 Выйти', 'logout')
+  return kb
+}
+
+// Кол-во заявок (выездов) водителя по датам в диапазоне — для подписи на кнопках.
+async function tripCountsByDate(driverId, from, to) {
+  const rows = await db('orders')
+    .where({ assigned_driver_id: driverId })
+    .whereNotNull('shift_date')
+    .whereBetween('shift_date', [from, to])
+    .whereNot('status', 'cancelled')
+    .groupByRaw("to_char(shift_date,'YYYY-MM-DD')")
+    .select(db.raw("to_char(shift_date,'YYYY-MM-DD') as d")).count({ n: '*' })
+  const map = {}
+  for (const r of rows) map[r.d] = Number(r.n)
+  return map
+}
+
+// Сетка дат: 2 недели вперёд по 3 в ряд, с числом выездов (Пн 15.07 (8) → day:YYYY-MM-DD).
+const WD = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+async function dateGridKeyboard(driverId, days = 14) {
+  const base = new Date(); base.setHours(0, 0, 0, 0)
+  const end = new Date(base); end.setDate(base.getDate() + days - 1)
+  const counts = await tripCountsByDate(driverId, ymd(base), ymd(end))
+  const kb = new InlineKeyboard()
+  for (let i = 0; i < days; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i)
+    const s = ymd(d)
+    const n = counts[s] || 0
+    kb.text(`${WD[d.getDay()]} ${dmOf(s)}${n ? ` (${n})` : ''}`, `day:${s}`)
+    if (i % 3 === 2) kb.row()
+  }
+  return kb
+}
+
+async function sendMenu(ctx) {
+  ctx.session.nav = ['menu'] // меню — корень навигации
+  const onShift = await isOnShift(ctx.session.driverId)
+  let veh = ''
+  if (onShift) {
+    const sh = await db('shifts as s').leftJoin('vehicles as v', 'v.id', 's.vehicle_id')
+      .where({ 's.driver_id': ctx.session.driverId, 's.date': today(), 's.status': 'present' }).whereNull('s.odometer_end')
+      .select('v.gov_number', 'v.model').first()
+    if (sh?.gov_number) veh = `\n🚐 ${vehLabel(sh)}`
+  }
+  await ctx.reply(onShift ? `🟢 Вы на смене.${veh}` : '⚪ Вы не на смене.', { reply_markup: menuKeyboard(onShift) })
+}
+
+async function sendOrderCard(ctx, orderId) {
+  const order = await orderCardForDriver(orderId, ctx.session.driverId)
+  if (!order) return ctx.reply('Заявка недоступна.')
+  await ctx.reply(orderText(order), { parse_mode: 'HTML', reply_markup: orderKeyboard(order), link_preview_options: { is_disabled: true } })
+}
+
+// ── Навигация: чистая перерисовка экрана. НЕ меняет статусы заявок и не запускает действия. ──
+async function renderScreen(ctx, token) {
+  ctx.session.step = null // любая навигация отменяет незавершённый ввод (пробег/пруф)
+  const driverId = ctx.session.driverId
+  if (token === 'menu') return sendMenu(ctx)
+  if (token === 'tasks') {
+    const orders = await ordersForDriver(driverId, { date: today(), statuses: ['in_progress'] })
+    if (!orders.length) return ctx.reply('Заявок в работе пока нет. Менеджер ещё не отправил их в работу.')
+    for (const o of orders) await sendOrderCard(ctx, o.id)
+    return
+  }
+  if (token === 'tomorrow') {
+    const orders = await ordersForDriver(driverId, { date: tomorrow(), statuses: ['assigned', 'review', 'in_progress'] })
+    if (!orders.length) return ctx.reply('На завтра заявок пока нет.')
+    await ctx.reply(`🗓 Задачи на завтра (${dmOf(tomorrow())}) — предпросмотр:`)
+    for (const o of orders) {
+      const order = await orderCardForDriver(o.id, driverId)
+      if (order) await ctx.reply(orderText(order), { parse_mode: 'HTML', link_preview_options: { is_disabled: true } })
+    }
+    return
+  }
+  if (token === 'datepick') {
+    return ctx.reply('📅 Выберите дату:', { reply_markup: await dateGridKeyboard(driverId) })
+  }
+  if (token.startsWith('day:')) {
+    const date = token.slice(4)
+    const orders = await ordersForDriver(driverId, { date })
+    if (!orders.length) return ctx.reply(`На ${dmOf(date)} заявок нет.`)
+    await ctx.reply(`🗓 Задачи на ${dmOf(date)}:`)
+    for (const o of orders) {
+      if (o.status === 'in_progress') await sendOrderCard(ctx, o.id)
+      else {
+        const order = await orderCardForDriver(o.id, driverId)
+        if (order) await ctx.reply(orderText(order), { parse_mode: 'HTML', link_preview_options: { is_disabled: true } })
+      }
+    }
+    return
+  }
+}
+
+// Перейти на экран с записью в стек навигации (без дублей подряд).
+async function showScreen(ctx, token) {
+  const nav = ctx.session.nav || (ctx.session.nav = [])
+  if (nav[nav.length - 1] !== token) nav.push(token)
+  await renderScreen(ctx, token)
+}
+
+// Шаг назад: снять текущий экран и перерисовать предыдущий (корень — меню).
+async function goBack(ctx) {
+  const nav = ctx.session.nav || (ctx.session.nav = [])
+  nav.pop()
+  const target = nav[nav.length - 1] || 'menu'
+  await renderScreen(ctx, target)
+}
+
+// Начать сбор пруфа (можно несколько файлов/текстов) — общий для «выполнено» и «не смог».
+// mode: 'done' — по «Готово» помечаем участок выполненным; 'failed' — уже помечен, пруф опционален.
+async function startProof(ctx, { subtaskId, orderId, mode }) {
+  ctx.session.step = 'proof'
+  ctx.session.data = { subtaskId, orderId, mode, count: 0 }
+  const kb = new InlineKeyboard().text('✅ Готово', 'pdone')
+  const prompt = mode === 'done'
+    ? 'Пришлите пруф: фото / видео / голосовое или текст. Можно несколько — затем «Готово».'
+    : 'По желанию приложите фото/текст подтверждения. Можно несколько — затем «Готово».'
+  return ctx.reply(prompt, { reply_markup: kb })
+}
+
+async function ingestProof(message, { orderId, subtaskId, driverId }) {
+  let kind, fileId = null, transcript = null
+  if (message.photo) { kind = 'photo'; fileId = message.photo.at(-1).file_id }
+  else if (message.video) { kind = 'video'; fileId = message.video.file_id }
+  else if (message.voice) { kind = 'audio'; fileId = message.voice.file_id }
+  else if (message.text) { kind = 'text'; transcript = message.text }
+  else return false
+  const [att] = await db('attachments')
+    .insert({ order_id: orderId, subtask_id: subtaskId, kind, tg_file_id: fileId, transcript, author_driver_id: driverId })
+    .returning('*')
+  if (fileId) {
+    // фон: скачиваем в своё хранилище, дописываем file_url (коммит не блокируем)
+    putFromTelegram(fileId).then((url) => db('attachments').where({ id: att.id }).update({ file_url: url })).catch(() => {})
+  }
+  return true
+}
+
+const navRows = () => ([
+  [{ text: '↩️ Шаг назад', callback_data: 'back' }],
+  [{ text: '⬅️ Главное меню', callback_data: 'menu' }],
+])
+
+// Если в тексте больше одного предложения — переносим каждое на новую строку (после . ! ?).
+// Срабатывает только на простых подсказках (не на HTML-карточках), сокращения «ул.»/«д.»
+// не задеваются: перенос лишь там, где после точки и пробела идёт заглавная буква.
+function splitSentences(text) {
+  return text.replace(/([.!?])\s+(?=[А-ЯЁA-Z])/g, '$1\n')
+}
+
+export function createBot(token = config.DRIVER_BOT_TOKEN) {
+  const bot = new Bot(token)
+
+  // На любом сообщении — кнопки «Шаг назад» + «Главное меню». Само меню (содержит «Выйти»)
+  // пропускаем, чтобы не дублировать; повторно тоже не добавляем.
+  bot.api.config.use((prev, method, payload, signal) => {
+    if (method === 'sendMessage') {
+      // Читабельность: многопредложные простые подсказки — по строке на предложение.
+      if (!payload.parse_mode && typeof payload.text === 'string') payload.text = splitSentences(payload.text)
+      const rm = payload.reply_markup
+      const rows = rm && Array.isArray(rm.inline_keyboard) ? rm.inline_keyboard : null
+      const hasNav = rows?.some((r) => r.some((b) => ['menu', 'logout', 'back'].includes(b.callback_data)))
+      if (!hasNav) {
+        if (rows) rows.push(...navRows())
+        else payload.reply_markup = { inline_keyboard: navRows() }
+      }
+    }
+    return prev(method, payload, signal)
+  })
+
+  bot.use(session({
+    initial: () => ({ driverId: null, authed: false, step: null, data: {}, nav: [] }),
+    storage: pgStorage,
+    getSessionKey: (ctx) => (ctx.chat?.id != null ? String(ctx.chat.id) : undefined),
+  }))
+
+  // ── /start: привязка по коду из ссылки, либо узнаём по chat_id ──
+  bot.command('start', async (ctx) => {
+    const chatId = ctx.chat.id
+    const code = (ctx.match || '').trim()
+    if (code) {
+      try {
+        const ch = await bindByCode(code, chatId)
+        ctx.session.driverId = Number(ch.owner_id); ctx.session.authed = true; ctx.session.step = null
+        const drv = await db('drivers').where({ id: ctx.session.driverId }).first()
+        await ctx.reply(`${drv?.first_name || drv?.name || 'Водитель'}, приветствую! Вы привязаны к боту.`)
+        return sendMenu(ctx)
+      } catch {
+        return ctx.reply('Ссылка недействительна или истекла. Попросите менеджера сгенерировать новую.')
+      }
+    }
+    // Без кода: узнаём по chat_id (привязка постоянная) — пароль не нужен.
+    const drv = await resolveDriverByChat(chatId)
+    if (!drv) return ctx.reply('Вы ещё не привязаны. Откройте личную ссылку, которую дал менеджер.')
+    ctx.session.driverId = drv.id; ctx.session.authed = true; ctx.session.step = null
+    return sendMenu(ctx)
+  })
+
+  // ── Callback-кнопки ──
+  bot.on('callback_query:data', async (ctx) => {
+    const data = ctx.callbackQuery.data
+    await ctx.answerCallbackQuery().catch(() => {})
+    if (data === 'noop') return
+    if (data === 'menu') {
+      if (!ctx.session.authed) return ctx.reply('Сначала войдите: /start')
+      return sendMenu(ctx)
+    }
+    if (!ctx.session.authed) return ctx.reply('Сначала войдите: /start')
+    const driverId = ctx.session.driverId
+
+    if (data === 'logout') {
+      ctx.session.authed = false; ctx.session.step = null
+      return ctx.reply('Вы вышли. Чтобы вернуться — отправьте /start.')
+    }
+    if (data === 'shift') {
+      // Сначала выбор машины, потом пробег.
+      const vehicles = await db('vehicles').where({ status: 'active' }).orderBy('gov_number')
+      if (!vehicles.length) return ctx.reply('Нет доступных машин. Обратитесь к менеджеру.')
+      const drv = await db('drivers').where({ id: driverId }).first()
+      const kb = new InlineKeyboard()
+      for (const v of vehicles) {
+        const star = v.id === drv?.default_vehicle_id ? '⭐ ' : ''
+        kb.text(`${star}${vehLabel(v)}`, `veh:${v.id}`).row()
+      }
+      return ctx.reply('🚐 Выберите машину для смены:', { reply_markup: kb })
+    }
+    if (data.startsWith('veh:')) {
+      const vehicleId = Number(data.slice(4))
+      const v = await db('vehicles').where({ id: vehicleId }).first()
+      ctx.session.data = { vehicleId }; ctx.session.step = 'odo_start'
+      return ctx.reply(`Машина: ${vehLabel(v)}. Теперь введите пробег на старте смены (км):`)
+    }
+    if (data === 'fin') { ctx.session.step = 'odo_end'; return ctx.reply('Введите пробег в конце смены (км):') }
+    if (data === 'back') return goBack(ctx)
+    if (data === 'tasks') return showScreen(ctx, 'tasks')
+    if (data === 'tomorrow') return showScreen(ctx, 'tomorrow')
+    if (data === 'datepick') return showScreen(ctx, 'datepick')
+    if (data.startsWith('day:')) return showScreen(ctx, data)
+    // ── ниже — действия по заявке (меняют статусы), не навигация ──
+    // sd:<subId>:<orderId> — отметить выполнено (сбор пруфа, можно несколько)
+    if (data.startsWith('sd:')) {
+      const [, subId, orderId] = data.split(':')
+      return startProof(ctx, { subtaskId: Number(subId), orderId: Number(orderId), mode: 'done' })
+    }
+    // pdone — завершить сбор пруфа
+    if (data === 'pdone') {
+      const d = ctx.session.data || {}
+      if (d.mode === 'done' && !d.count) return ctx.reply('Нужен хотя бы один пруф: фото / видео / голос или текст.')
+      ctx.session.step = null
+      if (d.mode === 'done') {
+        await markSubtask(Number(d.subtaskId), { status: 'done', driverId })
+        await ctx.reply(`✅ Участок отмечен выполненным (пруфов: ${d.count}).`)
+      } else {
+        await ctx.reply(d.count ? `Подтверждение сохранено (${d.count}).` : 'Ок.')
+      }
+      return sendOrderCard(ctx, Number(d.orderId))
+    }
+    // sf:<subId>:<orderId> — не смог → выбрать причину
+    if (data.startsWith('sf:')) {
+      const [, subId, orderId] = data.split(':')
+      const kb = new InlineKeyboard()
+      for (const [c, label] of REASONS) kb.text(label, `sr:${subId}:${orderId}:${c}`).row()
+      return ctx.reply('Причина:', { reply_markup: kb })
+    }
+    // sr:<subId>:<orderId>:<code> — причина выбрана
+    if (data.startsWith('sr:')) {
+      const [, subId, orderId, code] = data.split(':')
+      await markSubtask(Number(subId), { status: 'failed', reason_code: code, comment: reasonLabel(code), driverId })
+      await ctx.reply(`Отмечено: не выполнено (${reasonLabel(code)}).`)
+      return startProof(ctx, { subtaskId: Number(subId), orderId: Number(orderId), mode: 'failed' })
+    }
+    // oc:<orderId> — завершить заявку (коммит)
+    if (data.startsWith('oc:')) {
+      const [, orderId] = data.split(':')
+      try {
+        const res = await commitOrderByDriver(Number(orderId), driverId)
+        if (res.already) return ctx.reply('Заявка уже завершена.')
+        return ctx.reply(res.all_done
+          ? '✅ Заявка закрыта. Пруф отправлен заказчику.'
+          : '↪️ Часть участков не выполнена — заявка ушла на перераспределение. Спасибо!')
+      } catch (e) {
+        return ctx.reply(e?.status === 403 ? 'Заявка уже не за вами.' : 'Не удалось завершить заявку.')
+      }
+    }
+  })
+
+  // ── Текст/медиа: шаги ввода (пробег, пруф) ──
+  bot.on('message', async (ctx) => {
+    const step = ctx.session.step
+    const driverId = ctx.session.driverId
+    const text = ctx.message.text?.trim()
+
+    if (step === 'odo_start') {
+      const km = parseInt(text, 10)
+      if (!Number.isFinite(km)) return ctx.reply('Введите число (км):')
+      await goOnShift(driverId, { date: today(), vehicleId: ctx.session.data?.vehicleId ?? null, odometerStart: km })
+      ctx.session.step = null; await ctx.reply('Пробег записан.'); return sendMenu(ctx)
+    }
+    if (step === 'odo_end') {
+      const km = parseInt(text, 10)
+      if (!Number.isFinite(km)) return ctx.reply('Введите число (км):')
+      try { await finishShift(driverId, { date: today(), odometerEnd: km }) }
+      catch { return ctx.reply('Вы не на смене.') }
+      ctx.session.step = null; await ctx.reply('🏁 Смена завершена. Хорошего отдыха!'); return sendMenu(ctx)
+    }
+    if (step === 'proof') {
+      const d = ctx.session.data || {}
+      const ok = await ingestProof(ctx.message, { orderId: d.orderId, subtaskId: d.subtaskId, driverId })
+      if (!ok) return ctx.reply('Пришлите фото / видео / голосовое или текст.')
+      d.count = (d.count || 0) + 1; ctx.session.data = d
+      const kb = new InlineKeyboard().text('✅ Готово', 'pdone')
+      return ctx.reply(`Принято (${d.count}). Пришлите ещё фото/текст или нажмите «Готово».`, { reply_markup: kb })
+    }
+
+    // вне шага и не авторизован — пробуем распознать код привязки в тексте
+    // (водитель часто вставляет ссылку/код вместо тапа по deep-link).
+    if (!ctx.session.authed) {
+      const m = text && text.match(/(\d{6})/)
+      if (m) {
+        try {
+          const ch = await bindByCode(m[1], ctx.chat.id)
+          ctx.session.driverId = Number(ch.owner_id); ctx.session.authed = true; ctx.session.step = null
+          const drv = await db('drivers').where({ id: ctx.session.driverId }).first()
+          await ctx.reply(`${drv?.first_name || drv?.name || 'Водитель'}, приветствую! Вы привязаны к боту.`)
+          return sendMenu(ctx)
+        } catch { return ctx.reply('Код недействителен или истёк. Попросите менеджера новую ссылку.') }
+      }
+      return ctx.reply('Войдите: /start — или пришлите ссылку/код привязки от менеджера.')
+    }
+    return sendMenu(ctx)
+  })
+
+  return bot
+}

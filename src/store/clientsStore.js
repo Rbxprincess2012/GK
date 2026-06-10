@@ -4,9 +4,31 @@ import api from '@/lib/api'
 // Заказчики и их объекты — на реальном API (Этап 1).
 export const useClientsStore = create((set, get) => ({
   clients: [],
+  groups: [],            // группы компаний (ГК)
   objectsByClient: {}, // { [clientId]: [objects] }
   loading: false,
   error: null,
+
+  // ── Группы компаний (ГК) ──────────────────────────────────────────────────
+  fetchGroups: async () => {
+    const { data } = await api.get('/company-groups')
+    set({ groups: data })
+    return data
+  },
+  addGroup: async (group) => {
+    const { data } = await api.post('/company-groups', group)
+    set((s) => ({ groups: [...s.groups, data] }))
+    return data
+  },
+  updateGroup: async (id, patch) => {
+    const { data } = await api.patch(`/company-groups/${id}`, patch)
+    set((s) => ({ groups: s.groups.map((g) => (g.id === id ? data : g)) }))
+    return data
+  },
+  removeGroup: async (id) => {
+    await api.delete(`/company-groups/${id}`)
+    set((s) => ({ groups: s.groups.filter((g) => g.id !== id) }))
+  },
 
   fetchClients: async () => {
     set({ loading: true, error: null })
@@ -72,6 +94,41 @@ export const useClientsStore = create((set, get) => ({
     const { data } = await api.get(`/objects/${objectId}/inventory`)
     return data
   },
+
+  // ── Доверенные лица ───────────────────────────────────────────────────────
+  trustedByClient: {}, // { [clientId]: [persons] } — пул, доступный клиенту
+  trustedByGroup: {},  // { [groupId]: [persons] } — все лица группы (для управления)
+
+  // Пул лиц, доступных клиенту (если он в ГК — лица всей группы).
+  fetchTrusted: async (clientId) => {
+    const { data } = await api.get('/trusted-persons', { params: { for_client: clientId } })
+    set((s) => ({ trustedByClient: { ...s.trustedByClient, [clientId]: data } }))
+    return data
+  },
+  // Все лица конкретной ГК (для центрального списка).
+  fetchGroupTrusted: async (groupId) => {
+    const { data } = await api.get('/trusted-persons', { params: { group_id: groupId } })
+    set((s) => ({ trustedByGroup: { ...s.trustedByGroup, [groupId]: data } }))
+    return data
+  },
+
+  // Создаёт лицо. Кэш не трогаем — вызывающий перечитывает нужный список.
+  addTrusted: async (person) => {
+    const { data } = await api.post('/trusted-persons', person)
+    return data
+  },
+  updateTrusted: async (id, patch) => {
+    const { data } = await api.patch(`/trusted-persons/${id}`, patch)
+    return data
+  },
+  removeTrusted: async (id) => { await api.delete(`/trusted-persons/${id}`) },
+
+  // ── Участки объекта ───────────────────────────────────────────────────────
+  addSection: async (object_id, name, note) => {
+    const { data } = await api.post('/sections', { object_id, name, note: note || null })
+    return data
+  },
+  removeSection: async (id) => { await api.delete(`/sections/${id}`) },
 
   getClientById: (id) => get().clients.find((c) => c.id === id),
 }))

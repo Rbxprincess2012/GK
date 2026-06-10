@@ -22,6 +22,12 @@ export const useOrdersStore = create((set, get) => ({
     return data
   },
 
+  // Разовый запрос заявок по фильтру БЕЗ записи в общий список (для сверки/отчётов).
+  queryOrders: async (params = {}) => {
+    const { data } = await api.get('/orders', { params })
+    return Array.isArray(data) ? data : []
+  },
+
   // payload: { object_id, items:[{action,container_type_id,quantity,waste_class?,requested_container_ids?}], payment_method?, note?, desired_date?, desired_time? }
   addOrder: async (payload) => {
     const { data } = await api.post('/orders', payload)
@@ -29,8 +35,65 @@ export const useOrdersStore = create((set, get) => ({
     return data
   },
 
+  updateOrder: async (id, body) => {
+    const { data } = await api.patch(`/orders/${id}`, body)
+    set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, ...data } : o)) }))
+    return data
+  },
+
+  sendToReview: async (body) => {
+    const { data } = await api.post('/orders/send-to-review', body)
+    return data
+  },
+
+  // «Отправить в Работу»: проверенные заявки дня/смены → in_progress (раздел «В работе»).
+  sendToWork: async (body) => {
+    const { data } = await api.post('/orders/send-to-work', body)
+    return data
+  },
+
+  moveDriver: async (id, driver_id) => {
+    const { data } = await api.post(`/orders/${id}/move-driver`, { driver_id })
+    set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, ...data } : o)) }))
+    return data
+  },
+
+  // Задать порядок исполнения (приоритет внутри водителя). Локально проставляем seq.
+  reorder: async (orderedIds) => {
+    await api.post('/orders/reorder', { ordered_ids: orderedIds })
+    set((s) => ({ orders: s.orders.map((o) => {
+      const i = orderedIds.indexOf(o.id)
+      return i >= 0 ? { ...o, seq: i } : o
+    }) }))
+  },
+
+  // Мягкая отмена («в архив») — заявка остаётся в БД/журнале.
+  cancelOrder: async (id) => {
+    const { data } = await api.post(`/orders/${id}/cancel`)
+    set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, ...data } : o)) }))
+    return data
+  },
+
+  // Вернуть отменённую во «Входящие».
+  restoreOrder: async (id) => {
+    const { data } = await api.post(`/orders/${id}/restore`)
+    set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, ...data } : o)) }))
+    return data
+  },
+
+  removeOrder: async (id) => {
+    await api.delete(`/orders/${id}`)
+    set((s) => ({ orders: s.orders.filter((o) => o.id !== id) }))
+  },
+
   assign: async (id, body) => {
     const { data } = await api.post(`/orders/${id}/assign`, body)
+    set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, ...data } : o)) }))
+    return data
+  },
+
+  unassign: async (id) => {
+    const { data } = await api.post(`/orders/${id}/unassign`)
     set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, ...data } : o)) }))
     return data
   },

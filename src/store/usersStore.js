@@ -34,7 +34,7 @@ export const useUsersStore = create((set) => ({
 
   resetPassword: async (id) => {
     const { data } = await api.post(`/users/${id}/reset-password`)
-    return data.password
+    return data.invite_url
   },
 
   removeUser: async (id) => {

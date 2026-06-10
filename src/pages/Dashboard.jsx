@@ -10,10 +10,11 @@ const STATUS = {
   done: ['Выполнена', 'green'], closed: ['Закрыта', 'purple'], cancelled: ['Отменена', 'red'],
 }
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-function clientName(o) { return o.client_nickname || o.client_legal_name || '—' }
-function orderTitle(o) {
-  return o.object_name || [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || `Объект #${o.object_id}`
+function clientLegal(o) { return o.client_legal_name || o.client_nickname || '—' }
+function streetLine(o) {
+  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.district_alias || o.district || '—'
 }
+function objectLine(o) { return o.object_name || `Объект #${o.object_id}` }
 
 function Stat({ Icon, label, value, accent, to }) {
   const body = (
@@ -66,17 +67,18 @@ export default function Dashboard() {
           <Link to="/orders" className="a-muted" style={{ fontSize: '0.82rem' }}>Все →</Link>
         </div>
         <table className="a-table" style={{ marginTop: 10 }}>
-          <thead><tr><th>№</th><th>Клиент</th><th>Объект</th><th>Статус</th></tr></thead>
+          <thead><tr><th>№</th><th>Улица</th><th>Объект</th><th>Заказчик</th><th>Статус</th></tr></thead>
           <tbody>
             {recent.map((o) => (
               <tr key={o.id}>
                 <td style={{ fontWeight: 700 }}>#{o.number}</td>
-                <td>{clientName(o)}</td>
-                <td className="a-muted">{orderTitle(o)}</td>
+                <td style={{ fontWeight: 600 }}>{streetLine(o)}</td>
+                <td className="a-muted">{objectLine(o)}</td>
+                <td className="a-muted">{clientLegal(o)}</td>
                 <td><span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span></td>
               </tr>
             ))}
-            {recent.length === 0 && <tr><td colSpan={4} className="a-loading">Заявок пока нет</td></tr>}
+            {recent.length === 0 && <tr><td colSpan={5} className="a-loading">Заявок пока нет</td></tr>}
           </tbody>
         </table>
       </div>

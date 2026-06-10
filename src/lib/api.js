@@ -15,7 +15,7 @@ api.interceptors.response.use(
   (err) => {
     const url = err.config?.url || ''
     // На самом логине/me не редиректим — ошибку показываем в форме.
-    const isAuthProbe = url.includes('/auth/login') || url.includes('/auth/me')
+    const isAuthProbe = url.includes('/auth/login') || url.includes('/auth/me') || url.includes('/auth/invite')
     if (err.response?.status === 401 && !isAuthProbe) {
       localStorage.removeItem('token')
       window.location.href = `${import.meta.env.BASE_URL}login`

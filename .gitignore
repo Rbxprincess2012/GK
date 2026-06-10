@@ -22,6 +22,9 @@ dist-ssr
 # Артефакты деплоя
 *.tar.gz
 
+# Протоколы LLM-совета (могут содержать контекст кода)
+tools/council/out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

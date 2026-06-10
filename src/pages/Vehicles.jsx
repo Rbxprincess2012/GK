@@ -9,7 +9,7 @@ const STATUS = {
   repair: ['В ремонте', 'orange'],
 }
 
-const empty = { gov_number: '', model: '', capacity_slots: 3, fuel_norm: '', status: 'active' }
+const empty = { gov_number: '', model: '', capacity_slots: 3, empty_capacity: 2, fuel_norm: '', status: 'active' }
 
 export default function Vehicles() {
   const { vehicles, fetchVehicles, addVehicle, updateVehicle, removeVehicle } = useVehiclesStore()
@@ -30,6 +30,7 @@ export default function Vehicles() {
       gov_number: form.gov_number,
       model: form.model || undefined,
       capacity_slots: Number(form.capacity_slots) || 3,
+      empty_capacity: Number(form.empty_capacity) || 2,
       fuel_norm: form.fuel_norm === '' ? undefined : Number(form.fuel_norm),
       status: form.status,
     }
@@ -59,7 +60,7 @@ export default function Vehicles() {
         <table className="a-table">
           <thead>
             <tr>
-              <th>Госномер</th><th>Марка</th><th>Слотов</th><th>Норма л/100км</th><th>Статус</th><th></th>
+              <th>Госномер</th><th>Марка</th><th>Слотов</th><th>Пустых/рейс</th><th>Норма л/100км</th><th>Статус</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -68,6 +69,7 @@ export default function Vehicles() {
                 <td style={{ fontWeight: 600 }}>{v.gov_number}</td>
                 <td className="a-muted">{v.model || '—'}</td>
                 <td>{v.capacity_slots}</td>
+                <td title="Пустых контейнеров за рейс (по умолчанию 2)">{v.empty_capacity ?? 2}</td>
                 <td>{v.fuel_norm ?? '—'}</td>
                 <td><span className={`a-badge a-badge--${STATUS[v.status]?.[1]}`}>{STATUS[v.status]?.[0]}</span></td>
                 <td>
@@ -79,7 +81,7 @@ export default function Vehicles() {
               </tr>
             ))}
             {vehicles.length === 0 && (
-              <tr><td colSpan={6} className="a-loading">Машин пока нет</td></tr>
+              <tr><td colSpan={7} className="a-loading">Машин пока нет</td></tr>
             )}
           </tbody>
         </table>
@@ -103,6 +105,9 @@ export default function Vehicles() {
           <div className="a-field-row">
             <label className="a-field"><span>Слотов (лодочек)</span>
               <input className="a-input" type="number" min={1} value={form.capacity_slots} onChange={(e) => setForm({ ...form, capacity_slots: e.target.value })} />
+            </label>
+            <label className="a-field"><span>Пустых за рейс</span>
+              <input className="a-input" type="number" min={1} value={form.empty_capacity} onChange={(e) => setForm({ ...form, empty_capacity: e.target.value })} />
             </label>
             <label className="a-field"><span>Норма л/100км</span>
               <input className="a-input" type="number" value={form.fuel_norm} onChange={(e) => setForm({ ...form, fuel_norm: e.target.value })} />

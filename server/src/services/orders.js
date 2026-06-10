@@ -1,18 +1,35 @@
 import { db } from '../db.js'
 import { applyMovement } from './inventory.js'
 import { enqueue } from './outbox.js'
+import { metricsForOrder } from './orderMetrics.js'
+import { syncSubtasks, createSubtasksForNewOrder } from './subtasks.js'
 
 async function assembleOrder(q, id) {
   const order = await q('orders').where({ id }).first()
   if (!order) return null
-  const items = await q('order_items').where({ order_id: id }).orderBy('id')
+  const items = await q('order_items as oi')
+    .leftJoin('container_types as ct', 'ct.id', 'oi.container_type_id')
+    .leftJoin('sections as sec', 'sec.id', 'oi.section_id')
+    .where('oi.order_id', id)
+    .select('oi.*', 'ct.name as type_name', 'sec.name as section_name')
+    .orderBy('oi.id')
   for (const it of items) {
     const reqs = await q('order_item_containers').where({ order_item_id: it.id })
     it.requested_container_ids = reqs.map((r) => r.container_id)
   }
   order.items = items
+  // Участки объекта — для выпадающего списка в редакторе позиций.
+  order.object_sections = await q('sections').where({ object_id: order.object_id }).select('id', 'name').orderBy('name')
   order.movements = await q('container_movements').where({ order_id: id }).orderBy('id')
   order.attachments = await q('attachments').where({ order_id: id }).orderBy('id')
+  const subs = await q('order_subtasks as st')
+    .leftJoin('sections as s', 's.id', 'st.section_id')
+    .where('st.order_id', id).orderBy('st.sub_no')
+    .select('st.*', 's.name as section_name')
+  order.subtasks = subs.map((st) => ({
+    ...st,
+    attachments: order.attachments.filter((a) => a.subtask_id === st.id),
+  }))
   return order
 }
 
@@ -25,20 +42,40 @@ export function listOrders(filter = {}) {
     .leftJoin('streets as st', 'st.id', 'ob.street_id')
     .leftJoin('districts as d', 'd.id', 'ob.district_id')
     .leftJoin('drivers as dr', 'dr.id', 'o.assigned_driver_id')
+    .leftJoin('trusted_persons as tp', 'tp.id', 'o.trusted_person_id')
     .select(
       'o.*',
       'c.nickname as client_nickname', 'c.legal_name as client_legal_name',
-      'ob.informal_name as object_name', 'ob.house as object_house', 'st.name as street_name',
+      'tp.name as trusted_person_name', 'tp.phone as trusted_person_phone', 'tp.messengers as trusted_person_messengers',
+      'ob.informal_name as object_name', 'ob.house as object_house', 'ob.building as object_building',
+      'ob.city as city', 'ob.address_raw as address_raw', 'st.name as street_name',
+      'ob.lat as lat', 'ob.lng as lng',
       'd.name as district', 'd.alias as district_alias', 'd.id as district_id',
       'dr.name as driver_name',
       db.raw(`COALESCE((
-        SELECT SUM(oi.quantity * (CASE oi.action WHEN 'replace' THEN 2 ELSE 1 END))
-        FROM order_items oi WHERE oi.order_id = o.id
-      ), 0)::int AS slots`),
+        SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.order_id = o.id
+      ), 0)::int AS containers`),
+      // Пустых привезти (Поставить+Заменить) и полных забрать (Заменить+Забрать) —
+      // для строки «Взять N / Забрать N» в карточке водителя без догрузки позиций.
+      db.raw(`COALESCE((
+        SELECT SUM(oi.quantity) FROM order_items oi
+        WHERE oi.order_id = o.id AND oi.action IN ('place','replace')
+      ), 0)::int AS empties`),
+      db.raw(`COALESCE((
+        SELECT SUM(oi.quantity) FROM order_items oi
+        WHERE oi.order_id = o.id AND oi.action IN ('replace','haul')
+      ), 0)::int AS fulls`),
     )
     .orderBy('o.number', 'desc')
+  if (filter.id) q = q.where('o.id', filter.id)
   if (filter.status) q = q.where('o.status', filter.status)
+  if (filter.statuses) {
+    const list = Array.isArray(filter.statuses) ? filter.statuses : String(filter.statuses).split(',')
+    q = q.whereIn('o.status', list)
+  }
   if (filter.shift_date) q = q.where('o.shift_date', filter.shift_date)
+  if (filter.shift_from) q = q.where('o.shift_date', '>=', filter.shift_from)
+  if (filter.shift_to) q = q.where('o.shift_date', '<=', filter.shift_to)
   if (filter.assigned_driver_id) q = q.where('o.assigned_driver_id', filter.assigned_driver_id)
   if (filter.district_id) q = q.where('ob.district_id', filter.district_id)
   return q
@@ -57,7 +94,9 @@ export async function createOrder(payload) {
     const [order] = await trx('orders').insert({
       client_id: obj.client_id,
       object_id: payload.object_id,
+      trusted_person_id: payload.trusted_person_id ?? null,
       payment_method,
+      amount: payload.amount ?? null,
       desired_date: payload.desired_date ?? null,
       desired_time: payload.desired_time ?? null,
       note: payload.note ?? null,
@@ -65,11 +104,14 @@ export async function createOrder(payload) {
       number: isDraft ? null : trx.raw("nextval('orders_number_seq')"),
     }).returning('*')
 
-    for (const it of payload.items) {
+    // Участки этого объекта — section_id у позиции принимаем только из них (иначе → весь объект).
+    const sectionIds = new Set(await trx('sections').where({ object_id: payload.object_id }).pluck('id'))
+    for (const it of payload.items || []) {
       const [item] = await trx('order_items').insert({
         order_id: order.id,
         action: it.action,
-        container_type_id: it.container_type_id,
+        section_id: it.section_id && sectionIds.has(it.section_id) ? it.section_id : null,
+        container_type_id: it.container_type_id ?? null,
         quantity: it.quantity,
         waste_class: it.waste_class ?? null,
       }).returning('*')
@@ -85,17 +127,33 @@ export async function createOrder(payload) {
           it.requested_container_ids.map((cid) => ({ order_item_id: item.id, container_id: cid })))
       }
     }
+    await createSubtasksForNewOrder(order.id, trx)
     return assembleOrder(trx, order.id)
   })
 }
 
+// Доступность водителя по новой модели графика: активен И НЕ отмечен отсутствующим
+// (по умолчанию все на смене; запись в shifts существует только для отсутствий/переопределений).
+const ABSENCE = ['absent', 'sick', 'vacation']
+async function assertAvailable(driver_id, date, shift_type) {
+  const drv = await db('drivers').where({ id: driver_id, is_active: true }).first()
+  if (!drv) throw Object.assign(new Error('driver_not_available'), { status: 409 })
+  const absent = await db('shifts').where({ driver_id, date, shift_type }).whereIn('status', ABSENCE).first()
+  if (absent) throw Object.assign(new Error('driver_not_available'), { status: 409 })
+  return drv
+}
+
 export async function assign(id, { driver_id, shift_date, shift_type, vehicle_id = null }) {
-  const present = await db('shifts')
-    .where({ driver_id, date: shift_date, shift_type, status: 'present' }).first()
-  if (!present) throw Object.assign(new Error('driver_not_available'), { status: 409 })
+  const drv = await assertAvailable(driver_id, shift_date, shift_type)
+  if (vehicle_id == null) {
+    const row = await db('shifts').where({ driver_id, date: shift_date, shift_type }).first()
+    vehicle_id = row?.vehicle_id ?? drv.default_vehicle_id ?? null
+  }
+  // метрики нагрузки (км до базы, заезды, балл) — заезды по вместимости пустых машины
+  const metrics = await metricsForOrder(id, { vehicleId: vehicle_id })
   // статус-гард: назначать/переназначать можно только активные заявки
   const [row] = await db('orders').where({ id }).whereIn('status', ['new', 'assigned', 'in_progress'])
-    .update({ assigned_driver_id: driver_id, shift_date, shift_type, vehicle_id, status: 'assigned' })
+    .update({ assigned_driver_id: driver_id, shift_date, shift_type, vehicle_id, status: 'assigned', ...metrics })
     .returning('*')
   if (!row) throw Object.assign(new Error('not_assignable'), { status: 409 })
   await enqueue(db, {
@@ -104,6 +162,101 @@ export async function assign(id, { driver_id, shift_date, shift_type, vehicle_id
     event_key: `assigned:${id}:${driver_id}:${shift_date}:${shift_type}`,
   })
   return row
+}
+
+// Отправить распределение дня «на проверку»: assigned → review для даты/смены.
+export async function sendToReview({ shift_date, shift_type }) {
+  const rows = await db('orders')
+    .where({ shift_date, shift_type, status: 'assigned' })
+    .update({ status: 'review' }).returning('id')
+  return { moved: rows.length }
+}
+
+// «Отправить в Работу»: проверенные заявки дня (assigned/review) → in_progress.
+// Этап 2: в этот момент уйдут уведомления водителям и клиентам (пока не реализовано).
+export async function sendToWork({ shift_date, shift_type }) {
+  const rows = await db('orders')
+    .where({ shift_date, shift_type })
+    .whereIn('status', ['assigned', 'review'])
+    .update({ status: 'in_progress' }).returning('id')
+  return { moved: rows.length }
+}
+
+// Задать порядок исполнения заявок (приоритет внутри водителя): seq = позиция в списке.
+export async function reorderOrders(orderedIds) {
+  if (!orderedIds.length) return { reordered: 0 }
+  await db.transaction(async (trx) => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await trx('orders').where({ id: orderedIds[i] }).update({ seq: i })
+    }
+  })
+  return { reordered: orderedIds.length }
+}
+
+// Перенести заявку другому водителю, сохранив статус (доски «На проверке» / «В работе»).
+export async function moveToDriver(id, { driver_id }) {
+  const order = await db('orders').where({ id }).first()
+  if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+  const drv = await assertAvailable(driver_id, order.shift_date, order.shift_type)
+  const row0 = await db('shifts').where({ driver_id, date: order.shift_date, shift_type: order.shift_type }).first()
+  const vehicle_id = row0?.vehicle_id ?? drv?.default_vehicle_id ?? null
+  // Пересчёт нагрузки: км до базы + заезды по вместимости пустых новой машины.
+  const metrics = await metricsForOrder(id, { vehicleId: vehicle_id })
+  const [row] = await db('orders').where({ id }).whereIn('status', ['assigned', 'review', 'in_progress'])
+    .update({ assigned_driver_id: driver_id, vehicle_id, ...metrics })
+    .returning('*')
+  if (!row) throw Object.assign(new Error('not_movable'), { status: 409 })
+  return row
+}
+
+// Снять назначение: заявка возвращается в нераспределённые (status=new),
+// водитель/смена/машина очищаются. Допустимо только из assigned/in_progress.
+export async function unassign(id) {
+  const prev = await db('orders').where({ id }).first()
+  if (!prev) throw Object.assign(new Error('not_found'), { status: 404 })
+  const [row] = await db('orders').where({ id }).whereIn('status', ['assigned', 'in_progress'])
+    .update({ assigned_driver_id: null, shift_date: null, shift_type: null, vehicle_id: null, status: 'new' })
+    .returning('*')
+  if (!row) throw Object.assign(new Error('not_unassignable'), { status: 409 })
+  await enqueue(db, {
+    event_type: 'order_unassigned', order_id: id,
+    payload: { driver_id: prev.assigned_driver_id, shift_date: prev.shift_date, shift_type: prev.shift_type },
+    event_key: `unassigned:${id}:${prev.assigned_driver_id}:${prev.shift_date}:${prev.shift_type}`,
+  })
+  return row
+}
+
+// Ручное редактирование заявки менеджером: скалярные поля + (опц.) замена позиций.
+export async function updateOrder(id, payload) {
+  return db.transaction(async (trx) => {
+    const order = await trx('orders').where({ id }).first()
+    if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+
+    const patch = {}
+    for (const k of ['trusted_person_id', 'payment_method', 'amount', 'desired_date', 'desired_time', 'note']) {
+      if (k in payload) patch[k] = payload[k] ?? null
+    }
+    if (Object.keys(patch).length) await trx('orders').where({ id }).update(patch)
+
+    if (payload.items) {
+      const hasMoves = await trx('container_movements').where({ order_id: id }).first()
+      if (hasMoves) throw Object.assign(new Error('items_locked'), { status: 409 })
+      const itemIds = (await trx('order_items').where({ order_id: id }).select('id')).map((r) => r.id)
+      if (itemIds.length) await trx('order_item_containers').whereIn('order_item_id', itemIds).del()
+      await trx('order_items').where({ order_id: id }).del()
+      const sectionIds = new Set(await trx('sections').where({ object_id: order.object_id }).pluck('id'))
+      for (const it of payload.items) {
+        await trx('order_items').insert({
+          order_id: id, action: it.action,
+          section_id: it.section_id && sectionIds.has(it.section_id) ? it.section_id : null,
+          container_type_id: it.container_type_id ?? null,
+          quantity: it.quantity, waste_class: it.waste_class ?? null,
+        })
+      }
+      await syncSubtasks(id, trx)
+    }
+    return assembleOrder(trx, id)
+  })
 }
 
 export async function complete(id, { movements = [], attachments = [] }) {
@@ -159,6 +312,43 @@ export async function fail(id, { reason = null } = {}) {
     event_key: `failed:${id}:${row.assigned_driver_id}`,
   })
   return row
+}
+
+// Мягкая отмена («в архив»): заявка уходит из работы, но остаётся в журнале.
+// Никаких физических удалений — историю клиентских заявок храним всегда.
+export async function cancelOrder(id) {
+  const order = await db('orders').where({ id }).first()
+  if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+  if (['done', 'closed', 'cancelled'].includes(order.status)) throw Object.assign(new Error('not_cancellable'), { status: 409 })
+  const [row] = await db('orders').where({ id })
+    .update({ status: 'cancelled', assigned_driver_id: null, shift_date: null, shift_type: null, vehicle_id: null })
+    .returning('*')
+  return row
+}
+
+// Вернуть отменённую заявку во «Входящие» (cancelled → new).
+export async function restoreOrder(id) {
+  const [row] = await db('orders').where({ id }).where('status', 'cancelled')
+    .update({ status: 'new' }).returning('*')
+  if (!row) throw Object.assign(new Error('not_restorable'), { status: 409 })
+  return row
+}
+
+// Жёсткое удаление — НЕ используется из UI (журнал неудаляем). Оставлено для админ-нужд.
+export async function removeOrder(id) {
+  return db.transaction(async (trx) => {
+    const order = await trx('orders').where({ id }).first()
+    if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+    if (['done', 'closed'].includes(order.status)) throw Object.assign(new Error('cannot_delete_finalized'), { status: 409 })
+    const itemIds = (await trx('order_items').where({ order_id: id }).select('id')).map((r) => r.id)
+    if (itemIds.length) await trx('order_item_containers').whereIn('order_item_id', itemIds).del()
+    await trx('order_items').where({ order_id: id }).del()
+    await trx('container_movements').where({ order_id: id }).del()
+    await trx('attachments').where({ order_id: id }).del()
+    await trx('outbox').where({ order_id: id }).del()
+    await trx('orders').where({ id }).del()
+    return { ok: true }
+  })
 }
 
 export async function addAttachment(orderId, data) {

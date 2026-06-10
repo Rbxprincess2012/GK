@@ -1,5 +1,6 @@
 import express from 'express'
 import api from './routes/index.js'
+import publicReport from './routes/publicReport.js'
 import { config } from './config.js'
 import { errorHandler, notFound } from './middleware/error.js'
 
@@ -21,6 +22,10 @@ export function createApp() {
   })
 
   app.use(express.json({ limit: '5mb' }))
+  // Медиа-пруф (фото/видео/голос), скачанный из Telegram в своё хранилище.
+  app.use('/media', express.static(config.MEDIA_DIR))
+  // Публичный фотоотчёт клиенту — без авторизации, до /api.
+  app.use(publicReport)
   app.use('/api', api)
   app.use('/api', notFound) // неизвестные /api-маршруты
   app.use(errorHandler)

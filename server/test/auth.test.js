@@ -65,13 +65,16 @@ describe('users — видимость и гарды ролей', () => {
     expect(res.status).toBe(403)
   })
 
-  it('директор может создать менеджера (с паролем в ответе)', async () => {
+  it('директор может создать менеджера (через приглашение по ссылке)', async () => {
     const d = await mkUser('director', 'd5@x.ru')
     const res = await auth(request(app).post('/api/users'), d)
       .send({ email: 'mgr@x.ru', role: 'manager', first_name: 'Иван' })
     expect(res.status).toBe(201)
     expect(res.body.user.role).toBe('manager')
-    expect(res.body.password).toMatch(/.{10}/)
+    // Пароль не возвращается: менеджер задаёт его сам по ссылке-приглашению.
+    expect(res.body.user.invite_pending).toBe(true)
+    expect(res.body.user.activated).toBe(false)
+    expect(res.body.invite_url).toMatch(/.+/)
   })
 
   it('директору суперюзер невидим при изменении → 404', async () => {

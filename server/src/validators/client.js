@@ -12,6 +12,7 @@ const base = {
   bik: z.string().optional(),
   corr_account: z.string().optional(),
   nickname: z.string().optional(),
+  group_id: z.number().int().nullable().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
   default_payment_method: z.enum(['cashless', 'cash']).optional(),
