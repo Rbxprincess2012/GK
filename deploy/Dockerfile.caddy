@@ -1,0 +1,14 @@
+# Caddy с DNS-01 плагином caddy-dns/timeweb — ОТДЕЛЬНЫЙ образ, собирается редко
+# (только при обновлении Caddy/плагина). Приложение его НЕ пересобирает, поэтому
+# обычный деплой занимает секунды, а не 13 минут.
+#
+# Собрать/обновить вручную (разово или при апдейте Caddy):
+#   docker build -t dispatcher-caddy:local -f deploy/Dockerfile.caddy .
+#
+# Go-модули тянем через goproxy.cn — РФ→proxy.golang.org нестабилен.
+FROM caddy:2-builder AS caddybuild
+ENV GOPROXY=https://goproxy.cn,direct
+RUN xcaddy build --with github.com/caddy-dns/timeweb
+
+FROM caddy:2-alpine
+COPY --from=caddybuild /usr/bin/caddy /usr/bin/caddy

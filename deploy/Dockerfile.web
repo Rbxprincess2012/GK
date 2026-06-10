@@ -1,20 +1,12 @@
-# Многоступенчатая сборка: Caddy с DNS-01 плагином + фронт (админка) → итоговый образ.
+# Сборка фронта (админки) поверх готового образа Caddy (dispatcher-caddy:local).
+# Caddy с DNS-плагином собирается ОТДЕЛЬНО (deploy/Dockerfile.caddy) и здесь НЕ
+# компилируется — поэтому обычный деплой занимает секунды, а не минуты.
 # Контекст сборки — корень репозитория (см. docker-compose.prod.yml).
-
-# Caddy с плагином caddy-dns/timeweb для DNS-01. LE не может валидировать РФ-сервер
-# входящим соединением (трансгран. фильтрация рвёт http-01/tls-alpn-01), поэтому
-# подтверждаем домен через DNS TXT-запись (входящие не нужны). DNS домена хостится
-# в Timeweb — ставим TXT через Timeweb API, NS/регистратора (NIC) не трогаем.
-# Go-модули тянем через зеркало goproxy.cn — РФ→proxy.golang.org нестабилен, как и npm.
-FROM caddy:2-builder AS caddybuild
-ENV GOPROXY=https://goproxy.cn,direct
-RUN xcaddy build --with github.com/caddy-dns/timeweb
 
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-# РФ→registry.npmjs.org таймаутит на скачивании тарболов (трансграничная фильтрация),
-# поэтому ставим зависимости через зеркало npm, доступное из РФ, + ретраи/таймауты.
+# РФ→registry.npmjs.org таймаутит — ставим через зеркало, доступное из РФ, + ретраи.
 RUN npm ci --no-audit --no-fund \
     --registry=https://registry.npmmirror.com \
     --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-timeout=600000
@@ -23,7 +15,7 @@ COPY . .
 ARG VITE_API_URL=https://putevo.su/api
 RUN printf 'VITE_API_URL=%s\n' "$VITE_API_URL" > .env.production && npm run build
 
-FROM caddy:2-alpine
-COPY --from=caddybuild /usr/bin/caddy /usr/bin/caddy
+# Базовый образ — заранее собранный Caddy с плагином (deploy/Dockerfile.caddy).
+FROM dispatcher-caddy:local
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv/admin
