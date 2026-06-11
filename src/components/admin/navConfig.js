@@ -36,21 +36,23 @@ export const ITEMS = {
 // Контейнеры (основные разделы). `main` — псевдораздел: его пункты выводятся
 // как обычные ссылки верхнего уровня (без аккордеона). `bottom` прижимает к низу.
 export const SECTIONS = {
-  main:   { label: 'Основные', Icon: Star },
-  orders: { label: 'Заявки', Icon: Layers },
-  refs:   { label: 'Справочник', Icon: Library },
-  system: { label: 'Система', Icon: ShieldCheck, bottom: true },
+  main:    { label: 'Основные', Icon: Star },
+  orders:  { label: 'Заявки', Icon: Layers },
+  refs:    { label: 'Справочник', Icon: Library },
+  reports: { label: 'Отчёты', Icon: BarChart3 },
+  system:  { label: 'Система', Icon: ShieldCheck, bottom: true },
 }
 
 // Порядок контейнеров в сайдбаре (сам порядок разделов в v1 не перетаскивается).
-export const CONTAINER_ORDER = ['main', 'orders', 'refs', 'system']
+export const CONTAINER_ORDER = ['main', 'orders', 'refs', 'reports', 'system']
 
 // Раскладка по умолчанию: какой пункт в каком контейнере и в каком порядке.
 export const DEFAULT_LAYOUT = {
-  main:   ['/', '/reports'],
-  orders: ['/incoming', '/orders', '/distribution', '/map', '/review', '/inwork', '/proof-review', '/reconcile', '/journal'],
-  refs:   ['/clients', '/objects', '/containers', '/drivers', '/vehicles', '/schedule'],
-  system: ['/users', '/settings'],
+  main:    [],
+  orders:  ['/incoming', '/orders', '/distribution', '/map', '/review', '/inwork', '/proof-review', '/reconcile', '/journal'],
+  refs:    ['/clients', '/objects', '/containers', '/drivers', '/vehicles', '/schedule'],
+  reports: ['/', '/reports'],
+  system:  ['/users', '/settings'],
 }
 
 export const isValidKey = (k) => Object.prototype.hasOwnProperty.call(ITEMS, k)

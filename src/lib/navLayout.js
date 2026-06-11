@@ -1,7 +1,7 @@
 // Слой хранилища раскладки сайдбара. ЕДИНСТВЕННОЕ место, где раскладка читается/
 // пишется. Сейчас — localStorage (per-браузер). Для SaaS-мультитенанта здесь же
 // меняем источник на API, привязанный к компании (per-tenant), не трогая UI.
-const STORAGE_KEY = 'putevo.nav-layout.v1'
+const STORAGE_KEY = 'putevo.nav-layout.v2'
 
 const clone = (layout) => JSON.parse(JSON.stringify(layout))
 
