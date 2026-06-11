@@ -151,26 +151,30 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     <Modal title={order.number ? `Заявка #${order.number}` : 'Входящая заявка'} onClose={onClose} width={520} footer={footer}>
       {!mode && (
         <>
-          {/* Заявка · дата заезда · водитель */}
-          <div className="a-muted" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 16px', marginBottom: 8 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              Дата заезда: <b style={{ color: '#c4d0ff' }}>{order.desired_date?.slice(0, 10) || '—'}</b>
-              <DesiredTime time={order.desired_time} />
-            </span>
-            {order.driver_name && <span>Водитель: <b style={{ color: '#c4d0ff' }}>{order.driver_name}</b>{order.shift_date ? ` · ${order.shift_date.slice(0, 10)}` : ''}</span>}
-          </div>
-
-          {/* Статус · вид оплаты */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          {/* Статус + вид оплаты — самое верхнее, крупным акцентом */}
+          <div className="a-order-head">
             <span className={`a-badge a-badge--${STATUS[order.status]?.[1]}`}>{STATUS[order.status]?.[0]}</span>
             {isCash(order)
-              ? <span className="a-cash a-cash--lg">💵 НАЛИЧНЫЕ{order.amount != null ? ` · ${fmtMoney(order.amount)}` : ' · сумма не указана'}</span>
-              : <span className="a-muted">Безнал</span>}
+              ? <span className="a-cash a-cash--lg">💵 {order.amount != null ? `${fmtMoney(order.amount)} наличными` : 'наличные · сумма не указана'}</span>
+              : <span className="a-muted">Безналичный расчёт</span>}
           </div>
 
+          {/* Когда + кто */}
+          <div className="a-kv">
+            <span className="a-kv__k">Дата заезда</span>
+            <span className="a-kv__v">{order.desired_date?.slice(0, 10) || '—'}</span>
+            <DesiredTime time={order.desired_time} />
+          </div>
+          {order.driver_name && (
+            <div className="a-kv">
+              <span className="a-kv__k">Водитель</span>
+              <span className="a-kv__v">{order.driver_name}{order.shift_date ? ` · ${order.shift_date.slice(0, 10)}` : ''}</span>
+            </div>
+          )}
+
           {/* Объект + адрес */}
-          <div className="a-section-title" style={{ marginTop: 0 }}>Объект</div>
-          <div style={{ marginBottom: 4 }}><b style={{ color: '#e8ecff' }}>{objectLine(order)}</b></div>
+          <div className="a-section-title">Объект</div>
+          <div className="a-order-obj">{objectLine(order)}</div>
           <div className="a-muted" style={{ marginBottom: 10 }}>
             {(() => {
               const u = yandexMapsUrl(order)
@@ -182,11 +186,15 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
           </div>
 
           {/* Заказчик + доверенное лицо (телефон кликабельный) */}
-          <div className="a-muted" style={{ marginBottom: 4 }}>Заказчик: <b style={{ color: '#c4d0ff' }}>{clientLegal(order)}</b></div>
+          <div className="a-kv">
+            <span className="a-kv__k">Заказчик</span>
+            <span className="a-kv__v">{clientLegal(order)}</span>
+          </div>
           {order.trusted_person_name && (
-            <div className="a-muted" style={{ marginBottom: 10 }}>
-              Контакт: <b style={{ color: '#c4d0ff' }}>{order.trusted_person_name}</b>
-              {order.trusted_person_phone ? <> · <a href={`tel:${order.trusted_person_phone}`} className="a-maplink">{order.trusted_person_phone}</a></> : ''}
+            <div className="a-kv">
+              <span className="a-kv__k">Контакт</span>
+              <span className="a-kv__v">{order.trusted_person_name}</span>
+              {order.trusted_person_phone && <a href={`tel:${order.trusted_person_phone}`} className="a-maplink">{order.trusted_person_phone}</a>}
             </div>
           )}
 
@@ -208,9 +216,13 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             </>
           )}
 
-          {/* Комментарий */}
-          <div className="a-section-title">Комментарий</div>
-          <div className="a-muted" style={{ whiteSpace: 'pre-wrap' }}>{order.note || '—'}</div>
+          {/* Комментарий — показываем только если есть */}
+          {order.note && (
+            <>
+              <div className="a-section-title">Комментарий</div>
+              <div className="a-muted" style={{ whiteSpace: 'pre-wrap' }}>{order.note}</div>
+            </>
+          )}
 
           {order.movements?.length > 0 && (
             <><div className="a-section-title">Движения контейнеров</div>

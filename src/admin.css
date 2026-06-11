@@ -1289,6 +1289,19 @@
 .a-subrow {
   background: rgba(255,255,255,0.015);
 }
+
+/* Карточка заявки: единая типографика — приглушённый ярлык + яркое значение */
+.a-order-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; margin-bottom: 14px;
+}
+.a-kv {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+  font-size: 0.9rem; margin-bottom: 6px;
+}
+.a-kv__k { color: #92a2d4; }
+.a-kv__v { color: #e8ecff; font-weight: 600; }
+.a-order-obj { color: #e8ecff; font-weight: 700; font-size: 1.02rem; margin-bottom: 3px; }
 .a-empty { color: #92a2d4; font-size: 0.86rem; padding: 14px 0; }
 .a-linklike {
   background: none; border: none; padding: 0; cursor: pointer;
