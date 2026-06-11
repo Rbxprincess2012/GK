@@ -21,10 +21,8 @@ function sectionHtml(s) {
   const head = s.status === 'done'
     ? `<h3>🟩 ${esc(s.name)} — выполнено</h3>`
     : `<h3 class="fail">⚠ ${esc(s.name)} — не выполнено${s.comment ? `: ${esc(s.comment)}` : ''}</h3>`
-  const metaParts = []
-  if (s.driver) metaParts.push(`🚛 ${esc(s.driver)}${s.vehicle ? ` · ${esc(s.vehicle)}` : ''}`)
-  if (s.time) metaParts.push(`🕐 ${esc(s.time)}`)
-  const meta = metaParts.length ? `<div class="meta">${metaParts.join('  ·  ')}</div>` : ''
+  // Под участком — только время выполнения. Водитель/авто показываем в шапке.
+  const meta = s.time ? `<div class="meta">🕐 ${esc(s.time)}</div>` : ''
   const media = s.attachments.map(mediaHtml).join('')
   return `<section>${head}${meta}<div class="grid">${media || '<span class="muted">нет вложений</span>'}</div></section>`
 }
