@@ -14,6 +14,11 @@ services:
     container_name: dispatcher-api
     restart: unless-stopped
     env_file: ./server/.env.production
+    # Telegram доступен с этого сервера ТОЛЬКО по IPv4 — IPv6-маршрут до api.telegram.org
+    # мёртв (таймаут), а резолвер отдаёт AAAA. Прибиваем имя к рабочему IPv4, иначе
+    # getFile/скачивание медиа виснет. См. также bot.
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     expose:
       - "3000"
     volumes:
@@ -29,6 +34,10 @@ services:
     restart: unless-stopped
     command: npm run bot
     env_file: ./server/.env.production
+    # Telegram только по IPv4 (см. api): без этого long-polling getUpdates виснет —
+    # резолвер отдаёт IPv6, а маршрут до него мёртв.
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     depends_on:
       - api
     volumes:
