@@ -40,7 +40,7 @@ export const SECTIONS = {
   orders:  { label: 'Заявки', Icon: Layers },
   refs:    { label: 'Справочник', Icon: Library },
   reports: { label: 'Отчёты', Icon: BarChart3 },
-  system:  { label: 'Система', Icon: ShieldCheck, bottom: true },
+  system:  { label: 'Система', Icon: ShieldCheck },
 }
 
 // Порядок контейнеров в сайдбаре (сам порядок разделов в v1 не перетаскивается).

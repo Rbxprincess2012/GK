@@ -105,6 +105,7 @@
 .a-nav-label {
   margin-left: 12px;
   flex: 1;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
 }
