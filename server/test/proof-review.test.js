@@ -3,7 +3,7 @@ import request from 'supertest'
 import { createApp } from '../src/app.js'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
-import { renderTemplate, buildDeepLink, buildReportToken } from '../src/services/clientMessaging.js'
+import { renderTemplate, buildDeepLink, buildReportToken, buildClientChatLink } from '../src/services/clientMessaging.js'
 
 const app = createApp()
 beforeEach(resetDb)
@@ -48,6 +48,14 @@ describe('clientMessaging — чистые функции', () => {
   })
   it('buildReportToken — 24 hex-символа', () => {
     expect(buildReportToken()).toMatch(/^[0-9a-f]{24}$/)
+  })
+  it('buildClientChatLink: @username, t.me, url, телефон, пусто', () => {
+    expect(buildClientChatLink('@romashka')).toBe('https://t.me/romashka')
+    expect(buildClientChatLink('t.me/joinchat/AbC')).toBe('https://t.me/joinchat/AbC')
+    expect(buildClientChatLink('https://t.me/+abc')).toBe('https://t.me/+abc')
+    expect(buildClientChatLink('+79180001122')).toBe('https://t.me/+79180001122')
+    expect(buildClientChatLink('romashka_chat')).toBe('https://t.me/romashka_chat')
+    expect(buildClientChatLink('')).toBeNull()
   })
 })
 

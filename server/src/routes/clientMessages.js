@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { db } from '../db.js'
-import { buildClientMessage, buildDeepLink, logClientMessage, ensurePublicToken } from '../services/clientMessaging.js'
+import { buildClientMessage, buildDeepLink, buildClientChatLink, logClientMessage, ensurePublicToken } from '../services/clientMessaging.js'
 import { requireRole } from '../middleware/authUser.js'
 
 const r = Router()
@@ -21,6 +21,7 @@ r.get('/client-message/:orderId', async (req, res, next) => {
       body: msg.body,
       report_url: msg.vars.report_url,
       phone,
+      client_chat: buildClientChatLink(msg.head?.client_telegram_chat), // приоритетный чат клиента
       deeplinks: phone ? { telegram: buildDeepLink(phone, 'telegram'), max: buildDeepLink(phone, 'max') } : null,
     })
   } catch (e) { next(e) }

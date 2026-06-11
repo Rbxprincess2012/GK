@@ -62,14 +62,21 @@ export function ClientMessageModal({ order, onClose }) {
         а кнопка открывает чат с клиентом. Вставьте текст и отправьте.
       </div>
 
-      {data?.deeplinks ? (
+      {(data?.client_chat || data?.deeplinks) ? (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="a-btn a-btn--primary a-btn--sm" onClick={() => openChat(data.deeplinks.telegram)}>✈️ Открыть Telegram + копировать</button>
-          <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => openChat(data.deeplinks.max)}>🟦 Открыть MAX + копировать</button>
+          {data.client_chat && (
+            <button className="a-btn a-btn--primary a-btn--sm" onClick={() => openChat(data.client_chat)}>💬 Открыть чат клиента + копировать</button>
+          )}
+          {data.deeplinks && (
+            <>
+              <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => openChat(data.deeplinks.telegram)}>✈️ Telegram доверенного</button>
+              <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => openChat(data.deeplinks.max)}>🟦 MAX</button>
+            </>
+          )}
         </div>
       ) : (
         <div className="a-muted" style={{ fontSize: '0.8rem' }}>
-          У клиента не указан телефон доверенного лица — диплинк недоступен, скопируйте текст и отправьте вручную.
+          У клиента не задан чат для отчётов и нет телефона доверенного. Добавьте Telegram-чат в карточке клиента — или скопируйте текст и отправьте вручную.
         </div>
       )}
 

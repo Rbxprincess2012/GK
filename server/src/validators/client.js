@@ -12,6 +12,7 @@ const base = {
   bik: z.string().optional(),
   corr_account: z.string().optional(),
   nickname: z.string().optional(),
+  telegram_chat: z.string().nullable().optional(), // ссылка/@username/t.me — чат для отчётов
   group_id: z.number().int().nullable().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),

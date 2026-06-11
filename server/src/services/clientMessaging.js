@@ -29,6 +29,19 @@ export function buildDeepLink(phone, messenger = 'telegram') {
   return `https://t.me/+${intl}`
 }
 
+// Ссылка на чат клиента (поле clients.telegram_chat): @username / t.me / max.ru / URL / телефон
+// → кликабельный URL. Это приоритетный адрес отправки отчёта (личка доверенного или группа).
+export function buildClientChatLink(raw) {
+  const v = String(raw || '').trim()
+  if (!v) return null
+  if (/^https?:\/\//i.test(v)) return v
+  if (v.startsWith('@')) return `https://t.me/${v.slice(1)}`
+  if (/^(t\.me|max\.ru)\//i.test(v)) return `https://${v}`
+  if (/^[+\d][\d\s()-]{6,}$/.test(v)) return buildDeepLink(v, 'telegram')
+  if (/^[a-z0-9_]{3,}$/i.test(v)) return `https://t.me/${v}`
+  return v
+}
+
 // ── Сборка сообщения и приёмка (с БД) ──
 
 const DEFAULT_BODY = [
@@ -133,7 +146,7 @@ async function orderHead(where, conn) {
     .where(where)
     .select(
       'o.*', 'ob.city', 'ob.house', 'ob.building', 'ob.informal_name', 's.name as street_name',
-      'cl.nickname as client_nickname', 'cl.legal_name as client_legal_name',
+      'cl.nickname as client_nickname', 'cl.legal_name as client_legal_name', 'cl.telegram_chat as client_telegram_chat',
       'd.name as driver_name', 'v.model as veh_model', 'v.gov_number as veh_gov',
     ).first()
 }
