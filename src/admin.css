@@ -368,6 +368,19 @@
   width: 100%;
 }
 
+/* Автозаполнение Chrome красит поле в белый/жёлтый — возвращаем тёмную тему.
+   Заметнее всего на первом password-поле (Клиентский бот), которое браузер
+   автозаполняет сохранённым паролем. box-shadow inset перекрывает фон, а
+   transition на 9999s гасит жёлтую вспышку. */
+.a-input:-webkit-autofill,
+.a-input:-webkit-autofill:hover,
+.a-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e8ecff;
+  -webkit-box-shadow: 0 0 0 1000px #11233a inset;
+  caret-color: #e8ecff;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 .a-input:focus { border-color: rgba(134,95,255,0.5); }
 .a-input--sm { padding: 6px 10px; font-size: 0.85rem; width: 90px; }
 

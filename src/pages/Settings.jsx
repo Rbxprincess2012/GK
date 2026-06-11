@@ -137,7 +137,7 @@ export default function Settings() {
               {group.items.map(([k, label, hint]) => (
                 <div key={k} className="a-token-item">
                   <label htmlFor={`tok-${k}`}>{label}</label>
-                  <input id={`tok-${k}`} className="a-input" type="password" autoComplete="off"
+                  <input id={`tok-${k}`} className="a-input" type="password" autoComplete="new-password"
                     value={tokens[k] || ''} onChange={setToken(k)} placeholder="не задан" />
                   {hint && <div className="a-token-hint">{hint}</div>}
                 </div>
