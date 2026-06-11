@@ -99,6 +99,28 @@ function sectionsText(rows) {
   }).join('\n')
 }
 
+// Участки, выделенные из заявки в отдельные «остаточные» заявки (ещё не выполнены) —
+// для строки клиенту «передано менеджеру на ручную обработку».
+async function carriedOverSections(orderId, conn) {
+  return conn('orders as o')
+    .leftJoin('order_subtasks as st', 'st.order_id', 'o.id')
+    .leftJoin('sections as s', 's.id', 'st.section_id')
+    .where('o.split_from_order_id', orderId)
+    .whereNotIn('o.status', ['done', 'closed', 'cancelled'])
+    .select('s.name as section_name')
+}
+
+// Хвост сообщения клиенту: (опц.) строка про невыполненные участки + «ждём следующего заказа».
+function messageTail(carried) {
+  const tail = []
+  if (carried.length) {
+    const names = carried.map((c) => (c.section_name ? `«${c.section_name}»` : 'участок')).join(', ')
+    tail.push(`⚠️ ${carried.length > 1 ? 'Участки' : 'Участок'} ${names} выполнить не удалось — передали менеджеру на ручную обработку, свяжемся с вами отдельно.`)
+  }
+  tail.push('Ждём вашего следующего заказа! 🚛')
+  return tail.join('\n\n')
+}
+
 // Заголовочные данные заявки (объект/клиент/водитель/машина) одним запросом.
 // where — объект с условием ({ 'o.id': N } или { 'o.public_token': '…' }).
 async function orderHead(where, conn) {
@@ -138,9 +160,10 @@ export async function buildClientMessage(orderId, { templateId, token } = {}, co
     amount: amountOf(head),
     report_url: tok ? reportUrl(tok) : '',
   }
-  const body = renderTemplate(await activeTemplateBody(templateId), vars)
+  const carried = await carriedOverSections(orderId, conn)
+  const body = renderTemplate(await activeTemplateBody(templateId), vars).trimEnd() + '\n\n' + messageTail(carried)
   const results = rows.map((r) => ({ sub_no: r.sub_no, section_id: r.section_id, status: r.status }))
-  return { body, results, vars, head }
+  return { body, results, vars, head, carried }
 }
 
 // Гарантировать public_token у заявки (создать, если ещё нет). Идемпотентно.
@@ -175,6 +198,22 @@ export async function onOrderAccepted(orderId, { userId = null, channels = 'outb
     sent_by: userId || null, channels,
   })
   return { token, body: msg.body, report_url: reportUrl(token) }
+}
+
+// Подтверждение менеджером заявки из 'awaiting_confirmation': → done, все пруфы приняты,
+// формируется сообщение клиенту (token + outbox + лог). Идемпотентно по статусу.
+export async function confirmOrder(orderId, { userId = null, templateId } = {}) {
+  return db.transaction(async (trx) => {
+    const order = await trx('orders').where({ id: orderId }).first()
+    if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+    if (order.status !== 'awaiting_confirmation') {
+      throw Object.assign(new Error('not_confirmable'), { status: 409 })
+    }
+    await trx('orders').where({ id: orderId }).update({ status: 'done', done_at: order.done_at || trx.fn.now() })
+    await trx('order_subtasks').where({ order_id: orderId })
+      .update({ proof_status: 'accepted', reviewed_by: userId || null, reviewed_at: trx.fn.now() })
+    return onOrderAccepted(orderId, { userId, channels: 'outbox', templateId }, trx)
+  })
 }
 
 // Зафиксировать факт ручной отправки менеджером (диплинк скопирован/открыт).

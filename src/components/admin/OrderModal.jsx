@@ -17,7 +17,7 @@ import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, yan
 // «Отправить в Заявки» (для входящих) + назначение / перенос / завершение / архив.
 // props: order (полный, с items), onClose, onChanged
 export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
-  const { assign, complete, close, accept, updateOrder, cancelOrder } = useOrdersStore()
+  const { assign, complete, close, accept, updateOrder, cancelOrder, confirm } = useOrdersStore()
   const { fetchAvailable, available } = useShiftsStore()
   const { drivers, fetchDrivers } = useDriversStore()
   const { containers, fetchContainers } = useContainersStore()
@@ -32,6 +32,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
   const [movements, setMovements] = useState([])
   const [photoUrl, setPhotoUrl] = useState('')
   const [msgOpen, setMsgOpen] = useState(false)
+  const [confirmFlow, setConfirmFlow] = useState(false) // сообщение открыто после «Подтверждаю»
   const [proofBusy, setProofBusy] = useState(false)
 
   const doAcceptSub = async (id) => {
@@ -82,6 +83,16 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     if (!(await toast.confirm('Закрыть заявку? (документы оформлены)'))) return
     try { await close(order.id); toast.success('Закрыта'); onChanged() }
     catch { toast.error('Можно закрыть только выполненную') }
+  }
+
+  // «Подтверждаю»: заявка → done, формируется сообщение клиенту. Списки обновляем
+  // при закрытии окна сообщения (onChanged закрывает модалку — нельзя звать раньше).
+  const doConfirm = async () => {
+    try {
+      await confirm(order.id)
+      toast.success('Заявка подтверждена — отправьте сообщение клиенту')
+      setConfirmFlow(true); setMsgOpen(true)
+    } catch { toast.error('Не удалось подтвердить заявку') }
   }
 
   // «Отправить в Заявки»: входящая (pending_review) → new + номер.
@@ -140,6 +151,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       {order.status === 'pending_review' && <button className="a-btn a-btn--success" onClick={doSendToOrders}>Отправить в Заявки →</button>}
       {canAssign && <button className="a-btn a-btn--primary" onClick={() => setMode('assign')}>{order.status === 'new' ? 'Назначить' : 'Переназначить / перенести'}</button>}
       {(order.status === 'assigned' || order.status === 'in_progress') && <button className="a-btn a-btn--success" onClick={() => setMode('complete')}>Завершить</button>}
+      {order.status === 'awaiting_confirmation' && <button className="a-btn a-btn--success" onClick={doConfirm}>✓ Подтверждаю</button>}
       {(order.status === 'done' || order.status === 'closed') && <button className="a-btn a-btn--ghost" onClick={() => setMsgOpen(true)}>✉ Сообщить клиенту</button>}
       {order.status === 'done' && <button className="a-btn a-btn--primary" onClick={doClose}>Закрыть заявку</button>}
     </>
@@ -147,7 +159,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
 
   return (
     <>
-    {msgOpen && <ClientMessageModal order={order} onClose={() => setMsgOpen(false)} />}
+    {msgOpen && <ClientMessageModal order={order} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
     <Modal title={order.number ? `Заявка #${order.number}` : 'Входящая заявка'} onClose={onClose} width={520} footer={footer}>
       {!mode && (
         <>

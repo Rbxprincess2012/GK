@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import * as svc from '../services/orders.js'
+import { confirmOrder } from '../services/clientMessaging.js'
 import { createOrderInput, updateOrderInput, sendToReviewInput, moveDriverInput, assignInput, completeInput, driverConfirmInput, failInput } from '../validators/order.js'
 import { attachmentInput } from '../validators/attachment.js'
 
@@ -86,6 +87,13 @@ r.post('/:id/fail', async (req, res, next) => {
 
 r.post('/:id/close', async (req, res, next) => {
   try { res.json(await svc.close(Number(req.params.id))) } catch (e) { next(e) }
+})
+
+// Менеджер подтверждает заявку из 'awaiting_confirmation' → done + сообщение клиенту.
+r.post('/:id/confirm', async (req, res, next) => {
+  try {
+    res.json(await confirmOrder(Number(req.params.id), { userId: req.auth?.user?.id || null }))
+  } catch (e) { next(e) }
 })
 
 r.post('/:id/attachments', async (req, res, next) => {

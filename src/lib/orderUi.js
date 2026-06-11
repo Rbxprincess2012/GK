@@ -4,6 +4,7 @@ export const STATUS = {
   assigned: ['Назначена', 'purple'],
   review: ['На проверке', 'purple'],
   in_progress: ['В работе', 'green'],
+  awaiting_confirmation: ['Ожидает подтверждения', 'purple'],
   done: ['Выполнена', 'green'],
   closed: ['Закрыта', 'purple'],
   cancelled: ['Отменена', 'red'],

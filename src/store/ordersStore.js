@@ -122,6 +122,12 @@ export const useOrdersStore = create((set, get) => ({
     return data
   },
 
+  // Подтвердить заявку из «Ожидает подтверждения» → done + сообщение клиенту.
+  confirm: async (id) => {
+    const { data } = await api.post(`/orders/${id}/confirm`)
+    return data
+  },
+
   getByStatus: (status) => get().orders.filter((o) => o.status === status),
 
   getTodayOrders: () => {

@@ -381,10 +381,10 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
       const [, orderId] = data.split(':')
       try {
         const res = await commitOrderByDriver(Number(orderId), driverId)
-        if (res.already) return ctx.reply('Заявка уже завершена.')
+        if (res.already) return ctx.reply('Заявка уже отправлена менеджеру.')
         return ctx.reply(res.all_done
-          ? '✅ Заявка закрыта. Пруф отправлен заказчику.'
-          : '↪️ Часть участков не выполнена — заявка ушла на перераспределение. Спасибо!')
+          ? '✅ Работа по заявке отправлена менеджеру на подтверждение. Спасибо!'
+          : '✅ Выполненные участки отправлены менеджеру на подтверждение. Невыполненные передали на ручную обработку. Спасибо!')
       } catch (e) {
         return ctx.reply(e?.status === 403 ? 'Заявка уже не за вами.' : 'Не удалось завершить заявку.')
       }

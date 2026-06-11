@@ -51,10 +51,12 @@ export async function markSubtask(subtaskId, { status, reason_code = null, comme
   return row
 }
 
-// «Завершить заявку»: коммит всей работы по объекту.
-//  - все под-задачи done → заявка done;
-//  - смешанно/не всё → заявка обратно в пул (unassigned), не-done под-задачи сброшены в pending;
-//  - done под-задачи остаются закрытыми навсегда.
+// «Завершить заявку»: коммит работы водителя по объекту.
+//  - есть хотя бы один done-участок → заявка → 'awaiting_confirmation' (ждёт менеджера),
+//    а КАЖДЫЙ невыполненный участок выделяется в ОТДЕЛЬНУЮ новую заявку (в пул, на ручную
+//    обработку); сама заявка остаётся только с выполненными участками;
+//  - ни одного done → вся заявка обратно в пул как 'new' (подтверждать нечего);
+//  - done-участки остаются закрытыми навсегда.
 // Клиенту уходит событие order_attempt_committed с результатами по участкам.
 // Защита: чужой водитель → 403; повторный коммит уже завершённой → no-op (idempotent).
 export async function commitOrderByDriver(orderId, driverId) {
@@ -63,11 +65,14 @@ export async function commitOrderByDriver(orderId, driverId) {
     if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
     if (order.assigned_driver_id !== driverId) throw Object.assign(new Error('forbidden'), { status: 403 })
     if (!['assigned', 'in_progress'].includes(order.status)) {
-      return { order, all_done: order.status === 'done', already: true }
+      const settled = ['awaiting_confirmation', 'done', 'closed'].includes(order.status)
+      return { order, all_done: order.status === 'done' || order.status === 'awaiting_confirmation', already: settled }
     }
 
     const subs = await trx('order_subtasks').where({ order_id: orderId }).orderBy('sub_no')
-    const allDone = subs.length > 0 && subs.every((s) => s.status === 'done')
+    const doneSubs = subs.filter((s) => s.status === 'done')
+    const notDone = subs.filter((s) => s.status !== 'done')
+    const allDone = subs.length > 0 && notDone.length === 0
     const results = subs.map((s) => ({ sub_no: s.sub_no, section_id: s.section_id, status: s.status, reason_code: s.reason_code }))
 
     await enqueue(trx, {
@@ -76,15 +81,47 @@ export async function commitOrderByDriver(orderId, driverId) {
       event_key: `commit:${orderId}:${driverId}:${Date.now()}`,
     })
 
-    if (allDone) {
-      await trx('orders').where({ id: orderId }).update({ status: 'done', done_at: trx.fn.now() })
-    } else {
+    // Ни одного выполненного участка — подтверждать нечего, вся заявка обратно в пул.
+    if (doneSubs.length === 0) {
       await trx('order_subtasks').where({ order_id: orderId }).whereNot('status', 'done')
         .update({ status: 'pending', reason_code: null, comment: null, completed_at: null, completed_by_driver_id: null })
       await trx('orders').where({ id: orderId })
         .update({ status: 'new', assigned_driver_id: null, shift_date: null, shift_type: null, vehicle_id: null })
+      const finalOrder = await trx('orders').where({ id: orderId }).first()
+      return { order: finalOrder, all_done: false, carried_over: [] }
     }
+
+    // Невыполненные участки → каждый в отдельную новую заявку (тот же объект, только этот участок).
+    const carriedOver = []
+    for (const s of notDone) {
+      const [child] = await trx('orders').insert({
+        client_id: order.client_id,
+        object_id: order.object_id,
+        trusted_person_id: order.trusted_person_id,
+        payment_method: order.payment_method,
+        amount: null, // сумму по «остаточной» заявке менеджер назначит при перераспределении
+        desired_date: order.desired_date,
+        desired_time: order.desired_time,
+        note: order.note,
+        status: 'new',
+        number: trx.raw("nextval('orders_number_seq')"),
+        split_from_order_id: orderId,
+      }).returning('*')
+      // позиции этого участка и под-задачу — переносим на новую заявку
+      await trx('order_items').where({ order_id: orderId, section_id: s.section_id ?? null }).update({ order_id: child.id })
+      await trx('order_subtasks').where({ id: s.id }).update({
+        order_id: child.id, sub_no: 1, status: 'pending', proof_status: 'unreviewed',
+        reason_code: null, comment: null, completed_at: null, completed_by_driver_id: null,
+        review_comment: null, reviewed_by: null, reviewed_at: null,
+      })
+      await trx('attachments').where({ subtask_id: s.id }).update({ order_id: child.id })
+      const sec = s.section_id ? await trx('sections').where({ id: s.section_id }).first() : null
+      carriedOver.push({ order_id: child.id, number: child.number, section_id: s.section_id, section_name: sec?.name || null })
+    }
+
+    // На исходной заявке остаются только выполненные участки → ждёт подтверждения менеджера.
+    await trx('orders').where({ id: orderId }).update({ status: 'awaiting_confirmation' })
     const finalOrder = await trx('orders').where({ id: orderId }).first()
-    return { order: finalOrder, all_done: allDone }
+    return { order: finalOrder, all_done: allDone, carried_over: carriedOver }
   })
 }

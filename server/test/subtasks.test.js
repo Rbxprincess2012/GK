@@ -73,17 +73,17 @@ describe('subtasks — материализация', () => {
 })
 
 describe('subtasks — коммит', () => {
-  it('все done → заявка done', async () => {
+  it('все done → заявка ждёт подтверждения (awaiting_confirmation)', async () => {
     const d = await mkDriver()
     const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }])
     const subs = await syncSubtasks(order.id)
     await markSubtask(subs[0].id, { status: 'done', driverId: d.id })
     const res = await commitOrderByDriver(order.id, d.id)
     expect(res.all_done).toBe(true)
-    expect(res.order.status).toBe('done')
+    expect(res.order.status).toBe('awaiting_confirmation')
   })
 
-  it('смешанно → заявка в пул, не-done сброшены в pending, done остались', async () => {
+  it('часть done → невыполненный участок выделен в новую заявку, оригинал ждёт подтверждения', async () => {
     const d = await mkDriver()
     const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }, { action: 'replace', section: '63' }])
     const subs = await syncSubtasks(order.id)
@@ -91,11 +91,33 @@ describe('subtasks — коммит', () => {
     await markSubtask(subs[1].id, { status: 'failed', reason_code: 'blocked', driverId: d.id })
     const res = await commitOrderByDriver(order.id, d.id)
     expect(res.all_done).toBe(false)
+    expect(res.order.status).toBe('awaiting_confirmation')
+    expect(res.order.assigned_driver_id).toBe(d.id) // водитель остаётся на подтверждаемой
+    expect(res.carried_over).toHaveLength(1)
+    // на оригинале остался только выполненный участок
+    const orig = await db('order_subtasks').where({ order_id: order.id })
+    expect(orig).toHaveLength(1)
+    expect(orig[0].status).toBe('done')
+    // выделенная заявка — в пул, со своим невыполненным участком (pending)
+    const child = await db('orders').where({ id: res.carried_over[0].order_id }).first()
+    expect(child.status).toBe('new')
+    expect(child.split_from_order_id).toBe(order.id)
+    const childSubs = await db('order_subtasks').where({ order_id: child.id })
+    expect(childSubs).toHaveLength(1)
+    expect(childSubs[0].status).toBe('pending')
+  })
+
+  it('ни одного done → вся заявка обратно в пул', async () => {
+    const d = await mkDriver()
+    const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }])
+    const subs = await syncSubtasks(order.id)
+    await markSubtask(subs[0].id, { status: 'failed', reason_code: 'blocked', driverId: d.id })
+    const res = await commitOrderByDriver(order.id, d.id)
+    expect(res.all_done).toBe(false)
     expect(res.order.status).toBe('new')
     expect(res.order.assigned_driver_id).toBeNull()
-    const after = await db('order_subtasks').where({ order_id: order.id }).orderBy('sub_no')
-    expect(after[0].status).toBe('done')
-    expect(after[1].status).toBe('pending')
+    const after = await db('order_subtasks').where({ order_id: order.id })
+    expect(after[0].status).toBe('pending')
   })
 
   it('событие order_attempt_committed с результатами по участкам', async () => {

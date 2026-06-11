@@ -87,15 +87,25 @@ describe('proof review — accept/reject', () => {
   })
 })
 
-describe('приёмка всей заявки → token + outbox + лог', () => {
-  it('accept всех под-задач: public_token, событие client_report_ready, строка client_messages', async () => {
+describe('подтверждение заявки менеджером → token + outbox + лог', () => {
+  it('accept под-задач НЕ финализирует заявку (финал — отдельная кнопка)', async () => {
     const { order, s1, s2 } = await fixtures()
     await request(app).post(`/api/subtasks/${s1.id}/accept`)
     await request(app).post(`/api/subtasks/${s2.id}/accept`)
+    const o = await db('orders').where({ id: order.id }).first()
+    expect(o.status).toBe('in_progress') // не done
+    expect(o.public_token).toBeNull()
+    expect(await db('outbox').where({ event_type: 'client_report_ready', order_id: order.id })).toHaveLength(0)
+  })
+
+  it('POST /orders/:id/confirm: done, public_token, событие, сообщение с «ждём заказа»', async () => {
+    const { order } = await fixtures({ status: 'awaiting_confirmation' })
+    const res = await request(app).post(`/api/orders/${order.id}/confirm`)
+    expect(res.status).toBe(200)
 
     const o = await db('orders').where({ id: order.id }).first()
-    expect(o.public_token).toBeTruthy()
     expect(o.status).toBe('done')
+    expect(o.public_token).toBeTruthy()
 
     const evs = await db('outbox').where({ event_type: 'client_report_ready', order_id: order.id })
     expect(evs).toHaveLength(1)
@@ -104,18 +114,13 @@ describe('приёмка всей заявки → token + outbox + лог', () 
     const msgs = await db('client_messages').where({ order_id: order.id })
     expect(msgs).toHaveLength(1)
     expect(msgs[0].body).toContain('№390')
+    expect(msgs[0].body).toContain('Ждём вашего следующего заказа')
   })
 
-  it('идемпотентность: повторный accept не плодит токен/событие', async () => {
-    const { order, s1, s2 } = await fixtures()
-    await request(app).post(`/api/subtasks/${s1.id}/accept`)
-    await request(app).post(`/api/subtasks/${s2.id}/accept`)
-    const tok1 = (await db('orders').where({ id: order.id }).first()).public_token
-    await request(app).post(`/api/subtasks/${s1.id}/accept`) // повтор
-    const tok2 = (await db('orders').where({ id: order.id }).first()).public_token
-    expect(tok2).toBe(tok1)
-    const evs = await db('outbox').where({ event_type: 'client_report_ready', order_id: order.id })
-    expect(evs).toHaveLength(1)
+  it('confirm не из awaiting_confirmation → 409', async () => {
+    const { order } = await fixtures({ status: 'in_progress' })
+    const res = await request(app).post(`/api/orders/${order.id}/confirm`)
+    expect(res.status).toBe(409)
   })
 })
 
@@ -128,9 +133,8 @@ describe('очередь и публичный отчёт', () => {
   })
 
   it('GET /r/:token — 200 и содержит участок; мусор → 404', async () => {
-    const { order, s1, s2 } = await fixtures()
-    await request(app).post(`/api/subtasks/${s1.id}/accept`)
-    await request(app).post(`/api/subtasks/${s2.id}/accept`)
+    const { order } = await fixtures({ status: 'awaiting_confirmation' })
+    await request(app).post(`/api/orders/${order.id}/confirm`)
     const o = await db('orders').where({ id: order.id }).first()
     const ok = await request(app).get(`/r/${o.public_token}`)
     expect(ok.status).toBe(200)
