@@ -9,16 +9,17 @@
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 .a-sidebar {
-  min-height: 100vh;
+  height: 100vh;            /* ровно по экрану — внутренняя область навигации скроллится */
   background: #07192e;
   border-right: 1px solid rgba(255,255,255,0.07);
   display: flex;
   flex-direction: column;
-  padding: 24px 8px;
+  padding: 14px 8px;
   position: fixed;
   top: 0;
   left: 0;
   z-index: 200;
+  overflow: hidden;         /* скроллит .a-nav, а не весь рейл */
   /* width controlled by framer-motion */
   box-shadow: 2px 0 16px rgba(0,0,0,0.3);
 }
@@ -31,8 +32,9 @@
   letter-spacing: 0.14em;
   color: #e8ecff;
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  margin-bottom: 16px;
-  min-height: 42px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  min-height: 34px;
 }
 
 .a-brand span:first-child {
@@ -50,23 +52,27 @@
 .a-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
+  min-height: 0;            /* чтобы overflow внутри flex реально работал */
+  overflow-y: auto;
+  scrollbar-width: none;   /* чистый рейл без полосы прокрутки (Firefox) */
 }
+.a-nav::-webkit-scrollbar { width: 0; height: 0; }
 
 .a-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 26px;
+  gap: 3px;
+  margin-top: 16px;
 }
 .a-nav-group:first-child {
   margin-top: 0;
 }
-/* Системная группа прижата к самому низу сайдбара */
+/* Системная группа прижата к низу области навигации */
 .a-nav-group--bottom {
   margin-top: auto;
-  padding-top: 26px;
+  padding-top: 16px;
 }
 
 /* Заголовок группы (виден в развёрнутом сайдбаре) */
@@ -92,7 +98,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 10px;
   border: none;
   background: transparent;
