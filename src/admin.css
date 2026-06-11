@@ -144,6 +144,110 @@
   color: #ff4655;
 }
 
+/* ── Режим редактирования сайдбара (DnD) ──────────────────────────────────── */
+.a-nav--edit {
+  gap: 10px;
+}
+.a-nav-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.a-nav-zone-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7c8bc0;
+  padding: 0 6px 2px;
+  white-space: nowrap;
+}
+.a-nav-zone-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.015);
+  transition: border-color 0.15s, background 0.15s;
+}
+.a-nav-zone-body.is-over {
+  border-color: rgba(134,95,255,0.6);
+  background: rgba(134,95,255,0.08);
+}
+.a-nav-zone-empty {
+  font-size: 0.78rem;
+  color: #5b6da3;
+  text-align: center;
+  padding: 8px 4px;
+  user-select: none;
+}
+.a-nav-editrow {
+  cursor: grab;
+  background: rgba(255,255,255,0.04);
+  color: #cdd6f4;
+  touch-action: none;
+}
+.a-nav-editrow:hover {
+  background: rgba(255,255,255,0.07);
+}
+.a-nav-editrow--overlay {
+  cursor: grabbing;
+  background: #143052;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  border: 1px solid rgba(134,95,255,0.5);
+}
+.a-grip {
+  flex-shrink: 0;
+  margin-right: 8px;
+  color: #5b6da3;
+}
+
+/* Кнопки управления режимом */
+.a-editbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #aeb9e0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.a-editbtn:hover {
+  background: rgba(255,255,255,0.08);
+  color: #e8ecff;
+}
+.a-edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.a-edit-actions .a-editbtn {
+  margin-top: 0;
+}
+.a-editbtn--done {
+  border-color: rgba(134,95,255,0.45);
+  background: rgba(134,95,255,0.18);
+  color: #c4acff;
+}
+.a-editbtn--done:hover {
+  background: rgba(134,95,255,0.28);
+  color: #e3d8ff;
+}
+
 /* ── Main content ─────────────────────────────────────────────────────────── */
 .a-main-wrap {
   flex: 1;
