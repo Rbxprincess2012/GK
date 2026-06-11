@@ -31,6 +31,22 @@ const TOKEN_GROUPS = [
   },
 ]
 
+// Зеркало серверных дефолтов (server/src/routes/settings.js → DEFAULT_TEMPLATES)
+// для кнопки «Вернуть по умолчанию». Тексты должны совпадать с бэкендом.
+const DEFAULT_CLIENT_TEMPLATES = [
+  { id: 'report', title: 'Вывоз выполнен', body: 'Здравствуйте, {client}!\n\nЗаявка №{number} от {date} — выполнено ✅\n\nОбъект: {address}\nВодитель: {driver}\n\nПо участкам:\n{sections}\n\nСумма: {amount}\n\nФотоотчёт: {report_url}' },
+  { id: 'accepted', title: 'Заявка принята', body: 'Здравствуйте, {client}!\n\nВаша заявка №{number} принята в работу на {date}.\nОбъект: {address}\n\nСообщим, когда вывоз будет выполнен.' },
+  { id: 'enroute', title: 'Машина выехала', body: '{client}, машина выехала к вам на объект {address}.\nВодитель: {driver}.' },
+  { id: 'partial', title: 'Вывоз частично', body: 'Здравствуйте, {client}!\n\nЗаявка №{number} от {date} выполнена частично.\nОбъект: {address}\n\nПо участкам:\n{sections}\n\nФотоотчёт: {report_url}' },
+]
+// Подсказка по сценарию отправки для каждого предопределённого шаблона.
+const TEMPLATE_HINTS = {
+  report: 'Отправляется при подтверждении выполненной заявки кнопкой «✓ Подтверждаю» — автоматически всем Telegram-получателям клиента. По умолчанию используется и при ручной отправке.',
+  accepted: 'Уведомление, что заявка принята в работу. Отправляется вручную — до выезда машины.',
+  enroute: 'Уведомление, что машина выехала на объект. Отправляется вручную.',
+  partial: 'Для частично выполненной заявки (часть участков перенесена в ручную обработку). Выбирается вручную при отправке.',
+}
+
 const KEY = 'dispatcher_settings'
 const defaults = {
   day_start: '07:00', day_end: '19:00',
@@ -65,6 +81,12 @@ export default function Settings() {
   const setTpl = (i, patch) => setTemplates((arr) => arr.map((t, j) => (j === i ? { ...t, ...patch } : t)))
   const addTpl = () => setTemplates((arr) => [...arr, { id: `tpl_${Date.now()}`, title: 'Новый шаблон', body: '' }])
   const delTpl = (i) => setTemplates((arr) => arr.filter((_, j) => j !== i))
+  const resetTpl = (i) => {
+    const def = DEFAULT_CLIENT_TEMPLATES.find((d) => d.id === templates[i]?.id)
+    if (!def) return
+    setTpl(i, { title: def.title, body: def.body })
+    toast.success('Восстановлен стандартный текст')
+  }
   const saveTemplates = async () => {
     try {
       const clean = templates.filter((t) => t.title.trim() && t.body.trim())
@@ -186,23 +208,33 @@ export default function Settings() {
           <code>{'{client}'}</code> <code>{'{number}'}</code> <code>{'{date}'}</code> <code>{'{address}'}</code>{' '}
           <code>{'{driver}'}</code> <code>{'{sections}'}</code> <code>{'{amount}'}</code> <code>{'{report_url}'}</code>.
         </div>
-        {templates.map((t, i) => (
-          <div key={t.id} style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-              <label className="a-field" style={{ flex: 1 }}><span>Название</span>
-                <input className="a-input" value={t.title} onChange={(e) => setTpl(i, { title: e.target.value })} />
+        {templates.map((t, i) => {
+          const hint = TEMPLATE_HINTS[t.id]
+          const hasDefault = DEFAULT_CLIENT_TEMPLATES.some((d) => d.id === t.id)
+          return (
+            <div key={t.id} className="a-tpl-card">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 6 }}>
+                <label className="a-field" style={{ flex: 1 }}><span>Название</span>
+                  <input className="a-input" value={t.title} onChange={(e) => setTpl(i, { title: e.target.value })} />
+                </label>
+                <button className="a-btn a-btn--danger a-btn--sm" onClick={() => delTpl(i)} title="Удалить шаблон">✕</button>
+              </div>
+              <div className="a-tpl-hint">
+                {hint || 'Произвольный шаблон — выбирается вручную при отправке клиенту.'}
+              </div>
+              <label className="a-field"><span>Текст</span>
+                <textarea className="a-input" rows={5} value={t.body} onChange={(e) => setTpl(i, { body: e.target.value })} />
               </label>
-              <button className="a-btn a-btn--danger a-btn--sm" onClick={() => delTpl(i)} title="Удалить шаблон">✕</button>
+              <div className="a-tpl-actions">
+                {hasDefault && (
+                  <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => resetTpl(i)} title="Вернуть стандартный текст">↺ Вернуть по умолчанию</button>
+                )}
+                <button className="a-btn a-btn--primary a-btn--sm" onClick={saveTemplates}>Сохранить</button>
+              </div>
             </div>
-            <label className="a-field"><span>Текст</span>
-              <textarea className="a-input" rows={5} value={t.body} onChange={(e) => setTpl(i, { body: e.target.value })} />
-            </label>
-          </div>
-        ))}
-        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-          <button className="a-btn a-btn--ghost a-btn--sm" onClick={addTpl}>+ Шаблон</button>
-          <button className="a-btn a-btn--primary a-btn--sm" onClick={saveTemplates}>Сохранить шаблоны</button>
-        </div>
+          )
+        })}
+        <button className="a-btn a-btn--ghost a-btn--sm" style={{ marginTop: 4 }} onClick={addTpl}>+ Шаблон</button>
       </div>
 
       <div className="a-card" style={{ marginBottom: 16 }}>
