@@ -1,21 +1,23 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
   LayoutDashboard, Inbox, Shuffle, ClipboardList, ClipboardCheck, PackageCheck, FileCheck2, Archive, Building2, MapPin,
   Container, User, Truck, CalendarDays, BarChart3, UserCog, Settings, LogOut, Map, Camera,
+  Layers, Library, ShieldCheck, ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 
 const COLLAPSED = 56
 const EXPANDED = 220
 
-// Навигация делится на смысловые группы:
-//  • Работа — ежедневный поток заявок (вверху, без заголовка)
-//  • Справочники — библиотеки сущностей (клиенты, объекты, водители…)
-//  • Система — администрирование (только директор/суперпользователь)
+// Двухуровневая навигация: основные разделы (Заявки, Справочник, Система) —
+// раскрывающиеся аккордеоны с вложенными пунктами. Сводка и Отчёты — обычные ссылки.
+// В свёрнутом сайдбаре видны только иконки основных разделов.
 const NAV = [
+  { to: '/', label: 'Сводка', Icon: LayoutDashboard, end: true },
   {
+    key: 'orders', label: 'Заявки', Icon: Layers,
     items: [
       { to: '/incoming', label: 'Входящие', Icon: Inbox },
       { to: '/orders', label: 'Заявки в работе', Icon: ClipboardList },
@@ -26,12 +28,11 @@ const NAV = [
       { to: '/proof-review', label: 'Проверка пруфов', Icon: Camera, roles: ['manager', 'director', 'superuser'] },
       { to: '/reconcile', label: 'Сверка с водителем', Icon: FileCheck2 },
       { to: '/journal', label: 'Журнал', Icon: Archive },
-      { to: '/reports', label: 'Отчёты', Icon: BarChart3 },
-      { to: '/', label: 'Сводка', Icon: LayoutDashboard, end: true },
     ],
   },
+  { to: '/reports', label: 'Отчёты', Icon: BarChart3 },
   {
-    label: 'Справочники',
+    key: 'refs', label: 'Справочник', Icon: Library,
     items: [
       { to: '/clients', label: 'Клиенты', Icon: Building2 },
       { to: '/objects', label: 'Объекты', Icon: MapPin },
@@ -42,8 +43,7 @@ const NAV = [
     ],
   },
   {
-    label: 'Система',
-    bottom: true,
+    key: 'system', label: 'Система', Icon: ShieldCheck, bottom: true,
     items: [
       { to: '/users', label: 'Пользователи', Icon: UserCog, roles: ['director', 'superuser'] },
       { to: '/settings', label: 'Настройки', Icon: Settings, roles: ['manager', 'director', 'superuser'] },
@@ -53,13 +53,40 @@ const NAV = [
 
 const roleLabels = { superuser: 'Суперпользователь', director: 'Директор', manager: 'Менеджер' }
 
+// Ключ основного раздела, которому принадлежит путь (для авто-раскрытия активного).
+function sectionOfPath(pathname) {
+  for (const e of NAV) {
+    if (e.items && e.items.some((i) => i.to === pathname)) return e.key
+  }
+  return null
+}
+
 export default function AdminShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [expanded, setExpanded] = useState(false)
-  const groups = NAV
-    .map((g) => ({ ...g, items: g.items.filter((n) => !n.roles || n.roles.includes(user?.role)) }))
-    .filter((g) => g.items.length > 0)
+  // openKeys хранит ТОЛЬКО явные действия пользователя (true/false). Раздел без записи
+  // открыт по умолчанию, если содержит активную страницу (см. isOpen ниже) — так при
+  // переходе нужный раздел раскрывается сам, без эффектов и каскадных ре-рендеров.
+  const [openKeys, setOpenKeys] = useState({})
+  const activeKey = sectionOfPath(pathname)
+  const isOpen = (entry) => openKeys[entry.key] ?? (entry.key === activeKey)
+
+  const visible = (n) => !n.roles || n.roles.includes(user?.role)
+  const tree = NAV
+    .map((e) => (e.items ? { ...e, items: e.items.filter(visible) } : e))
+    .filter((e) => (e.items ? e.items.length > 0 : visible(e)))
+
+  const toggleSection = (entry) => {
+    if (!expanded) {
+      // В свёрнутом виде клик по иконке раздела разворачивает сайдбар и открывает раздел.
+      setExpanded(true)
+      setOpenKeys((o) => ({ ...o, [entry.key]: true }))
+    } else {
+      setOpenKeys((o) => ({ ...o, [entry.key]: !isOpen(entry) }))
+    }
+  }
 
   return (
     <div className="a-shell">
@@ -87,31 +114,69 @@ export default function AdminShell() {
         </div>
 
         <nav className="a-nav">
-          {groups.map((group, gi) => (
-            <div key={gi} className={'a-nav-group' + (group.bottom ? ' a-nav-group--bottom' : '')}>
-              {group.label && (
-                expanded
-                  ? <div className="a-nav-group-label">{group.label}</div>
-                  : <div className="a-nav-sep" />
-              )}
-              {group.items.map(({ to, label, Icon, end }) => (
+          {tree.map((entry) => {
+            // Обычная ссылка (Сводка, Отчёты)
+            if (!entry.items) {
+              return (
                 <NavLink
-                  key={to}
-                  to={to}
-                  end={end}
+                  key={entry.to}
+                  to={entry.to}
+                  end={entry.end}
+                  title={!expanded ? entry.label : undefined}
                   className={({ isActive }) => 'a-nav-item' + (isActive ? ' active' : '')}
                 >
-                  <Icon size={18} style={{ flexShrink: 0 }} />
-                  {expanded && <span style={{ marginLeft: 12, whiteSpace: 'nowrap' }}>{label}</span>}
+                  <entry.Icon size={18} style={{ flexShrink: 0 }} />
+                  {expanded && <span className="a-nav-label">{entry.label}</span>}
                 </NavLink>
-              ))}
-            </div>
-          ))}
+              )
+            }
+
+            // Раскрывающийся основной раздел
+            const open = isOpen(entry)
+            const hasActive = entry.items.some((i) => i.to === pathname)
+            const headActive = hasActive && (!expanded || !open)
+            return (
+              <div
+                key={entry.key}
+                className={'a-nav-section' + (entry.bottom ? ' a-nav-section--bottom' : '')}
+              >
+                <button
+                  type="button"
+                  title={!expanded ? entry.label : undefined}
+                  onClick={() => toggleSection(entry)}
+                  className={'a-nav-item a-nav-head' + (headActive ? ' active' : '')}
+                >
+                  <entry.Icon size={18} style={{ flexShrink: 0 }} />
+                  {expanded && (
+                    <>
+                      <span className="a-nav-label">{entry.label}</span>
+                      <ChevronDown size={15} className={'a-chev' + (open ? ' a-chev--open' : '')} />
+                    </>
+                  )}
+                </button>
+                {expanded && open && (
+                  <div className="a-nav-children">
+                    {entry.items.map(({ to, label, Icon, end }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={end}
+                        className={({ isActive }) => 'a-nav-item a-nav-child' + (isActive ? ' active' : '')}
+                      >
+                        <Icon size={16} style={{ flexShrink: 0 }} />
+                        <span className="a-nav-label">{label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         <button className="a-nav-item a-nav-item--logout" onClick={() => { logout(); navigate('/login') }}>
           <LogOut size={18} style={{ flexShrink: 0 }} />
-          {expanded && <span style={{ marginLeft: 12, whiteSpace: 'nowrap' }}>Выйти</span>}
+          {expanded && <span className="a-nav-label">Выйти</span>}
         </button>
       </motion.aside>
 

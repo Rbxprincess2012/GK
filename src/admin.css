@@ -60,38 +60,53 @@
 }
 .a-nav::-webkit-scrollbar { width: 0; height: 0; }
 
-.a-nav-group {
+/* Основной раздел-аккордеон */
+.a-nav-section {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  margin-top: 16px;
+  gap: 2px;
 }
-.a-nav-group:first-child {
-  margin-top: 0;
-}
-/* Системная группа прижата к низу области навигации */
-.a-nav-group--bottom {
+/* Системный раздел прижат к низу области навигации */
+.a-nav-section--bottom {
   margin-top: auto;
-  padding-top: 16px;
 }
 
-/* Заголовок группы (виден в развёрнутом сайдбаре) */
-.a-nav-group-label {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #5b6da3;
-  padding: 0 12px 6px;
+/* Шапка раскрывающегося раздела */
+.a-nav-head {
+  font-weight: 600;
+}
+
+/* Шеврон-индикатор раскрытия */
+.a-chev {
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: transform 0.18s ease;
+}
+.a-chev--open {
+  transform: rotate(180deg);
+}
+
+/* Вложенные пункты раздела — с отступом и тонкой направляющей слева */
+.a-nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 4px 19px;
+  padding-left: 2px;
+  border-left: 1px solid rgba(255,255,255,0.08);
+}
+.a-nav-child {
+  padding-left: 13px;
+  font-size: 0.85rem;
+}
+
+/* Текстовая подпись пункта (растягивается, чтобы прижать шеврон вправо) */
+.a-nav-label {
+  margin-left: 12px;
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
-}
-
-/* Тонкий разделитель вместо заголовка, когда сайдбар свёрнут */
-.a-nav-sep {
-  height: 1px;
-  background: rgba(255,255,255,0.08);
-  margin: 0 8px 8px;
 }
 
 .a-nav-item {
