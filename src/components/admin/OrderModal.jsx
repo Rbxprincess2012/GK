@@ -159,23 +159,25 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
               : <span className="a-muted">Безналичный расчёт</span>}
           </div>
 
-          {/* Когда + кто */}
-          <div className="a-kv">
-            <span className="a-kv__k">Дата заезда</span>
-            <span className="a-kv__v">{order.desired_date?.slice(0, 10) || '—'}</span>
+          {/* Дата заезда */}
+          <div className="a-fl">Дата заезда</div>
+          <div className="a-fv">
+            {order.desired_date?.slice(0, 10) || '—'}
             <DesiredTime time={order.desired_time} />
           </div>
+
+          {/* Водитель */}
           {order.driver_name && (
-            <div className="a-kv">
-              <span className="a-kv__k">Водитель</span>
-              <span className="a-kv__v">{order.driver_name}{order.shift_date ? ` · ${order.shift_date.slice(0, 10)}` : ''}</span>
-            </div>
+            <>
+              <div className="a-fl">Водитель</div>
+              <div className="a-fv">{order.driver_name}{order.shift_date ? ` · ${order.shift_date.slice(0, 10)}` : ''}</div>
+            </>
           )}
 
           {/* Объект + адрес */}
-          <div className="a-section-title">Объект</div>
-          <div className="a-order-obj">{objectLine(order)}</div>
-          <div className="a-muted" style={{ marginBottom: 10 }}>
+          <div className="a-fl">Объект</div>
+          <div className="a-fv a-fv--obj">{objectLine(order)}</div>
+          <div className="a-fsub">
             {(() => {
               const u = yandexMapsUrl(order)
               return u
@@ -185,17 +187,19 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             {(order.district_alias || order.district) ? ` · ${order.district_alias || order.district}` : ''}
           </div>
 
-          {/* Заказчик + доверенное лицо (телефон кликабельный) */}
-          <div className="a-kv">
-            <span className="a-kv__k">Заказчик</span>
-            <span className="a-kv__v">{clientLegal(order)}</span>
-          </div>
+          {/* Заказчик */}
+          <div className="a-fl">Заказчик</div>
+          <div className="a-fv">{clientLegal(order)}</div>
+
+          {/* Доверенное лицо (телефон кликабельный) */}
           {order.trusted_person_name && (
-            <div className="a-kv">
-              <span className="a-kv__k">Контакт</span>
-              <span className="a-kv__v">{order.trusted_person_name}</span>
-              {order.trusted_person_phone && <a href={`tel:${order.trusted_person_phone}`} className="a-maplink">{order.trusted_person_phone}</a>}
-            </div>
+            <>
+              <div className="a-fl">Контакт</div>
+              <div className="a-fv">
+                {order.trusted_person_name}
+                {order.trusted_person_phone && <a href={`tel:${order.trusted_person_phone}`} className="a-maplink">{order.trusted_person_phone}</a>}
+              </div>
+            </>
           )}
 
           {/* Участки / действия + плашка + рейсы */}

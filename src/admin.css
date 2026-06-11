@@ -1290,18 +1290,21 @@
   background: rgba(255,255,255,0.015);
 }
 
-/* Карточка заявки: единая типографика — приглушённый ярлык + яркое значение */
+/* Карточка заявки: единый визуальный язык — один стиль ярлыка, один стиль значения.
+   Ярлык полей (.a-fl) и заголовок секций (.a-section-title) совпадают по типографике,
+   различаются лишь отступом сверху → вся модалка читается ровно. */
 .a-order-head {
   display: flex; justify-content: space-between; align-items: center;
-  gap: 10px; margin-bottom: 14px;
+  gap: 10px; margin-bottom: 16px;
 }
-.a-kv {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
-  font-size: 0.9rem; margin-bottom: 6px;
+.a-fl {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
+  color: #92a2d4; font-weight: 700; margin: 12px 0 3px;
 }
-.a-kv__k { color: #92a2d4; }
-.a-kv__v { color: #e8ecff; font-weight: 600; }
-.a-order-obj { color: #e8ecff; font-weight: 700; font-size: 1.02rem; margin-bottom: 3px; }
+.a-fv { color: #e8ecff; font-size: 0.95rem; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.a-fv--obj { font-weight: 700; font-size: 1.05rem; }
+.a-fsub { color: #92a2d4; font-size: 0.85rem; margin-top: 3px; }
+.a-fsub .a-maplink { color: #b9c4ef; }
 .a-empty { color: #92a2d4; font-size: 0.86rem; padding: 14px 0; }
 .a-linklike {
   background: none; border: none; padding: 0; cursor: pointer;
