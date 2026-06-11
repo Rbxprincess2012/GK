@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "bot": "node src/bot.js",
     "bot:dev": "node --watch src/bot.js",
+    "client-bot": "node src/clientBot.js",
     "test": "vitest run",
     "migrate": "knex migrate:latest",
     "rollback": "knex migrate:rollback",

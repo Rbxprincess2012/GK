@@ -33,6 +33,9 @@ const schema = z.object({
   // Водительский Telegram-бот (отдельный токен от клиентского!).
   DRIVER_BOT_TOKEN: z.string().optional(),
   DRIVER_BOT_USERNAME: z.string().optional(),   // без @, для ссылок t.me/<username>?start=<code>
+  // Клиентский Telegram-бот (отправка отчётов; отдельный токен от водительского!).
+  CLIENT_BOT_TOKEN: z.string().optional(),
+  CLIENT_BOT_USERNAME: z.string().optional(),
   // Каталог хранения медиа-пруфа (скачиваем из Telegram). Volume на VPS.
   MEDIA_DIR: z.string().default('./media'),
 })

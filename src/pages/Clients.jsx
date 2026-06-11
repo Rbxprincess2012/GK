@@ -6,6 +6,7 @@ import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { StreetPicker } from '@/components/admin/StreetPicker'
 import { PhoneMessengerField, MessengerTag } from '@/components/admin/PhoneMessengerField'
+import { ClientRecipients } from '@/components/admin/ClientRecipients'
 
 const PAY = { cashless: 'Безнал', cash: 'Нал' }
 
@@ -29,7 +30,7 @@ function clientInitial(c) {
 const emptyClient = {
   type: 'ooo', legal_name: '', nickname: '', inn: '', kpp: '', ogrn: '',
   legal_address: '', bank_name: '', bank_account: '', bik: '', corr_account: '',
-  email: '', phone: '', telegram_chat: '', default_payment_method: 'cashless', requires_photo: false,
+  email: '', phone: '', default_payment_method: 'cashless', requires_photo: false,
   group_id: '',
 }
 
@@ -123,7 +124,6 @@ export default function Clients() {
     payload.legal_name = form.legal_name
     payload.requires_photo = !!form.requires_photo
     payload.default_payment_method = form.default_payment_method
-    payload.telegram_chat = (form.telegram_chat || '').trim() || null // явный null — чтобы можно было очистить
     payload.group_id = groupId
     try {
       if (editing.id) await updateClient(editing.id, payload)
@@ -430,13 +430,7 @@ export default function Clients() {
               <input className="a-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </label>
           </div>
-          <label className="a-field"><span>Telegram-чат для отчётов</span>
-            <input className="a-input" value={form.telegram_chat || ''} onChange={(e) => setForm({ ...form, telegram_chat: e.target.value })}
-              placeholder="@username, t.me/… или ссылка на группу" />
-            <span className="a-muted" style={{ fontSize: '0.76rem', marginTop: 4 }}>
-              Куда отправлять сообщения и фотоотчёты: личка доверенного лица или группа заказчика.
-            </span>
-          </label>
+          {editing.id && <ClientRecipients clientId={editing.id} />}
 
           <div className="a-section-title">Банк</div>
           <label className="a-field"><span>Банк</span>

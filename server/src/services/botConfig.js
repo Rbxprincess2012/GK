@@ -8,6 +8,29 @@ export async function getDriverBotToken() {
   return t?.telegram_driver_bot_token || config.DRIVER_BOT_TOKEN || null
 }
 
+// Токен клиентского бота (отправка отчётов): ПРИОРИТЕТ — Настройки (БД), затем .env.
+export async function getClientBotToken() {
+  const t = await getTokens()
+  return t?.telegram_client_bot_token || config.CLIENT_BOT_TOKEN || null
+}
+
+// Username клиентского бота для личных ссылок t.me/<username>?start=<code>.
+let cachedClientUsername = null
+export async function getClientBotUsername(token = null) {
+  if (cachedClientUsername) return cachedClientUsername
+  const stored = await getSetting('client_bot_username')
+  if (stored?.username) { cachedClientUsername = stored.username; return stored.username }
+  const tk = token || (await getClientBotToken())
+  if (tk) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${tk}/getMe`)
+      const data = await res.json()
+      if (data?.result?.username) { cachedClientUsername = data.result.username; return cachedClientUsername }
+    } catch { /* сеть недоступна — фолбэк ниже */ }
+  }
+  return config.CLIENT_BOT_USERNAME || null
+}
+
 // Username бота для ссылок t.me/<username>?start=<code>.
 // Приоритет: сохранённое в Настройках (бот пишет его при старте) → getMe(токен) → .env.
 // Так API строит ссылку из БД, не обращаясь к Telegram (важно при перехвате TLS/блокировках).

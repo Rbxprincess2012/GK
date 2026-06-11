@@ -3,6 +3,7 @@ import { db } from '../db.js'
 import { enqueue } from './outbox.js'
 import { config } from '../config.js'
 import { getSetting } from './settings.js'
+import { sendReportToClient } from './clientDelivery.js'
 
 const BASE_URL = config.APP_URL || 'https://putevo.su'
 
@@ -27,19 +28,6 @@ export function buildDeepLink(phone, messenger = 'telegram') {
   const intl = digits.startsWith('8') ? '7' + digits.slice(1) : digits
   if (messenger === 'max') return `https://max.ru/u/+${intl}`
   return `https://t.me/+${intl}`
-}
-
-// Ссылка на чат клиента (поле clients.telegram_chat): @username / t.me / max.ru / URL / телефон
-// → кликабельный URL. Это приоритетный адрес отправки отчёта (личка доверенного или группа).
-export function buildClientChatLink(raw) {
-  const v = String(raw || '').trim()
-  if (!v) return null
-  if (/^https?:\/\//i.test(v)) return v
-  if (v.startsWith('@')) return `https://t.me/${v.slice(1)}`
-  if (/^(t\.me|max\.ru)\//i.test(v)) return `https://${v}`
-  if (/^[+\d][\d\s()-]{6,}$/.test(v)) return buildDeepLink(v, 'telegram')
-  if (/^[a-z0-9_]{3,}$/i.test(v)) return `https://t.me/${v}`
-  return v
 }
 
 // ── Сборка сообщения и приёмка (с БД) ──
@@ -146,7 +134,7 @@ async function orderHead(where, conn) {
     .where(where)
     .select(
       'o.*', 'ob.city', 'ob.house', 'ob.building', 'ob.informal_name', 's.name as street_name',
-      'cl.nickname as client_nickname', 'cl.legal_name as client_legal_name', 'cl.telegram_chat as client_telegram_chat',
+      'cl.nickname as client_nickname', 'cl.legal_name as client_legal_name',
       'd.name as driver_name', 'v.model as veh_model', 'v.gov_number as veh_gov',
     ).first()
 }
@@ -214,9 +202,11 @@ export async function onOrderAccepted(orderId, { userId = null, channels = 'outb
 }
 
 // Подтверждение менеджером заявки из 'awaiting_confirmation': → done, все пруфы приняты,
-// формируется сообщение клиенту (token + outbox + лог). Идемпотентно по статусу.
-export async function confirmOrder(orderId, { userId = null, templateId } = {}) {
-  return db.transaction(async (trx) => {
+// формируется сообщение клиенту (token + outbox + лог), затем авто-рассылка получателям
+// клиента в Telegram. Рассылка — ВНЕ транзакции (HTTP не держит tx). sendImpl инъектируется
+// в тестах. Возвращает { token, body, report_url, delivery:{sent,failed,recipients} }.
+export async function confirmOrder(orderId, { userId = null, templateId, sendImpl = sendReportToClient } = {}) {
+  const acc = await db.transaction(async (trx) => {
     const order = await trx('orders').where({ id: orderId }).first()
     if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
     if (order.status !== 'awaiting_confirmation') {
@@ -227,6 +217,8 @@ export async function confirmOrder(orderId, { userId = null, templateId } = {}) 
       .update({ proof_status: 'accepted', reviewed_by: userId || null, reviewed_at: trx.fn.now() })
     return onOrderAccepted(orderId, { userId, channels: 'outbox', templateId }, trx)
   })
+  const delivery = await sendImpl(orderId, { body: acc.body })
+  return { ...acc, delivery }
 }
 
 // Зафиксировать факт ручной отправки менеджером (диплинк скопирован/открыт).

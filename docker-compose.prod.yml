@@ -43,6 +43,20 @@ services:
     volumes:
       - media_data:/app/media
 
+  # Клиентский Telegram-бот: онбординг получателей отчётов. Отдельный токен (Настройки →
+  # «Клиентский бот»). Отправку отчётов делает api, бот — только приём /start и /bind.
+  clientbot:
+    build: ./server
+    image: dispatcher-api
+    container_name: dispatcher-clientbot
+    restart: unless-stopped
+    command: npm run client-bot
+    env_file: ./server/.env.production
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
+    depends_on:
+      - api
+
   web:
     build:
       context: .

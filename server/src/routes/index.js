@@ -17,6 +17,7 @@ import distribution from './distribution.js'
 import dailyRoutes from './dailyRoutes.js'
 import proofReview from './proofReview.js'
 import clientMessages from './clientMessages.js'
+import clientRecipients from './clientRecipients.js'
 import { authenticate, requireUserOrService, requireRole } from '../middleware/authUser.js'
 import { createInvoice, updateInvoice } from '../validators/invoice.js'
 import { crudRouter } from '../lib/crudRouter.js'
@@ -45,6 +46,7 @@ api.use('/settings', requireRole('manager', 'director', 'superuser'), settings)
 api.use('/distribution', requireRole('manager', 'director', 'superuser'), distribution)
 // Проверка пруфов: accept/reject под-задач + очередь (роль проверяется внутри роутера).
 api.use(proofReview)
+api.use(clientRecipients)
 // Сообщение клиенту: сборка текста + диплинк + лог (роль внутри роутера).
 api.use(clientMessages)
 

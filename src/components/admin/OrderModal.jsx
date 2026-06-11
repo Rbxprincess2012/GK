@@ -89,9 +89,15 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
   // при закрытии окна сообщения (onChanged закрывает модалку — нельзя звать раньше).
   const doConfirm = async () => {
     try {
-      await confirm(order.id)
-      toast.success('Заявка подтверждена — отправьте сообщение клиенту')
-      setConfirmFlow(true); setMsgOpen(true)
+      const res = await confirm(order.id)
+      const d = res?.delivery
+      if (d && d.recipients > 0) {
+        toast.success(`Отчёт отправлен получателям: ${d.sent}${d.failed ? `, ошибок ${d.failed}` : ''}`)
+        onChanged()
+      } else {
+        toast.success('Заявка подтверждена. Получателей в Telegram нет — отправьте вручную.')
+        setConfirmFlow(true); setMsgOpen(true)
+      }
     } catch { toast.error('Не удалось подтвердить заявку') }
   }
 

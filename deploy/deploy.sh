@@ -30,7 +30,7 @@ echo '== Миграции БД (идемпотентно) =='
 docker compose -f docker-compose.prod.yml run --rm api npm run migrate
 
 echo '== Перезапуск сервисов (без n8n) =='
-docker compose -f docker-compose.prod.yml up -d api bot web
+docker compose -f docker-compose.prod.yml up -d api bot clientbot web
 
 docker compose -f docker-compose.prod.yml ps
 echo '== Деплой завершён =='

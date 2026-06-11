@@ -3,7 +3,7 @@ import request from 'supertest'
 import { createApp } from '../src/app.js'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
-import { renderTemplate, buildDeepLink, buildReportToken, buildClientChatLink } from '../src/services/clientMessaging.js'
+import { renderTemplate, buildDeepLink, buildReportToken } from '../src/services/clientMessaging.js'
 
 const app = createApp()
 beforeEach(resetDb)
@@ -48,14 +48,6 @@ describe('clientMessaging — чистые функции', () => {
   })
   it('buildReportToken — 24 hex-символа', () => {
     expect(buildReportToken()).toMatch(/^[0-9a-f]{24}$/)
-  })
-  it('buildClientChatLink: @username, t.me, url, телефон, пусто', () => {
-    expect(buildClientChatLink('@romashka')).toBe('https://t.me/romashka')
-    expect(buildClientChatLink('t.me/joinchat/AbC')).toBe('https://t.me/joinchat/AbC')
-    expect(buildClientChatLink('https://t.me/+abc')).toBe('https://t.me/+abc')
-    expect(buildClientChatLink('+79180001122')).toBe('https://t.me/+79180001122')
-    expect(buildClientChatLink('romashka_chat')).toBe('https://t.me/romashka_chat')
-    expect(buildClientChatLink('')).toBeNull()
   })
 })
 
@@ -129,6 +121,17 @@ describe('подтверждение заявки менеджером → token
     const { order } = await fixtures({ status: 'in_progress' })
     const res = await request(app).post(`/api/orders/${order.id}/confirm`)
     expect(res.status).toBe(409)
+  })
+
+  it('confirm рассылает отчёт получателям через sendImpl (инъекция)', async () => {
+    const { order } = await fixtures({ status: 'awaiting_confirmation' })
+    const { confirmOrder } = await import('../src/services/clientMessaging.js')
+    let called = null
+    const delivery = { sent: 2, failed: 0, recipients: 2 }
+    const res = await confirmOrder(order.id, { sendImpl: async (id, a) => { called = { id, body: a.body }; return delivery } })
+    expect(res.delivery).toEqual(delivery)
+    expect(called.id).toBe(order.id)
+    expect(called.body).toContain('№390')
   })
 })
 
