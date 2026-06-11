@@ -99,11 +99,12 @@ export default function Orders() {
             </div>
 
             <div className="a-table-wrap">
-              <table className="a-table a-table--fixed">
+              <table className="a-table a-table--fixed a-table--rows">
                 <colgroup>
                   <col style={{ width: 54 }} />
                   <col style={{ width: '19%' }} />
                   <col style={{ width: '21%' }} />
+                  <col style={{ width: 150 }} />
                   <col style={{ width: '17%' }} />
                   <col style={{ width: 96 }} />
                   <col style={{ width: 112 }} />
@@ -112,20 +113,21 @@ export default function Orders() {
                   <col style={{ width: 92 }} />
                 </colgroup>
                 <thead>
-                  <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
+                  <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
                 </thead>
                 <tbody>
                   {list.map((o) => (
                     <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(o)}>
                       <td style={{ fontWeight: 700 }}>{o.number ? `#${o.number}` : <span className="a-muted" style={{ fontWeight: 400 }}>—</span>}</td>
-                      <td style={{ fontWeight: 600 }}>{objectLine(o)}</td>
-                      <td className="a-muted">{streetLine(o)}<div style={{ marginTop: 3 }}><DesiredTime time={o.desired_time} compact /></div></td>
-                      <td className="a-muted">{clientLegal(o)}</td>
+                      <td style={{ fontWeight: 600 }} title={objectLine(o)}>{objectLine(o)}</td>
+                      <td className="a-muted" title={streetLine(o)}>{streetLine(o)}</td>
+                      <td><DesiredTime time={o.desired_time} /></td>
+                      <td className="a-muted" title={clientLegal(o)}>{clientLegal(o)}</td>
                       <td>{isCash(o)
                         ? <span className="a-cash" title="Наличные">💵 {o.amount != null ? fmtMoney(o.amount) : 'Нал'}</span>
                         : <span className="a-muted">Безнал</span>}</td>
                       <td className="a-muted">{o.district ? (o.district_alias || o.district) : '—'}</td>
-                      <td className="a-muted">{o.driver_name || '—'}</td>
+                      <td className="a-muted" title={o.driver_name || ''}>{o.driver_name || '—'}</td>
                       <td><span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span></td>
                       <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {o.status !== 'done' && o.status !== 'closed' && (

@@ -674,6 +674,15 @@
   white-space: normal; overflow-wrap: anywhere; word-break: break-word; vertical-align: top;
 }
 
+/* Одна строка на ячейку → одинаковая высота всех строк (длинный текст усекается
+   многоточием, полный — в title при наведении). */
+.a-table--fixed.a-table--rows td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
 .a-table td,
 .a-table th {
   white-space: nowrap;
