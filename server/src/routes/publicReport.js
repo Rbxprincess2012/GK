@@ -21,8 +21,12 @@ function sectionHtml(s) {
   const head = s.status === 'done'
     ? `<h3>🟩 ${esc(s.name)} — выполнено</h3>`
     : `<h3 class="fail">⚠ ${esc(s.name)} — не выполнено${s.comment ? `: ${esc(s.comment)}` : ''}</h3>`
+  const metaParts = []
+  if (s.driver) metaParts.push(`🚛 ${esc(s.driver)}${s.vehicle ? ` · ${esc(s.vehicle)}` : ''}`)
+  if (s.time) metaParts.push(`🕐 ${esc(s.time)}`)
+  const meta = metaParts.length ? `<div class="meta">${metaParts.join('  ·  ')}</div>` : ''
   const media = s.attachments.map(mediaHtml).join('')
-  return `<section>${head}<div class="grid">${media || '<span class="muted">нет вложений</span>'}</div></section>`
+  return `<section>${head}${meta}<div class="grid">${media || '<span class="muted">нет вложений</span>'}</div></section>`
 }
 
 function pageHtml(rep) {
@@ -39,6 +43,7 @@ h1{font-size:1.3rem;margin:0 0 6px}
 section{border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;margin:12px 0;background:rgba(255,255,255,.02)}
 h3{margin:0 0 10px;font-size:1.02rem}
 h3.fail{color:#ff8f6b}
+.meta{color:#92a2d4;font-size:.85rem;margin:-4px 0 10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 img,video{width:100%;height:120px;object-fit:cover;border-radius:8px;background:#000}
 audio{grid-column:1/-1;width:100%}

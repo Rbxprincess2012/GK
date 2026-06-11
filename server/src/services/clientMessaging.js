@@ -54,6 +54,17 @@ function fmtDate(d) {
   return `${day}.${m}.${y}`
 }
 
+// Дата+время в МСК (сервер может быть в UTC) — для «время выполнения» по участку.
+function fmtDateTime(d) {
+  if (!d) return ''
+  const dt = new Date(d)
+  if (Number.isNaN(dt.getTime())) return ''
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    timeZone: 'Europe/Moscow',
+  }).format(dt)
+}
+
 function addressOf(o) {
   return [o.city, o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`]
     .filter(Boolean).join(', ') || (o.informal_name || '—')
@@ -74,8 +85,10 @@ function driverOf(o) {
 async function sectionRows(orderId, conn) {
   return conn('order_subtasks as st')
     .leftJoin('sections as s', 's.id', 'st.section_id')
+    .leftJoin('drivers as d', 'd.id', 'st.completed_by_driver_id')
     .where('st.order_id', orderId).orderBy('st.sub_no')
-    .select('st.id', 'st.sub_no', 'st.section_id', 'st.status', 'st.reason_code', 'st.comment', 's.name as section_name')
+    .select('st.id', 'st.sub_no', 'st.section_id', 'st.status', 'st.reason_code', 'st.comment',
+      'st.completed_at', 'st.completed_by_driver_id', 's.name as section_name', 'd.name as done_driver_name')
 }
 
 function sectionsText(rows) {
@@ -182,21 +195,49 @@ export async function publicReport(token) {
   if (!head) return null
   const rows = await sectionRows(head.id, db)
   const atts = await db('attachments').where({ order_id: head.id }).orderBy('id')
+
+  // Водитель/авто для отчёта. Обычно из заявки (o.assigned_driver_id). Но если заявка ушла из
+  // работы (пул/перенос — назначение снято), берём того, кто реально закрывал участки
+  // (order_subtasks.completed_by_driver_id) и его авто по умолчанию.
+  let driverName = head.driver_name
+  let vehStr = [head.veh_model, head.veh_gov].filter(Boolean).join(' ')
+  if (!driverName) {
+    const cid = rows.map((r) => r.completed_by_driver_id).find(Boolean)
+    if (cid) {
+      const d = await db('drivers as d').leftJoin('vehicles as v', 'v.id', 'd.default_vehicle_id')
+        .where('d.id', cid).select('d.name', 'v.model as vm', 'v.gov_number as vg').first()
+      if (d) {
+        driverName = d.name
+        if (!vehStr) vehStr = [d.vm, d.vg].filter(Boolean).join(' ')
+      }
+    }
+  }
+  const driverLine = driverName ? (vehStr ? `${driverName} · ${vehStr}` : driverName) : '—'
+
   return {
     number: head.number ?? head.id,
     client: head.client_nickname || head.client_legal_name || `Клиент #${head.id}`,
     date: fmtDate(head.desired_date),
     address: addressOf(head),
-    driver: driverOf(head),
+    driver: driverLine,
     amount: amountOf(head),
-    sections: rows.map((r) => ({
-      sub_no: r.sub_no,
-      name: r.section_name || 'Объект',
-      status: r.status,
-      comment: r.comment,
-      attachments: atts.filter((a) => a.subtask_id === r.id).map((a) => ({
-        kind: a.kind, url: a.file_url, transcript: a.transcript,
-      })),
-    })),
+    sections: rows.map((r) => {
+      const attsFor = atts.filter((a) => a.subtask_id === r.id)
+      // Время выполнения: когда участок закрыт, иначе — момент последнего оставленного пруфа.
+      const lastAt = attsFor.map((a) => a.created_at).filter(Boolean).sort().at(-1)
+      const doneAt = r.completed_at || lastAt || null
+      return {
+        sub_no: r.sub_no,
+        name: r.section_name || 'Объект',
+        status: r.status,
+        comment: r.comment,
+        driver: r.done_driver_name || driverName || null,
+        vehicle: vehStr || null,
+        time: fmtDateTime(doneAt) || null,
+        attachments: attsFor.map((a) => ({
+          kind: a.kind, url: a.file_url, transcript: a.transcript,
+        })),
+      }
+    }),
   }
 }
