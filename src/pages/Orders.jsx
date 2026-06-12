@@ -104,7 +104,7 @@ export default function Orders() {
                   <col style={{ width: 54 }} />
                   <col style={{ width: '19%' }} />
                   <col style={{ width: '21%' }} />
-                  <col style={{ width: 150 }} />
+                  <col style={{ width: 88 }} />
                   <col style={{ width: '17%' }} />
                   <col style={{ width: 96 }} />
                   <col style={{ width: 112 }} />
@@ -121,7 +121,7 @@ export default function Orders() {
                       <td style={{ fontWeight: 700 }}>{o.number ? `#${o.number}` : <span className="a-muted" style={{ fontWeight: 400 }}>—</span>}</td>
                       <td style={{ fontWeight: 600 }} title={objectLine(o)}>{objectLine(o)}</td>
                       <td className="a-muted" title={streetLine(o)}>{streetLine(o)}</td>
-                      <td><DesiredTime time={o.desired_time} /></td>
+                      <td><DesiredTime time={o.desired_time} compact /></td>
                       <td className="a-muted" title={clientLegal(o)}>{clientLegal(o)}</td>
                       <td>{isCash(o)
                         ? <span className="a-cash" title="Наличные">💵 {o.amount != null ? fmtMoney(o.amount) : 'Нал'}</span>
