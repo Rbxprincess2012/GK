@@ -1800,6 +1800,12 @@
 .a-orders-group-head .a-count { margin-left: 2px; }
 .a-orders-group-head .a-badge:last-child { margin-left: auto; }
 
+/* Строка-разделитель даты внутри общей таблицы заявок. */
+.a-orders-group-row > td { padding: 16px 10px 0; border: none; }
+.a-orders-table > tbody:first-of-type > .a-orders-group-row > td { padding-top: 4px; }
+.a-orders-group-row:hover > td { background: none !important; cursor: default; }
+.a-orders-group-row .a-orders-group-head { margin-bottom: 0; }
+
 /* ── Сверка с водителем: «бумажная» ведомость ─────────────────────────────── */
 .recon-sheet {
   background: #fff;

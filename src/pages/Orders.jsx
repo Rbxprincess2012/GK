@@ -84,52 +84,59 @@ export default function Orders() {
 
       {groups.length === 0 && <div className="a-card"><div className="a-empty">Заявок нет</div></div>}
 
-      {groups.map(({ date, list, unassigned }) => {
-        const overdue = date && date < todayStr
-        return (
-          <div key={date || 'none'} className="a-card" style={{ marginBottom: 14 }}>
-            <div className={'a-orders-group-head' + (overdue ? ' is-overdue' : '')}>
-              <span className="a-orders-group-date">{date ? dateLabel(date) : 'Без даты заезда'}</span>
-              {date === todayStr && <span className="a-badge a-badge--purple">сегодня</span>}
-              {overdue && <span className="a-badge a-badge--red">просрочено</span>}
-              <span className="a-count" title="всего заявок на дату">{list.length}</span>
-              {unassigned > 0
-                ? <span className="a-badge a-badge--orange" title="ещё не распределены">{unassigned} не распределено</span>
-                : <span className="a-badge a-badge--green" title="все распределены">распределены</span>}
-            </div>
-
-            <div className="a-table-wrap">
-              <table className="a-table">
-                <thead>
-                  <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {list.map((o) => (
-                    <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(o)}>
-                      <td style={{ fontWeight: 700 }}>{o.number ? `#${o.number}` : <span className="a-muted" style={{ fontWeight: 400 }}>—</span>}</td>
-                      <td style={{ fontWeight: 600 }} title={objectLine(o)}>{objectLine(o)}</td>
-                      <td className="a-muted" title={streetLine(o)}>{streetLine(o)}</td>
-                      <td><DesiredTime time={o.desired_time} compact /></td>
-                      <td className="a-muted" title={clientLegal(o)}>{clientLegal(o)}</td>
-                      <td>{isCash(o)
-                        ? <span className="a-cash" title="Наличные">💵 {o.amount != null ? fmtMoney(o.amount) : 'Нал'}</span>
-                        : <span className="a-muted">Безнал</span>}</td>
-                      <td className="a-muted">{o.district ? (o.district_alias || o.district) : '—'}</td>
-                      <td className="a-muted" title={o.driver_name || ''}>{o.driver_name || '—'}</td>
-                      <td><span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span></td>
-                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        {o.status !== 'done' && o.status !== 'closed' && (
-                          <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => onArchive(e, o)} title="Убрать в архив (останется в Журнале)">В архив</button>
-                        )}
+      {/* Одна общая таблица на все даты → колонки выровнены между группами.
+          Дата заезда — строка-разделитель (colSpan), заявки идут под ней. */}
+      {groups.length > 0 && (
+        <div className="a-card">
+          <div className="a-table-wrap">
+            <table className="a-table a-orders-table">
+              <thead>
+                <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
+              </thead>
+              {groups.map(({ date, list, unassigned }) => {
+                const overdue = date && date < todayStr
+                return (
+                  <tbody key={date || 'none'}>
+                    <tr className="a-orders-group-row">
+                      <td colSpan={10}>
+                        <div className={'a-orders-group-head' + (overdue ? ' is-overdue' : '')}>
+                          <span className="a-orders-group-date">{date ? dateLabel(date) : 'Без даты заезда'}</span>
+                          {date === todayStr && <span className="a-badge a-badge--purple">сегодня</span>}
+                          {overdue && <span className="a-badge a-badge--red">просрочено</span>}
+                          <span className="a-count" title="всего заявок на дату">{list.length}</span>
+                          {unassigned > 0
+                            ? <span className="a-badge a-badge--orange" title="ещё не распределены">{unassigned} не распределено</span>
+                            : <span className="a-badge a-badge--green" title="все распределены">распределены</span>}
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    {list.map((o) => (
+                      <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(o)}>
+                        <td style={{ fontWeight: 700 }}>{o.number ? `#${o.number}` : <span className="a-muted" style={{ fontWeight: 400 }}>—</span>}</td>
+                        <td style={{ fontWeight: 600 }} title={objectLine(o)}>{objectLine(o)}</td>
+                        <td className="a-muted" title={streetLine(o)}>{streetLine(o)}</td>
+                        <td><DesiredTime time={o.desired_time} compact /></td>
+                        <td className="a-muted" title={clientLegal(o)}>{clientLegal(o)}</td>
+                        <td>{isCash(o)
+                          ? <span className="a-cash" title="Наличные">💵 {o.amount != null ? fmtMoney(o.amount) : 'Нал'}</span>
+                          : <span className="a-muted">Безнал</span>}</td>
+                        <td className="a-muted">{o.district ? (o.district_alias || o.district) : '—'}</td>
+                        <td className="a-muted" title={o.driver_name || ''}>{o.driver_name || '—'}</td>
+                        <td><span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span></td>
+                        <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {o.status !== 'done' && o.status !== 'closed' && (
+                            <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => onArchive(e, o)} title="Убрать в архив (останется в Журнале)">В архив</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                )
+              })}
+            </table>
           </div>
-        )
-      })}
+        </div>
+      )}
 
       {detail && (
         <OrderModal
