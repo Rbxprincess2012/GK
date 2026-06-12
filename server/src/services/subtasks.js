@@ -44,7 +44,18 @@ export async function createSubtasksForNewOrder(orderId, conn = db) {
 }
 
 // Водитель отмечает исход под-задачи: 'done' (с пруфом) или 'failed' (причина+коммент).
+// Проверка владения: под-задача должна принадлежать заявке этого водителя и быть в работе —
+// иначе по «устаревшей» кнопке (после переназначения) можно было пометить чужой участок.
 export async function markSubtask(subtaskId, { status, reason_code = null, comment = null, driverId = null }) {
+  const st = await db('order_subtasks').where({ id: subtaskId }).first()
+  if (!st) throw Object.assign(new Error('not_found'), { status: 404 })
+  const order = await db('orders').where({ id: st.order_id }).first()
+  if (!order || (driverId != null && order.assigned_driver_id !== driverId)) {
+    throw Object.assign(new Error('forbidden'), { status: 403 })
+  }
+  if (!['assigned', 'in_progress'].includes(order.status)) {
+    throw Object.assign(new Error('not_active'), { status: 409 })
+  }
   const [row] = await db('order_subtasks').where({ id: subtaskId })
     .update({ status, reason_code, comment, completed_by_driver_id: driverId, completed_at: db.fn.now() })
     .returning('*')
@@ -77,7 +88,10 @@ export async function commitOrderByDriver(orderId, driverId) {
     await enqueue(trx, {
       event_type: 'order_attempt_committed', order_id: orderId,
       payload: { all_done: allDone, results },
-      event_key: `commit:${orderId}:${driverId}:${Date.now()}`,
+      // Ключ детерминирован по содержимому попытки (а не по Date.now()): повтор того же
+      // коммита (ретрай callback'а) дедупится outbox'ом, а новый коммит после переделки
+      // имеет иной набор статусов → не дедупится.
+      event_key: `commit:${orderId}:${driverId}:${results.map((r) => `${r.sub_no}${r.status}`).join('.')}`,
     })
 
     // Ни одного выполненного участка — подтверждать нечего, вся заявка обратно в пул.

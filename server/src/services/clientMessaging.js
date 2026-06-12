@@ -208,7 +208,9 @@ export async function onOrderAccepted(orderId, { userId = null, channels = 'outb
 // в тестах. Возвращает { token, body, report_url, delivery:{sent,failed,recipients} }.
 export async function confirmOrder(orderId, { userId = null, templateId, sendImpl = sendReportToClient } = {}) {
   const acc = await db.transaction(async (trx) => {
-    const order = await trx('orders').where({ id: orderId }).first()
+    // forUpdate: при гонке (двойной клик) второй запрос ждёт коммита первого, затем видит
+    // status='done' и падает в 409 — не будет повторной рассылки отчёта клиенту.
+    const order = await trx('orders').where({ id: orderId }).forUpdate().first()
     if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
     if (order.status !== 'awaiting_confirmation') {
       throw Object.assign(new Error('not_confirmable'), { status: 409 })

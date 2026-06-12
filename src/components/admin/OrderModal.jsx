@@ -46,7 +46,13 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
 
   const reload = useCallback(async () => {
     const full = await getOrder(order.id)
-    if (full) setData((d) => ({ ...d, ...full }))
+    if (full) {
+      setData((d) => ({ ...d, ...full }))
+      // Сбрасываем «принято» по участкам, которые больше не done (возвращены на пересъёмку):
+      // после переделки тот же участок снова станет done и потребует повторного просмотра пруфа.
+      const doneIds = new Set((full.subtasks || []).filter((s) => s.status === 'done').map((s) => s.id))
+      setAccepted((acc) => new Set([...acc].filter((id) => doneIds.has(id))))
+    }
   }, [order.id, getOrder])
 
   // ── Приёмка по участкам (awaiting_confirmation) ──

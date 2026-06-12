@@ -35,7 +35,15 @@ export async function sendReportToClient(orderId, { body, token, fetchImpl } = {
       if (out?.ok) {
         sent++
         if (t.kind === 'client') await conn('client_recipients').where({ id: t.id }).update({ last_sent_at: conn.fn.now() })
-      } else failed++
+      } else {
+        failed++
+        // Бот заблокирован / чат удалён (403/400) — деактивируем получателя, чтобы менеджер
+        // видел проблему и заново онбордил, а не молча терял все будущие отчёты.
+        if (out?.error_code === 403 || out?.error_code === 400) {
+          if (t.kind === 'client') await conn('client_recipients').where({ id: t.id }).update({ status: 'revoked', updated_at: conn.fn.now() })
+          else await conn('trusted_persons').where({ id: t.id }).update({ tg_status: 'revoked' })
+        }
+      }
     } catch { failed++ }
   }
   return { sent, failed, recipients: targets.length }

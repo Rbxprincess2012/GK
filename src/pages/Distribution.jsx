@@ -90,7 +90,9 @@ export default function Distribution() {
   const ordersByDriver = useMemo(() => {
     const m = {}
     for (const o of orders) {
-      if ((o.status === 'assigned' || o.status === 'in_progress') && o.shift_date?.slice(0, 10) === date && o.shift_type === shiftType && o.assigned_driver_id)
+      // Только распределённые, ещё НЕ отправленные в работу: in_progress живёт на экране
+      // «В работе», и «Расформировать» здесь не должно дёргать уже выданные водителю заявки.
+      if (o.status === 'assigned' && o.shift_date?.slice(0, 10) === date && o.shift_type === shiftType && o.assigned_driver_id)
         (m[o.assigned_driver_id] ||= []).push(o)
     }
     return m

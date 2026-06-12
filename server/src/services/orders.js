@@ -272,6 +272,11 @@ export async function updateOrder(id, payload) {
     if (payload.items) {
       const hasMoves = await trx('container_movements').where({ order_id: id }).first()
       if (hasMoves) throw Object.assign(new Error('items_locked'), { status: 409 })
+      // Заявка уже у водителя/на подтверждении/завершена — замена позиций снесла бы его
+      // под-задачи и пруфы (syncSubtasks удаляет pending исчезнувших участков). Блокируем.
+      if (['in_progress', 'awaiting_confirmation', 'done', 'closed'].includes(order.status)) {
+        throw Object.assign(new Error('items_locked'), { status: 409 })
+      }
       const itemIds = (await trx('order_items').where({ order_id: id }).select('id')).map((r) => r.id)
       if (itemIds.length) await trx('order_item_containers').whereIn('order_item_id', itemIds).del()
       await trx('order_items').where({ order_id: id }).del()

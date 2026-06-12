@@ -19,7 +19,10 @@ export async function issueInvite(clientId, kind) {
 // Привязать чат по коду: pending → active, проставить chat_id/title, погасить код.
 // null — если код не найден/уже погашен/не совпал kind.
 export async function bindByCode(verifyCode, { chat_id, kind, title }) {
-  const r = await db('client_recipients').where({ verify_code: verifyCode, status: 'pending' }).first()
+  const r = await db('client_recipients')
+    .where({ verify_code: verifyCode, status: 'pending' })
+    .where('verify_expires_at', '>', db.fn.now()) // просроченный код не привязываем
+    .first()
   if (!r || r.kind !== kind) return null
   const [row] = await db('client_recipients').where({ id: r.id }).update({
     chat_id, title: title || null, status: 'active',

@@ -377,7 +377,11 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
       if (d.mode === 'done' && !d.count) return ctx.reply('Нужен хотя бы один пруф: фото / видео / голос или текст.')
       ctx.session.step = null
       if (d.mode === 'done') {
-        await markSubtask(Number(d.subtaskId), { status: 'done', driverId })
+        try {
+          await markSubtask(Number(d.subtaskId), { status: 'done', driverId })
+        } catch {
+          return ctx.reply('Эта заявка уже не за вами или закрыта — отметить нельзя.')
+        }
         await ctx.reply(`✅ Участок отмечен выполненным (пруфов: ${d.count}).`)
       } else {
         await ctx.reply(d.count ? `Подтверждение сохранено (${d.count}).` : 'Ок.')
@@ -394,7 +398,11 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     // sr:<subId>:<orderId>:<code> — причина выбрана
     if (data.startsWith('sr:')) {
       const [, subId, orderId, code] = data.split(':')
-      await markSubtask(Number(subId), { status: 'failed', reason_code: code, comment: reasonLabel(code), driverId })
+      try {
+        await markSubtask(Number(subId), { status: 'failed', reason_code: code, comment: reasonLabel(code), driverId })
+      } catch {
+        return ctx.reply('Эта заявка уже не за вами или закрыта — отметить нельзя.')
+      }
       await ctx.reply(`Отмечено: не выполнено (${reasonLabel(code)}).`)
       return startProof(ctx, { subtaskId: Number(subId), orderId: Number(orderId), mode: 'failed' })
     }

@@ -37,6 +37,15 @@ describe('clientDelivery — рассылка отчёта', () => {
     expect(res).toEqual({ sent: 0, failed: 1, recipients: 1 })
   })
 
+  it('бот заблокирован (403) → получатель деактивируется (status revoked)', async () => {
+    const { order, active } = await fixture()
+    const fetchImpl = async () => ({ json: async () => ({ ok: false, error_code: 403 }) })
+    const res = await sendReportToClient(order.id, { body: 'x', token: 't', fetchImpl })
+    expect(res).toEqual({ sent: 0, failed: 1, recipients: 1 })
+    const row = await db('client_recipients').where({ id: active.id }).first()
+    expect(row.status).toBe('revoked')
+  })
+
   it('шлёт и активному доверенному лицу объекта (+ к получателю клиента)', async () => {
     const { cl, order } = await fixture()
     const [tp] = await db('trusted_persons')

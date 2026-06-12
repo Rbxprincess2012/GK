@@ -116,6 +116,15 @@ describe('subtasks — коммит', () => {
     expect(after[0].status).toBe('pending')
   })
 
+  it('markSubtask: чужой водитель → 403; не-активная заявка → 409', async () => {
+    const a = await mkDriver('A'); const b = await mkDriver('B')
+    const { order } = await fixture(a.id, [{ action: 'replace', section: '58' }])
+    const subs = await syncSubtasks(order.id)
+    await expect(markSubtask(subs[0].id, { status: 'done', driverId: b.id })).rejects.toMatchObject({ status: 403 })
+    await db('orders').where({ id: order.id }).update({ status: 'closed' })
+    await expect(markSubtask(subs[0].id, { status: 'done', driverId: a.id })).rejects.toMatchObject({ status: 409 })
+  })
+
   it('событие order_attempt_committed с результатами по участкам', async () => {
     const d = await mkDriver()
     const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }])

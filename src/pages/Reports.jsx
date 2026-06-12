@@ -50,11 +50,11 @@ export default function Reports() {
 
   return (
     <div className="a-page">
-      <div className="a-page-header">
+      <div className="a-page-header no-print">
         <h2>{user?.role === 'director' ? 'Статистика' : 'Отчёты'}</h2>
       </div>
 
-      <div className="a-tabs">
+      <div className="a-tabs no-print">
         <button className={'a-tab' + (tab === 'reports' ? ' is-active' : '')} onClick={() => setTab('reports')}>Статистика и нагрузка</button>
         <button className={'a-tab' + (tab === 'recon' ? ' is-active' : '')} onClick={() => setTab('recon')}>Сверка с водителем</button>
       </div>
