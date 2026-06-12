@@ -8,7 +8,7 @@ import { ymd } from '@/lib/orderUi'
 
 // Вложенная модалка переназначения невыполненного участка (поверх модалки приёмки).
 // «Назначить» → участок выносится в отдельную заявку и сразу назначается водителю на дату.
-// «Оставить в Задачах» → выносится в отдельную новую заявку в пул (менеджер распределит позже).
+// «Оставить в Заявках в работе» → выносится в отдельную новую заявку в пул (менеджер распределит позже).
 // props: subtask, onClose, onDone(result) — родитель перезагружает заявку, onClose закрывает.
 export function ReassignModal({ subtask, onClose, onDone }) {
   const { carryOverSubtask } = useOrdersStore()
@@ -46,16 +46,16 @@ export function ReassignModal({ subtask, onClose, onDone }) {
     setBusy(true)
     try {
       const res = await carryOverSubtask(subtask.id, null)
-      toast.success(`Участок оставлен в Задачах${res?.number ? `, №${res.number}` : ''}`)
+      toast.success(`Готово: отдельная заявка${res?.number ? ` №${res.number}` : ''} в «Заявках в работе»${res?.desired_date ? ` на ${res.desired_date.slice(0, 10)}` : ''}`)
       onDone(res)
-    } catch { toast.error('Не удалось оставить в Задачах') }
+    } catch { toast.error('Не удалось оставить в Заявках в работе') }
     finally { setBusy(false) }
   }
 
   const footer = (
     <>
       <button className="a-btn a-btn--ghost" onClick={onClose} disabled={busy}>Отмена</button>
-      <button className="a-btn a-btn--soft" onClick={doLeaveInTasks} disabled={busy}>Оставить в Задачах</button>
+      <button className="a-btn a-btn--soft" onClick={doLeaveInTasks} disabled={busy}>Оставить в Заявках в работе</button>
       <button className="a-btn a-btn--primary" onClick={doAssign} disabled={!driverId || busy}>Назначить</button>
     </>
   )
@@ -64,7 +64,7 @@ export function ReassignModal({ subtask, onClose, onDone }) {
     <Modal title={`Переназначить участок${subtask.section_name ? ` «${subtask.section_name}»` : ''}`} onClose={onClose} width={460} footer={footer}>
       <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 12 }}>
         Выберите дату и водителя — участок сразу уйдёт в работу. Если пока не готовы распределить —
-        «Оставить в Задачах»: участок останется отдельной новой заявкой.
+        «Оставить в Заявках в работе»: участок станет отдельной новой заявкой (дата — как у исходной).
       </div>
       <div className="a-field-row">
         <label className="a-field"><span>Дата исполнения</span>
