@@ -136,11 +136,13 @@ describe('подтверждение заявки менеджером → token
 })
 
 describe('очередь и публичный отчёт', () => {
-  it('GET /proof-review возвращает заявку с непросмотренными пруфами', async () => {
-    const { order } = await fixtures()
+  it('GET /proof-review возвращает заявку, ждущую подтверждения, с итогом по участкам', async () => {
+    const { order } = await fixtures({ status: 'awaiting_confirmation' })
     const res = await request(app).get('/api/proof-review')
     expect(res.status).toBe(200)
-    expect(res.body.map((o) => o.id)).toContain(order.id)
+    const row = res.body.find((o) => o.id === order.id)
+    expect(row).toBeTruthy()
+    expect(row.review_sections).toHaveLength(2) // оба участка с исходом
   })
 
   it('GET /r/:token — 200 и содержит участок; мусор → 404', async () => {

@@ -847,6 +847,29 @@
 .a-mtag--tg { color: #34a7e0; }
 .a-mtag--max { color: #9b85ff; font-size: 0.72rem; letter-spacing: 0.02em; }
 
+/* ── Раздел «Проверка»: история проверки пруфов ───────────────────────────── */
+.a-proof-group { margin-bottom: 14px; }
+.a-proof-date { font-size: 0.92rem; font-weight: 700; color: #c4d2ff; padding: 4px 2px 8px; }
+.a-proof-row { margin-bottom: 10px; cursor: pointer; transition: border-color .12s, background .12s; }
+.a-proof-row:hover { border-color: rgba(95,160,255,0.4); }
+/* завершённые (Принят заказ) — серые, уходят вниз */
+.a-proof-row--closed { opacity: 0.55; filter: grayscale(0.35); }
+.a-proof-row--closed:hover { opacity: 0.8; }
+.a-proof-closed-tag { margin-left: auto; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+  color: #9fb0d8; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px; padding: 2px 8px; text-transform: uppercase; }
+/* статусы по участкам — выровнены в столбцы по левому краю */
+.a-proof-secs { display: flex; flex-direction: column; gap: 3px; }
+.a-proof-sec { display: grid; grid-template-columns: minmax(0,1.4fr) 120px minmax(0,1.6fr);
+  align-items: center; gap: 12px; font-size: 0.86rem; }
+.a-proof-sec-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #dbe3ff; }
+.a-proof-sec-done.is-ok { color: #2ecc71; }
+.a-proof-sec-done.is-no { color: #ff8f8f; }
+.a-proof-sec-res { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-pd-ok { color: #2ecc71; font-weight: 600; }
+.a-pd-wait { color: #92a2d4; }
+.a-pd-move { color: #f4a840; }
+
 /* строка лица в списке (модалка доверенных лиц): имя | телефон | TG | MAX | действия.
    TG и MAX — отдельные фикс-столбцы, чтобы иконки выравнивались между строками
    (телега всегда слева, MAX всегда справа — не оказывается одна под другой). */
