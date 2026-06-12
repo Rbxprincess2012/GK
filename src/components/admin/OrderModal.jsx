@@ -11,7 +11,6 @@ import { ItemsEditor } from '@/components/admin/ItemsEditor'
 import { ProofGallery } from '@/components/admin/ProofGallery'
 import { SectionReview } from '@/components/admin/SectionReview'
 import { ReassignModal } from '@/components/admin/ReassignModal'
-import { ClientMessageModal } from '@/components/admin/ClientMessageModal'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, fmtDesiredTime, yandexMapsUrl } from '@/lib/orderUi'
 
@@ -40,8 +39,6 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
   })
   const [movements, setMovements] = useState([])
   const [photoUrl, setPhotoUrl] = useState('')
-  const [msgOpen, setMsgOpen] = useState(false)
-  const [confirmFlow, setConfirmFlow] = useState(false) // сообщение открыто после «Подтверждаю»
   const [proofBusy, setProofBusy] = useState(false)
   // Приёмка: локально принятые участки (фиксируются на сервере при «Принять заказ»).
   const [accepted, setAccepted] = useState(() => new Set())
@@ -112,20 +109,16 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     catch { toast.error('Можно закрыть только выполненную') }
   }
 
-  // «Принять заказ»: заявка → done, пруфы приняты, формируется и рассылается сообщение клиенту.
-  // Списки обновляем при закрытии окна сообщения (onChanged закрывает модалку).
+  // «Завершить работу над заявкой и оповестить клиента»: заявка → done, пруфы приняты,
+  // отчёт по шаблону автоматически уходит в Telegram-чат(ы) клиента (бот уже в группе).
   const doConfirm = async () => {
     try {
       const res = await confirm(order.id)
       const d = res?.delivery
-      if (d && d.recipients > 0) {
-        toast.success(`Отчёт отправлен получателям: ${d.sent}${d.failed ? `, ошибок ${d.failed}` : ''}`)
-        onChanged()
-      } else {
-        toast.success('Заказ принят. Получателей в Telegram нет — отправьте вручную.')
-        setConfirmFlow(true); setMsgOpen(true)
-      }
-    } catch { toast.error('Не удалось принять заказ') }
+      if (d && d.recipients > 0) toast.success(`Готово. Отчёт отправлен: ${d.sent}${d.failed ? `, ошибок ${d.failed}` : ''}`)
+      else toast.success('Готово. Получателей в Telegram пока нет — добавьте нашего бота в чат клиента в Настройках.')
+      onChanged()
+    } catch { toast.error('Не удалось завершить заявку') }
   }
 
   const doSendToOrders = async () => {
@@ -191,10 +184,9 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       {o.status === 'awaiting_confirmation' && (
         <button className="a-btn a-btn--primary" onClick={doConfirm} disabled={!canConfirm}
           title={!canConfirm ? 'Примите все выполненные участки и разрулите невыполненные' : undefined}>
-          Принять заказ
+          Завершить работу над заявкой и оповестить клиента
         </button>
       )}
-      {(o.status === 'done' || o.status === 'closed') && <button className="a-btn a-btn--ghost" onClick={() => setMsgOpen(true)}>✉ Сообщить клиенту</button>}
       {o.status === 'done' && <button className="a-btn a-btn--primary" onClick={doClose}>Закрыть заявку</button>}
     </>
   )
@@ -204,7 +196,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     <Modal
       title={<>
         {o.number ? `Заявка #${o.number}` : 'Входящая заявка'}
-        {STATUS[o.status] && <span className="a-modal-status" style={{ color: STATUS_TEXT[STATUS[o.status][1]] || '#92a2d4' }}> · {STATUS[o.status][0]}</span>}
+        {STATUS[o.status] && o.status !== 'awaiting_confirmation' && <span className="a-modal-status" style={{ color: STATUS_TEXT[STATUS[o.status][1]] || '#92a2d4' }}> · {STATUS[o.status][0]}</span>}
         {isCash(o)
           ? <span className="a-cash a-modal-pay">💵 {o.amount != null ? fmtMoney(o.amount) : 'нал'}</span>
           : <span className="a-modal-pay a-inline-meta">Безнал</span>}
@@ -411,7 +403,6 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         onDone={() => { setReassign(null); reload() }}
       />
     )}
-    {msgOpen && <ClientMessageModal order={o} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
     </>
   )
 }
