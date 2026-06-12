@@ -324,10 +324,12 @@
   gap: 6px;
   padding: 10px 18px;
   border-radius: 10px;
-  border: none;
+  /* прозрачный бордер + line-height — чтобы высота кнопки совпадала с высотой
+     соседнего поля (.a-input/.a-select: padding 10 + border 1 + текст) */
+  border: 1px solid transparent;
   font-size: 0.875rem;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.2;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -568,6 +570,7 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
+  min-width: 0; /* чтобы поля в .a-field-row сжимались, а не выезжали вправо (напр. «Оплата») */
 }
 
 .a-field span {
@@ -590,6 +593,9 @@
   outline: none;
   transition: border-color 0.15s;
   resize: vertical;
+  width: 100%;
+  min-width: 0; /* date-инпуты не сжимаются по умолчанию → даём сжиматься внутри flex */
+  box-sizing: border-box;
 }
 
 .a-field input:focus,
