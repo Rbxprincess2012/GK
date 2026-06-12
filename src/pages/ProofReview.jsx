@@ -1,19 +1,25 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useProofReviewStore } from '@/store/proofReviewStore'
 import { useDriversStore } from '@/store/driversStore'
+import { useOrdersStore } from '@/store/ordersStore'
 import { ProofGallery } from '@/components/admin/ProofGallery'
+import { OrderModal } from '@/components/admin/OrderModal'
 import { DesiredTime } from '@/components/admin/DesiredTime'
 import { useToast } from '@/components/admin/Toast'
-import { objectLine, streetLine } from '@/lib/orderUi'
+import { clientLegal, objectLine, streetLine } from '@/lib/orderUi'
 
 // Лента-очередь проверки пруфов: заявки с выполненными участками, ждущими модерации.
 export default function ProofReview() {
   const { queue, loading, fetchQueue, accept, reject } = useProofReviewStore()
   const { drivers, fetchDrivers } = useDriversStore()
+  const { getOrder } = useOrdersStore()
   const toast = useToast()
   const [date, setDate] = useState('')
   const [driverId, setDriverId] = useState('')
   const [busy, setBusy] = useState(false)
+  const [detail, setDetail] = useState(null) // заявка в единой модалке OrderModal
+
+  const openDetail = async (o) => { const full = await getOrder(o.id); setDetail({ ...o, ...full }) }
 
   const reload = useCallback(
     () => fetchQueue({ ...(date ? { date } : {}), ...(driverId ? { driver_id: driverId } : {}) }),
@@ -62,22 +68,44 @@ export default function ProofReview() {
         <div className="a-loading">Загрузка…</div>
       ) : queue.length === 0 ? (
         <div className="a-empty">Нет заявок, ожидающих проверки пруфов.</div>
-      ) : queue.map((o) => (
-        <div key={o.id} className="a-card" style={{ marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-            <b style={{ color: '#e8ecff' }}>Заявка №{o.number}</b>
-            <DesiredTime time={o.desired_time} />
-            <span className="a-muted">{objectLine(o)} · {streetLine(o)}</span>
-            {o.driver_name && <span className="a-muted">· {o.driver_name}</span>}
-            <button className="a-btn a-btn--success a-btn--sm" style={{ marginLeft: 'auto' }} disabled={busy} onClick={() => acceptAll(o)}>
-              ✅ Принять все
-            </button>
+      ) : queue.map((o) => {
+        const subs = o.subtasks || []
+        const undone = subs.filter((s) => s.status !== 'done')
+        return (
+          <div key={o.id} className="a-card" style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+              <b style={{ color: '#e8ecff' }}>Заявка №{o.number}</b>
+              <DesiredTime time={o.desired_time} />
+              <span className="a-muted">{[clientLegal(o), objectLine(o), streetLine(o)].filter(Boolean).join(' · ')}</span>
+              <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => openDetail(o)}>Открыть</button>
+                <button className="a-btn a-btn--success a-btn--sm" disabled={busy} onClick={() => acceptAll(o)}>✅ Принять все</button>
+              </span>
+            </div>
+            {/* Водитель и машина — отдельной строкой (П4) */}
+            <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 10 }}>
+              🚛 {o.driver_name || '—'}{o.veh_gov ? ` · ${o.veh_gov}` : ''}
+            </div>
+            {/* Все участки: выполненные — с галереей пруфов; невыполненные — строкой состояния (П2) */}
+            {subs.map((s) => (
+              s.status === 'done' || s.attachments?.length
+                ? <ProofGallery key={s.id} subtask={s} onAccept={onAccept} onReject={onReject} busy={busy} />
+                : <div key={s.id} className="a-muted" style={{ padding: '6px 0', fontSize: '0.86rem' }}>
+                    📍 {s.section_name || 'Объект целиком'} — <b style={{ color: '#ff8f8f' }}>не выполнен</b>{s.comment ? `: ${s.comment}` : ''}
+                  </div>
+            ))}
+            {undone.length > 0 && (
+              <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 6 }}>
+                Невыполненные участки разруливаются в окне заявки — нажмите «Открыть».
+              </div>
+            )}
           </div>
-          {(o.subtasks || []).filter((s) => s.status === 'done' || s.attachments?.length).map((s) => (
-            <ProofGallery key={s.id} subtask={s} onAccept={onAccept} onReject={onReject} busy={busy} />
-          ))}
-        </div>
-      ))}
+        )
+      })}
+
+      {detail && (
+        <OrderModal order={detail} onClose={() => setDetail(null)} onChanged={() => { setDetail(null); reload() }} />
+      )}
     </div>
   )
 }

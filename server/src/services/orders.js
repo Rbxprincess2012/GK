@@ -5,7 +5,29 @@ import { metricsForOrder } from './orderMetrics.js'
 import { syncSubtasks, createSubtasksForNewOrder } from './subtasks.js'
 
 async function assembleOrder(q, id) {
-  const order = await q('orders').where({ id }).first()
+  // Заголовочные данные (имена объекта/клиента/водителя/машины) — теми же JOIN'ами,
+  // что в listOrders, чтобы единая модалка и проверка пруфов имели полную шапку.
+  const order = await q('orders as o')
+    .leftJoin('clients as c', 'c.id', 'o.client_id')
+    .leftJoin('objects as ob', 'ob.id', 'o.object_id')
+    .leftJoin('streets as st', 'st.id', 'ob.street_id')
+    .leftJoin('districts as d', 'd.id', 'ob.district_id')
+    .leftJoin('drivers as dr', 'dr.id', 'o.assigned_driver_id')
+    .leftJoin('vehicles as v', 'v.id', 'o.vehicle_id')
+    .leftJoin('trusted_persons as tp', 'tp.id', 'o.trusted_person_id')
+    .where('o.id', id)
+    .select(
+      'o.*',
+      'c.nickname as client_nickname', 'c.legal_name as client_legal_name',
+      'tp.name as trusted_person_name', 'tp.phone as trusted_person_phone', 'tp.messengers as trusted_person_messengers',
+      'ob.informal_name as object_name', 'ob.house as object_house', 'ob.building as object_building',
+      'ob.city as city', 'ob.address_raw as address_raw', 'st.name as street_name',
+      'ob.lat as lat', 'ob.lng as lng',
+      'd.name as district', 'd.alias as district_alias', 'd.id as district_id',
+      'dr.name as driver_name',
+      'v.gov_number as veh_gov', 'v.model as veh_model',
+    )
+    .first()
   if (!order) return null
   const items = await q('order_items as oi')
     .leftJoin('container_types as ct', 'ct.id', 'oi.container_type_id')

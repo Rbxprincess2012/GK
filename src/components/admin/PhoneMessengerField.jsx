@@ -1,4 +1,5 @@
 import { toNational, toFull, formatNat } from '@/lib/phone'
+import maxLogo from '@/assets/max-logo.png'
 
 // Иконка Telegram (бумажный самолётик — официальный логотип, а не эмодзи-авиалайнер).
 export function TelegramIcon({ size = 13 }) {
@@ -9,22 +10,11 @@ export function TelegramIcon({ size = 13 }) {
   )
 }
 
-// Логотип мессенджера MAX: squircle с фирменным сине-голубым градиентом и белой «M».
+// Логотип мессенджера MAX — официальный (файл src/assets/max-logo.png от заказчика).
 // Единственный источник логотипа в проекте — используйте этот компонент везде.
 export function MaxIcon({ size = 14 }) {
-  const gid = 'max-g' // один градиент на документ — id может повторяться, браузер берёт первый
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id={gid} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#2ccbff" /><stop offset="1" stopColor="#2b7bff" />
-        </linearGradient>
-      </defs>
-      {/* squircle вместо прямого rx — ближе к фирменной форме */}
-      <path fill={`url(#${gid})`} d="M12 1.2c5.4 0 7.2.3 8.7 1.8C22.5 4.8 22.8 6.6 22.8 12s-.3 7.2-2.1 8.9c-1.5 1.6-3.3 1.9-8.7 1.9s-7.2-.3-8.7-1.9C1.5 19.2 1.2 17.4 1.2 12s.3-7.2 2.1-9C4.8 1.5 6.6 1.2 12 1.2z" />
-      <path fill="#fff" d="M6.3 17.4V6.6h2.5l3.2 4.9 3.2-4.9h2.5v10.8h-2.6v-6.5l-3.1 4.6-3.1-4.6v6.5z" />
-    </svg>
-  )
+  return <img src={maxLogo} width={size} height={size} alt="MAX" aria-hidden="true"
+    style={{ display: 'block', objectFit: 'contain' }} />
 }
 
 // Бейдж одного мессенджера: Telegram (логотип) или MAX (аватарка-иконка).
