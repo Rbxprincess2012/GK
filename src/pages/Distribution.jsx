@@ -10,7 +10,7 @@ import { Modal } from '@/components/admin/Modal'
 import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
-import { isCash, fmtMoney } from '@/lib/orderUi'
+import { isCash, cashLabel } from '@/lib/orderUi'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -40,7 +40,7 @@ function OrderCard({ o, onOpen }) {
     <div className="a-orderrow">
       <span className="a-orderrow-num">#{o.number}</span>
       <span className="a-orderrow-street" title={streetLine(o)}>
-        {isCash(o) && <span className="a-cash" style={{ marginRight: 6 }} title="Наличные">💵{o.amount != null ? ` ${fmtMoney(o.amount)}` : ''}</span>}
+        {isCash(o) && <span className="a-cash" style={{ marginRight: 6 }} title="Наличные">{cashLabel(o)}</span>}
         {streetLine(o)}
       </span>
       <span className="a-orderrow-obj a-muted" title={objectLine(o)}>{objectLine(o)}</span>

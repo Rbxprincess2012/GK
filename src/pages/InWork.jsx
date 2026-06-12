@@ -10,7 +10,7 @@ import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
 import { DesiredTime } from '@/components/admin/DesiredTime'
-import { isCash, fmtMoney } from '@/lib/orderUi'
+import { isCash, cashLabel } from '@/lib/orderUi'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -40,7 +40,7 @@ function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn })
       <div className="a-reviewcard-top">
         {seqNo != null && <span className="a-reviewcard-seq" title="Очередность исполнения">{seqNo}</span>}
         <span className="a-reviewcard-num">#{o.number}</span>
-        {isCash(o) && <span className="a-cash" title="Оплата наличными">💵 {o.amount != null ? fmtMoney(o.amount) : 'НАЛ'}</span>}
+        {isCash(o) && <span className="a-cash" title="Оплата наличными">{cashLabel(o)}</span>}
         <Lock size={13} className="a-lock" style={{ marginLeft: 'auto' }} />
       </div>
       <div className="a-reviewcard-line a-reviewcard-street">{addressLine(o)}</div>

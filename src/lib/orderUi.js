@@ -129,3 +129,5 @@ export function fmtMoney(a) {
   if (Number.isNaN(n)) return ''
   return n.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ₽'
 }
+// Единый ярлык нала на всех экранах (П17): «💵 1 500 ₽» или «💵 нал», если сумма не указана.
+export function cashLabel(o) { return `💵 ${fmtMoney(o?.amount) || 'нал'}` }

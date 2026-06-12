@@ -4,7 +4,7 @@ import { useContainersStore } from '@/store/containersStore'
 import { OrderModal } from '@/components/admin/OrderModal'
 import { CreateOrderModal } from '@/components/admin/CreateOrderModal'
 import { useToast } from '@/components/admin/Toast'
-import { STATUS, clientLegal, streetLine, objectLine, isCash, fmtMoney } from '@/lib/orderUi'
+import { STATUS, clientLegal, streetLine, objectLine, isCash, cashLabel } from '@/lib/orderUi'
 import { DesiredTime } from '@/components/admin/DesiredTime'
 
 const FILTERS = [['active', 'Новые и на проверке'], ['', 'Все'], ['new', 'Новые'], ['assigned', 'Назначены'], ['review', 'На проверке'], ['done', 'Выполнены'], ['closed', 'Закрыты']]
@@ -125,7 +125,7 @@ export default function Orders() {
                         <td><DesiredTime time={o.desired_time} compact /></td>
                         <td className="a-muted" title={clientLegal(o)}>{clientLegal(o)}</td>
                         <td>{isCash(o)
-                          ? <span className="a-cash" title="Наличные">💵 {o.amount != null ? fmtMoney(o.amount) : 'Нал'}</span>
+                          ? <span className="a-cash" title="Наличные">{cashLabel(o)}</span>
                           : <span className="a-muted">Безнал</span>}</td>
                         <td className="a-muted">{o.district ? (o.district_alias || o.district) : '—'}</td>
                         <td className="a-muted" title={o.driver_name || ''}>{o.driver_name || '—'}</td>

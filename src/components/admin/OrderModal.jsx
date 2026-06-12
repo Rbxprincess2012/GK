@@ -12,7 +12,7 @@ import { ProofGallery } from '@/components/admin/ProofGallery'
 import { SectionReview } from '@/components/admin/SectionReview'
 import { ReassignModal } from '@/components/admin/ReassignModal'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
-import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, fmtDesiredTime, yandexMapsUrl } from '@/lib/orderUi'
+import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, cashLabel, fmtDesiredTime, yandexMapsUrl } from '@/lib/orderUi'
 
 // Цвет текста статуса в шапке (тон бейджа, но без плашки — меньше визуального шума).
 const STATUS_TEXT = { purple: '#a87fff', orange: '#f4a840', green: '#2ecc71', red: '#ff4655' }
@@ -198,7 +198,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         {o.number ? `Заявка #${o.number}` : 'Входящая заявка'}
         {STATUS[o.status] && o.status !== 'awaiting_confirmation' && <span className="a-modal-status" style={{ color: STATUS_TEXT[STATUS[o.status][1]] || '#92a2d4' }}> · {STATUS[o.status][0]}</span>}
         {isCash(o)
-          ? <span className="a-cash a-modal-pay">💵 {o.amount != null ? fmtMoney(o.amount) : 'нал'}</span>
+          ? <span className="a-cash a-modal-pay">{cashLabel(o)}</span>
           : <span className="a-modal-pay a-inline-meta">Безнал</span>}
       </>}
       onClose={onClose} width={520} footer={footer}

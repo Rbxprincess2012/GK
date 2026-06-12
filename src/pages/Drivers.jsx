@@ -4,6 +4,7 @@ import { useVehiclesStore } from '@/store/vehiclesStore'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { PhoneMessengerField, MessengerTag } from '@/components/admin/PhoneMessengerField'
+import { formatPhone } from '@/lib/phone'
 
 const empty = { last_name: '', first_name: '', name: '', phone: '', messenger: null, is_active: true, default_vehicle_id: '' }
 const fullName = (last, first) => [last, first].map((s) => (s || '').trim()).filter(Boolean).join(' ')
@@ -75,7 +76,7 @@ export default function Drivers() {
             {drivers.map((d) => (
               <tr key={d.id} className={d.is_active ? '' : 'a-row--paused'}>
                 <td style={{ fontWeight: 600 }}>{d.name}</td>
-                <td className="a-muted">{d.phone || '—'}</td>
+                <td className="a-muted">{d.phone ? formatPhone(d.phone) : '—'}</td>
                 <td>{d.messenger ? <MessengerTag value={d.messenger} label /> : <span className="a-muted">—</span>}</td>
                 <td>{vehicleLabel(d.default_vehicle_id)}</td>
                 <td>
