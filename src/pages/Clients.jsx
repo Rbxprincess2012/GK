@@ -62,6 +62,7 @@ export default function Clients() {
   const [groupModal, setGroupModal] = useState(null) // group modal
   const [groupForm, setGroupForm] = useState({ name: '', note: '' })
   const [personsModal, setPersonsModal] = useState(null) // ГК для управления списком лиц
+  const [clientPersonsModal, setClientPersonsModal] = useState(null) // клиент вне ГК — свой список лиц
 
   useEffect(() => { fetchClients(); fetchGroups() }, [fetchClients, fetchGroups])
   const [searchParams, setSearchParams] = useSearchParams()
@@ -261,6 +262,9 @@ export default function Clients() {
                   <span className="a-muted">{c.requires_photo ? '📷 фотоотчёт' : 'без фото'}</span>
                 </span>
                 <div className="a-actions">
+                  {!c.group_id && (
+                    <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); setClientPersonsModal(c) }} title="Доверенные лица клиента">👤 Лица</button>
+                  )}
                   <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); openClient(c) }}>✎</button>
                   <button className="a-btn a-btn--danger a-btn--sm" onClick={(e) => { e.stopPropagation(); delClient(c) }}>✕</button>
                 </div>
@@ -570,6 +574,11 @@ export default function Clients() {
       {personsModal && (
         <GroupPersonsModal group={personsModal} onClose={() => setPersonsModal(null)} />
       )}
+
+      {/* ── Модалка доверенных лиц одиночного клиента (вне ГК) ── */}
+      {clientPersonsModal && (
+        <ClientPersonsModal client={clientPersonsModal} onClose={() => setClientPersonsModal(null)} />
+      )}
     </div>
   )
 }
@@ -749,6 +758,81 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
         </div>
       )}
     </>
+  )
+}
+
+// Центральный список доверенных лиц одиночного клиента (вне ГК).
+// Зеркало GroupPersonsModal, но пул считается по клиенту (poolForClient).
+function ClientPersonsModal({ client, onClose }) {
+  const { trustedByClient, fetchTrusted, addTrusted, updateTrusted, removeTrusted } = useClientsStore()
+  const toast = useToast()
+  const persons = trustedByClient[client.id] || []
+  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [] }
+  const [pf, setPf] = useState(emptyPf)
+
+  useEffect(() => { fetchTrusted(client.id) }, [client.id, fetchTrusted])
+
+  const openCreate = () => setPf({ ...emptyPf, open: true, mode: 'create' })
+  const openEdit = (p) => { const sp = splitName(p.name); setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [] }) }
+  const close = () => setPf(emptyPf)
+  const save = async () => {
+    if (!fullName(pf.last_name, pf.first_name)) { toast.error('Укажите фамилию или имя'); return }
+    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers }
+    try {
+      if (pf.mode === 'edit') await updateTrusted(pf.id, payload)
+      else await addTrusted({ client_id: client.id, ...payload })
+      await fetchTrusted(client.id); close()
+    } catch { toast.error('Не удалось сохранить') }
+  }
+  const del = async (p) => {
+    if (!(await toast.confirm(`Удалить лицо «${p.name}»? Оно снимется со всех объектов клиента.`))) return
+    try { await removeTrusted(p.id); await fetchTrusted(client.id) } catch { toast.error('Не удалось удалить') }
+  }
+
+  return (
+    <Modal title={`Доверенные лица — ${client.nickname || client.legal_name}`} onClose={onClose} width={520}>
+      <div className="a-muted" style={{ fontSize: '0.8rem', marginBottom: 8 }}>
+        Общий список лиц клиента. Доступны на всех его объектах. Если клиента позже добавить в группу компаний, лицами управляют на уровне ГК.
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {persons.length === 0 && <div className="a-empty">Лиц пока нет</div>}
+        {persons.map((p) => (
+          <div key={p.id} className="a-trust-row">
+            <span className="a-person-name" style={{ flex: '1 1 auto' }}>👤 {p.name}</span>
+            <span className="a-person-phone a-muted">{p.phone || '—'}</span>
+            <MessengerTag value={p.messengers} />
+            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
+            <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>
+          </div>
+        ))}
+      </div>
+
+      {!pf.open && (
+        <button type="button" className="a-btn a-btn--ghost a-btn--sm" style={{ marginTop: 10 }} onClick={openCreate}>+ Доверенное лицо</button>
+      )}
+
+      {pf.open && (
+        <div className="a-card" style={{ padding: 12, marginTop: 10 }}>
+          <div className="a-section-title" style={{ marginTop: 0 }}>{pf.mode === 'edit' ? 'Редактирование лица' : 'Новое лицо'}</div>
+          <div className="a-field-row">
+            <label className="a-field"><span>Фамилия</span>
+              <input className="a-input" autoFocus value={pf.last_name} onChange={(e) => setPf({ ...pf, last_name: e.target.value })} placeholder="Иванов" />
+            </label>
+            <label className="a-field"><span>Имя</span>
+              <input className="a-input" value={pf.first_name} onChange={(e) => setPf({ ...pf, first_name: e.target.value })} placeholder="Иван" />
+            </label>
+          </div>
+          <PhoneMessengerField
+            multi phone={pf.phone} messengers={pf.messengers}
+            onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>
+            <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={save} disabled={!fullName(pf.last_name, pf.first_name)}>Сохранить</button>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 
