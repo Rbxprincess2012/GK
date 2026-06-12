@@ -15,6 +15,9 @@ import { ClientMessageModal } from '@/components/admin/ClientMessageModal'
 import { DesiredTime, TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, yandexMapsUrl } from '@/lib/orderUi'
 
+// Цвет текста статуса в шапке (тон бейджа, но без плашки — меньше визуального шума).
+const STATUS_TEXT = { purple: '#a87fff', orange: '#f4a840', green: '#2ecc71', red: '#ff4655' }
+
 // Модалка управления заявкой: просмотр + правка (дата/объект/работы/комментарий) +
 // «Отправить в Заявки» (для входящих) + назначение / перенос / завершение / архив +
 // приёмка по участкам (статус «Ожидает подтверждения») с кнопкой «Принять заказ».
@@ -206,12 +209,14 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       />
     )}
     {msgOpen && <ClientMessageModal order={o} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
-    <Modal title={o.number ? `Заявка #${o.number}` : 'Входящая заявка'} onClose={onClose} width={520} footer={footer}>
+    <Modal
+      title={<>{o.number ? `Заявка #${o.number}` : 'Входящая заявка'}{STATUS[o.status] && <span className="a-modal-status" style={{ color: STATUS_TEXT[STATUS[o.status][1]] || '#92a2d4' }}> · {STATUS[o.status][0]}</span>}</>}
+      onClose={onClose} width={520} footer={footer}
+    >
       {!mode && (
         <>
-          {/* Статус + вид оплаты */}
+          {/* Вид оплаты (статус вынесен в шапку модалки) */}
           <div className="a-order-head">
-            <span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span>
             {isCash(o)
               ? <span className="a-cash a-cash--lg">💵 {o.amount != null ? `${fmtMoney(o.amount)} наличными` : 'наличные · сумма не указана'}</span>
               : <span className="a-inline-meta">Безналичный расчёт</span>}

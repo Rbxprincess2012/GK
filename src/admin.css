@@ -1097,6 +1097,8 @@
 }
 
 .a-modal-header h3 { margin: 0; font-size: 1.1rem; }
+/* Статус заявки в шапке — тем же шрифтом, что номер; без плашки (меньше шума). */
+.a-modal-status { font-weight: 600; }
 
 .a-close {
   background: none;
