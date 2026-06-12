@@ -845,6 +845,9 @@
 /* Бейдж мессенджера в списках */
 .a-mtag { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; vertical-align: middle; }
 .a-mtag--tg { color: #34a7e0; }
+.a-mtag--tg.is-active { color: #2ecc71; }
+.a-mtag--tg.is-pending { color: #f4a840; }
+.a-mtag--tg.is-off { color: #5b667e; }
 .a-mtag--max { color: #9b85ff; font-size: 0.72rem; letter-spacing: 0.02em; }
 
 /* ── Раздел «Проверка»: история проверки пруфов ───────────────────────────── */
@@ -878,6 +881,13 @@
 .a-person-row .a-person-phone { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .a-person-tg, .a-person-max { display: inline-flex; align-items: center; justify-content: center; }
 .a-person-row-actions { display: inline-flex; gap: 6px; justify-content: flex-end; }
+
+/* шапка модалки лиц: описание слева, «↻ Обновить» справа на одной линии */
+.a-persons-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.a-persons-head .a-btn { flex: 0 0 auto; white-space: nowrap; }
+/* футер карточки лица: кнопки одной высоты, делят ширину поровну по полям выше */
+.a-form-actions { display: flex; gap: 8px; margin-top: 12px; }
+.a-form-actions .a-btn { flex: 1; }
 
 /* адреса чатов под выбранными мессенджерами (куда слать точечно) */
 .a-chataddr { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }

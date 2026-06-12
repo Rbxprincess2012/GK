@@ -717,6 +717,19 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
 }
 
 // Центральный список доверенных лиц одиночного клиента (вне ГК).
+// TG-значок лица в списке: зелёный = привязан (active), янтарный = приглашение
+// отправлено (pending), серый = мессенджер выбран, но привязки ещё нет.
+function PersonTgTag({ on, status }) {
+  if (!on) return null
+  const cls = status === 'active' ? 'is-active' : status === 'pending' ? 'is-pending' : 'is-off'
+  const title = status === 'active'
+    ? 'Telegram привязан — отчёты приходят'
+    : status === 'pending'
+      ? 'Приглашение отправлено — ожидает'
+      : 'Telegram выбран, но не привязан'
+  return <span className={'a-mtag a-mtag--tg ' + cls} title={title}><TelegramIcon /></span>
+}
+
 // Зеркало GroupPersonsModal, но пул считается по клиенту (poolForClient).
 function ClientPersonsModal({ client, onClose }) {
   const { trustedByClient, fetchTrusted, addTrusted, updateTrusted, removeTrusted } = useClientsStore()
@@ -744,12 +757,17 @@ function ClientPersonsModal({ client, onClose }) {
     try { await removeTrusted(p.id); await fetchTrusted(client.id) } catch { toast.error('Не удалось удалить') }
   }
   const reloadPersons = () => fetchTrusted(client.id)
+  const [refreshing, setRefreshing] = useState(false)
+  const refresh = async () => { setRefreshing(true); try { await reloadPersons() } finally { setRefreshing(false) } }
   const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
 
   return (
     <Modal title={`Доверенные лица — ${client.nickname || client.legal_name}`} onClose={onClose} width={520}>
-      <div className="a-muted" style={{ fontSize: '0.8rem', marginBottom: 8 }}>
-        Общий список лиц клиента. Доступны на всех его объектах. Если клиента позже добавить в группу компаний, лицами управляют на уровне ГК.
+      <div className="a-persons-head">
+        <div className="a-muted" style={{ fontSize: '0.8rem' }}>
+          Общий список лиц клиента. Доступны на всех его объектах. Если клиента позже добавить в группу компаний, лицами управляют на уровне ГК.
+        </div>
+        <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={refresh} disabled={refreshing} title="Обновить статусы привязки Telegram">{refreshing ? '…' : '↻ Обновить'}</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {persons.length === 0 && <div className="a-empty">Лиц пока нет</div>}
@@ -757,7 +775,7 @@ function ClientPersonsModal({ client, onClose }) {
           <div key={p.id} className="a-person-row">
             <span className="a-person-name">👤 {p.name}</span>
             <span className="a-person-phone a-muted">{p.phone ? formatPhone(p.phone) : '—'}</span>
-            <span className="a-person-tg">{(p.messengers || []).includes('telegram') && <span className="a-mtag a-mtag--tg"><TelegramIcon /></span>}</span>
+            <span className="a-person-tg"><PersonTgTag on={(p.messengers || []).includes('telegram')} status={p.tg_status} /></span>
             <span className="a-person-max">{(p.messengers || []).includes('max') && <MaxIcon />}</span>
             <span className="a-person-row-actions">
               <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
@@ -795,9 +813,9 @@ function ClientPersonsModal({ client, onClose }) {
             onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
             onChanged={reloadPersons}
           />
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>
-            <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={save} disabled={!fullName(pf.last_name, pf.first_name)}>Сохранить</button>
+          <div className="a-form-actions">
+            <button type="button" className="a-btn a-btn--ghost" onClick={close}>Отмена</button>
+            <button type="button" className="a-btn a-btn--primary" onClick={save} disabled={!fullName(pf.last_name, pf.first_name)}>Сохранить</button>
           </div>
         </div>
       )}
@@ -832,12 +850,17 @@ function GroupPersonsModal({ group, onClose }) {
     try { await removeTrusted(p.id); await fetchGroupTrusted(group.id) } catch { toast.error('Не удалось удалить') }
   }
   const reloadPersons = () => fetchGroupTrusted(group.id)
+  const [refreshing, setRefreshing] = useState(false)
+  const refresh = async () => { setRefreshing(true); try { await reloadPersons() } finally { setRefreshing(false) } }
   const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
 
   return (
     <Modal title={`Доверенные лица — ${group.name}`} onClose={onClose} width={520}>
-      <div className="a-muted" style={{ fontSize: '0.8rem', marginBottom: 8 }}>
-        Общий список лиц группы. Доступны для всех юрлиц и объектов этой ГК.
+      <div className="a-persons-head">
+        <div className="a-muted" style={{ fontSize: '0.8rem' }}>
+          Общий список лиц группы. Доступны для всех юрлиц и объектов этой ГК.
+        </div>
+        <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={refresh} disabled={refreshing} title="Обновить статусы привязки Telegram">{refreshing ? '…' : '↻ Обновить'}</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {persons.length === 0 && <div className="a-empty">Лиц пока нет</div>}
@@ -845,7 +868,7 @@ function GroupPersonsModal({ group, onClose }) {
           <div key={p.id} className="a-person-row">
             <span className="a-person-name">👤 {p.name}</span>
             <span className="a-person-phone a-muted">{p.phone ? formatPhone(p.phone) : '—'}</span>
-            <span className="a-person-tg">{(p.messengers || []).includes('telegram') && <span className="a-mtag a-mtag--tg"><TelegramIcon /></span>}</span>
+            <span className="a-person-tg"><PersonTgTag on={(p.messengers || []).includes('telegram')} status={p.tg_status} /></span>
             <span className="a-person-max">{(p.messengers || []).includes('max') && <MaxIcon />}</span>
             <span className="a-person-row-actions">
               <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
@@ -883,9 +906,9 @@ function GroupPersonsModal({ group, onClose }) {
             onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
             onChanged={reloadPersons}
           />
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>
-            <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={save} disabled={!fullName(pf.last_name, pf.first_name)}>Сохранить</button>
+          <div className="a-form-actions">
+            <button type="button" className="a-btn a-btn--ghost" onClick={close}>Отмена</button>
+            <button type="button" className="a-btn a-btn--primary" onClick={save} disabled={!fullName(pf.last_name, pf.first_name)}>Сохранить</button>
           </div>
         </div>
       )}
