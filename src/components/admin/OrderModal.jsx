@@ -214,7 +214,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             <span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span>
             {isCash(o)
               ? <span className="a-cash a-cash--lg">💵 {o.amount != null ? `${fmtMoney(o.amount)} наличными` : 'наличные · сумма не указана'}</span>
-              : <span className="a-muted">Безналичный расчёт</span>}
+              : <span className="a-inline-meta">Безналичный расчёт</span>}
           </div>
 
           {/* Дата заезда */}
@@ -255,7 +255,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
               <div className="a-fl">Контакт</div>
               <div className="a-fv">
                 {o.trusted_person_name}
-                {o.trusted_person_phone && <a href={`tel:${o.trusted_person_phone}`} className="a-maplink">{o.trusted_person_phone}</a>}
+                {o.trusted_person_phone && <a href={`tel:${o.trusted_person_phone}`} className="a-inline-meta" style={{ textDecoration: 'none' }}>{o.trusted_person_phone}</a>}
               </div>
             </>
           )}

@@ -777,6 +777,10 @@
 
 .a-loading { text-align: center; padding: 32px; color: #92a2d4; }
 .a-muted { color: #92a2d4; }
+/* Текст в одном ряду с плашкой/бейджем — тот же размерный слой, что плашка. */
+.a-inline-meta { font-size: 0.78rem; font-weight: 600; color: #92a2d4; line-height: 1; }
+/* Второстепенный текст внутри модалки (коммент, движения) — тише «значений». */
+.a-modal-body .a-muted { font-size: 0.82rem; line-height: 1.5; }
 .a-nowrap { white-space: nowrap; }
 .a-details { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -807,7 +811,7 @@
   box-shadow: 0 0 0 2px rgba(255,210,46,0.28);
   white-space: nowrap;
 }
-.a-cash--lg { font-size: 0.84rem; padding: 4px 10px; border-radius: 8px; }
+.a-cash--lg { font-size: 0.78rem; padding: 4px 10px; border-radius: 8px; }
 /* подсветка поля суммы/селекта при выборе «нал» */
 .a-input--cash, .a-input--cash:focus {
   border-color: #ffd22e !important;
@@ -1508,16 +1512,17 @@
    различаются лишь отступом сверху → вся модалка читается ровно. */
 .a-order-head {
   display: flex; justify-content: space-between; align-items: center;
-  gap: 10px; margin-bottom: 16px;
+  gap: 10px; margin-bottom: 16px; line-height: 1;
 }
 .a-fl {
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
-  color: #92a2d4; font-weight: 700; margin: 12px 0 3px;
+  color: #92a2d4; font-weight: 700; margin: 12px 0 3px; line-height: 1.4;
 }
-.a-fv { color: #e8ecff; font-size: 0.95rem; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.a-fv--obj { font-weight: 700; font-size: 1.05rem; }
-.a-fsub { color: #92a2d4; font-size: 0.85rem; margin-top: 3px; }
-.a-fsub .a-maplink { color: #b9c4ef; }
+/* Все «значения» полей — один размер 0.9rem; акцент задаётся весом, не размером. */
+.a-fv { color: #e8ecff; font-size: 0.9rem; font-weight: 500; line-height: 1.5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.a-fv--obj { font-weight: 800; }
+.a-fsub { color: #92a2d4; font-size: 0.82rem; line-height: 1.5; margin-top: 3px; }
+.a-fsub .a-maplink { color: #92a2d4; }
 .a-empty { color: #92a2d4; font-size: 0.86rem; padding: 14px 0; }
 .a-linklike {
   background: none; border: none; padding: 0; cursor: pointer;
