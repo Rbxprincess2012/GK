@@ -8,6 +8,8 @@ import { STATUS, clientLegal, streetLine, objectLine, isCash, fmtMoney } from '@
 import { DesiredTime } from '@/components/admin/DesiredTime'
 
 const FILTERS = [['active', 'Новые и на проверке'], ['', 'Все'], ['new', 'Новые'], ['assigned', 'Назначены'], ['review', 'На проверке'], ['done', 'Выполнены'], ['closed', 'Закрыты']]
+// Заглушка: счётчики дня (всего / не распределено / просрочено) пока скрыты. Вернуть → true.
+const SHOW_DAY_COUNTERS = false
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 const MON_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
 
@@ -103,11 +105,15 @@ export default function Orders() {
                         <div className={'a-orders-group-head' + (overdue ? ' is-overdue' : '')}>
                           <span className="a-orders-group-date">{date ? dateLabel(date) : 'Без даты заезда'}</span>
                           {date === todayStr && <span className="a-badge a-badge--purple">сегодня</span>}
-                          {overdue && <span className="a-badge a-badge--red">просрочено</span>}
-                          <span className="a-count" title="всего заявок на дату">{list.length}</span>
-                          {unassigned > 0
-                            ? <span className="a-badge a-badge--orange" title="ещё не распределены">{unassigned} не распределено</span>
-                            : <span className="a-badge a-badge--green" title="все распределены">распределены</span>}
+                          {SHOW_DAY_COUNTERS && (
+                            <>
+                              {overdue && <span className="a-badge a-badge--red">просрочено</span>}
+                              <span className="a-count" title="всего заявок на дату">{list.length}</span>
+                              {unassigned > 0
+                                ? <span className="a-badge a-badge--orange" title="ещё не распределены">{unassigned} не распределено</span>
+                                : <span className="a-badge a-badge--green" title="все распределены">распределены</span>}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
