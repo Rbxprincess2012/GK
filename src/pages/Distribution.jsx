@@ -11,7 +11,6 @@ import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
 import { isCash, fmtMoney } from '@/lib/orderUi'
-import { DesiredTime } from '@/components/admin/DesiredTime'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -46,7 +45,6 @@ function OrderCard({ o, onOpen }) {
       </span>
       <span className="a-orderrow-obj a-muted" title={objectLine(o)}>{objectLine(o)}</span>
       <span className="a-orderrow-client a-muted" title={clientLegal(o)}>{clientLegal(o)}</span>
-      <DesiredTime time={o.desired_time} compact />
       <button
         className="a-orderrow-open"
         title="Открыть заявку — все поля, редактирование, комментарий клиента"
@@ -185,7 +183,7 @@ export default function Distribution() {
     >
       <div className="a-page">
         <div className="a-page-header">
-          <h2>Распределение <span className="a-count">{newOrders.length}</span></h2>
+          <h2>Распределение</h2>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, -1))} title="День назад">‹</button>
@@ -201,7 +199,7 @@ export default function Distribution() {
         </div>
 
         <div className="a-chip-bar">
-          <span className="a-muted" style={{ fontSize: '0.82rem' }}>Заявки на <b>{date}</b> — перетащите заявку на водителя, она сразу появится в «На проверке».</span>
+          <span className="a-muted" style={{ fontSize: '0.82rem' }}>Перетащите заявку на водителя справа — она появится в «На проверке».</span>
         </div>
 
         {suggestion && (
@@ -250,11 +248,10 @@ export default function Distribution() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'start' }}>
           {/* заявки по районам */}
           <div>
-            <div className="a-pool-hint">Нераспределённые</div>
             {byDistrict.length === 0 && <div className="a-card"><div className="a-empty">Нераспределённых заявок нет</div></div>}
             {byDistrict.map(([district, list]) => (
               <div key={district} className="a-card" style={{ marginBottom: 14 }}>
-                <div className="a-section-title" style={{ marginTop: 0 }}>{district} <span className="a-count">{list.length}</span></div>
+                <div className="a-section-title" style={{ marginTop: 0 }}>{district}</div>
                 <div className="a-orderrow a-orderrow--head">
                   <span className="a-orderrow-num">№</span>
                   <span className="a-orderrow-street">Улица</span>
@@ -273,7 +270,6 @@ export default function Distribution() {
 
           {/* водители-дроп-зоны */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="a-pool-hint">На смене</div>
             {available.length === 0 && <div className="a-empty">Никто не на смене. Откройте «График» и поставьте статус «Смена».</div>}
             {available.map((d) => {
               const cnt = (ordersByDriver[d.id] || []).length

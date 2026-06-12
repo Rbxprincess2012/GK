@@ -170,7 +170,7 @@ export default function InWork() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, -1))} title="День назад">‹</button>
-              <input className="a-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
+              <input className="a-input a-input--accent" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, 1))} title="День вперёд">›</button>
             </div>
           </div>
@@ -195,7 +195,6 @@ export default function InWork() {
                       <div style={{ fontWeight: 600 }}>{d.name}</div>
                       <DriverLoad orders={list} />
                     </div>
-                    <span className="a-badge" title="заявок">{list.length}</span>
                   </div>
                   <div className="a-reviewcol-body">
                     {list.length === 0 && <div className="a-muted" style={{ fontSize: '0.78rem', padding: '8px 4px' }}>перетащите сюда</div>}

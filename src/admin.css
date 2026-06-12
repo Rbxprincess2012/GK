@@ -436,6 +436,13 @@
 
 .a-input:focus { border-color: rgba(134,95,255,0.5); }
 .a-input--sm { padding: 6px 10px; font-size: 0.85rem; width: 90px; }
+/* Насыщенная заливка поля даты (акцент на выбранном дне, напр. «В работе») */
+.a-input--accent {
+  background: rgba(134,95,255,0.22);
+  border-color: rgba(134,95,255,0.55);
+  color: #e8ddff; font-weight: 600;
+}
+.a-input--accent:focus { border-color: rgba(134,95,255,0.85); }
 
 .a-price-input { width: 100%; min-width: 110px; box-sizing: border-box; }
 .a-price-input--auto { color: rgba(232,236,255,0.4); border-color: rgba(255,255,255,0.08); }

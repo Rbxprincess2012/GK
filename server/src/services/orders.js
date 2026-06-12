@@ -87,6 +87,15 @@ export function listOrders(filter = {}) {
         SELECT SUM(oi.quantity) FROM order_items oi
         WHERE oi.order_id = o.id AND oi.action IN ('replace','haul')
       ), 0)::int AS fulls`),
+      // Разбивка по участкам для карточек («📍 58 — 2 забрать»), без догрузки заявки.
+      db.raw(`COALESCE((
+        SELECT json_agg(json_build_object(
+          'id', oi.id, 'action', oi.action, 'quantity', oi.quantity,
+          'section_id', oi.section_id, 'section_name', sec.name
+        ) ORDER BY oi.id)
+        FROM order_items oi LEFT JOIN sections sec ON sec.id = oi.section_id
+        WHERE oi.order_id = o.id
+      ), '[]') AS items`),
     )
     .orderBy('o.number', 'desc')
   if (filter.id) q = q.where('o.id', filter.id)
