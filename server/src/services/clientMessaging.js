@@ -4,6 +4,7 @@ import { enqueue } from './outbox.js'
 import { config } from '../config.js'
 import { getSetting } from './settings.js'
 import { sendReportToClient } from './clientDelivery.js'
+import { carryOverSubtaskTx } from './subtasks.js'
 
 const BASE_URL = config.APP_URL || 'https://putevo.su'
 
@@ -212,6 +213,10 @@ export async function confirmOrder(orderId, { userId = null, templateId, sendImp
     if (order.status !== 'awaiting_confirmation') {
       throw Object.assign(new Error('not_confirmable'), { status: 409 })
     }
+    // Невыполненные участки, не разрулённые менеджером вручную, уходят в отдельные
+    // новые заявки (= «Оставить в Задачах»). Клиенту про них уйдёт строка в хвосте.
+    const leftovers = await trx('order_subtasks').where({ order_id: orderId }).whereNot('status', 'done')
+    for (const st of leftovers) await carryOverSubtaskTx(trx, st, order)
     await trx('orders').where({ id: orderId }).update({ status: 'done', done_at: order.done_at || trx.fn.now() })
     await trx('order_subtasks').where({ order_id: orderId })
       .update({ proof_status: 'accepted', reviewed_by: userId || null, reviewed_at: trx.fn.now() })

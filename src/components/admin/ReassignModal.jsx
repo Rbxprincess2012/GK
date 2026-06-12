@@ -1,0 +1,84 @@
+import { useEffect, useState } from 'react'
+import { Modal } from '@/components/admin/Modal'
+import { useToast } from '@/components/admin/Toast'
+import { useOrdersStore } from '@/store/ordersStore'
+import { useShiftsStore } from '@/store/shiftsStore'
+import { useDriversStore } from '@/store/driversStore'
+import { ymd } from '@/lib/orderUi'
+
+// Вложенная модалка переназначения невыполненного участка (поверх модалки приёмки).
+// «Назначить» → участок выносится в отдельную заявку и сразу назначается водителю на дату.
+// «Оставить в Задачах» → выносится в отдельную новую заявку в пул (менеджер распределит позже).
+// props: subtask, onClose, onDone(result) — родитель перезагружает заявку, onClose закрывает.
+export function ReassignModal({ subtask, onClose, onDone }) {
+  const { carryOverSubtask } = useOrdersStore()
+  const { fetchAvailable, available } = useShiftsStore()
+  const { drivers, fetchDrivers } = useDriversStore()
+  const toast = useToast()
+  const [shiftDate, setShiftDate] = useState(ymd(new Date()))
+  const [driverId, setDriverId] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => { fetchAvailable(shiftDate, 'day'); fetchDrivers() }, [shiftDate, fetchAvailable, fetchDrivers])
+
+  const doAssign = async () => {
+    const id = Number(driverId)
+    const onShift = available.find((d) => d.id === id)
+    const drv = drivers.find((d) => d.id === id)
+    setBusy(true)
+    try {
+      const res = await carryOverSubtask(subtask.id, {
+        driver_id: id,
+        shift_date: shiftDate,
+        shift_type: 'day',
+        vehicle_id: onShift?.vehicle_id ?? drv?.default_vehicle_id ?? null,
+      })
+      toast.success('Участок переназначен — в работе у водителя')
+      onDone(res)
+    } catch (e) {
+      toast.error(e?.response?.data?.error === 'driver_not_available'
+        ? 'Водитель недоступен в этот день (отпуск/больничный)'
+        : 'Не удалось переназначить')
+    } finally { setBusy(false) }
+  }
+
+  const doLeaveInTasks = async () => {
+    setBusy(true)
+    try {
+      const res = await carryOverSubtask(subtask.id, null)
+      toast.success(`Участок оставлен в Задачах${res?.number ? `, №${res.number}` : ''}`)
+      onDone(res)
+    } catch { toast.error('Не удалось оставить в Задачах') }
+    finally { setBusy(false) }
+  }
+
+  const footer = (
+    <>
+      <button className="a-btn a-btn--ghost" onClick={onClose} disabled={busy}>Отмена</button>
+      <button className="a-btn a-btn--soft" onClick={doLeaveInTasks} disabled={busy}>Оставить в Задачах</button>
+      <button className="a-btn a-btn--primary" onClick={doAssign} disabled={!driverId || busy}>Назначить</button>
+    </>
+  )
+
+  return (
+    <Modal title={`Переназначить участок${subtask.section_name ? ` «${subtask.section_name}»` : ''}`} onClose={onClose} width={460} footer={footer}>
+      <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 12 }}>
+        Выберите дату и водителя — участок сразу уйдёт в работу. Если пока не готовы распределить —
+        «Оставить в Задачах»: участок останется отдельной новой заявкой.
+      </div>
+      <div className="a-field-row">
+        <label className="a-field"><span>Дата исполнения</span>
+          <input className="a-input" type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} />
+        </label>
+        <label className="a-field"><span>Водитель</span>
+          <select className="a-select" value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+            <option value="">— выберите —</option>
+            {drivers.filter((d) => d.is_active).map((d) => (
+              <option key={d.id} value={d.id}>{d.name}{available.some((a) => a.id === d.id) ? ' · на смене' : ''}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </Modal>
+  )
+}

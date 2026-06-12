@@ -351,8 +351,47 @@
 }
 .a-btn--success:hover { background: rgba(74,222,128,0.22); }
 
+/* Принятый участок: «гасим» кнопку в серый (нейтральное состояние, можно отжать). */
+.a-btn--accepted {
+  background: rgba(255,255,255,0.06);
+  color: #92a2d4;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.a-btn--accepted:hover { background: rgba(255,255,255,0.1); color: #c4ccea; }
+
+/* Мягкие варианты — для второстепенных действий в нашем стиле. */
+.a-btn--soft {
+  background: rgba(96,165,250,0.12);
+  color: #93c5fd;
+  border: 1px solid rgba(96,165,250,0.25);
+}
+.a-btn--soft:hover { background: rgba(96,165,250,0.2); }
+.a-btn--soft-danger {
+  background: transparent;
+  color: #f08a8a;
+  border: 1px solid rgba(240,138,138,0.3);
+}
+.a-btn--soft-danger:hover { background: rgba(240,138,138,0.12); color: #ff9d9d; }
+
 .a-btn--sm { padding: 6px 12px; font-size: 0.8rem; }
 .a-btn--full { width: 100%; }
+
+/* ── Приёмка по участкам (SectionReview) ──────────────────────────────────── */
+.a-secrev {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.a-secrev-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.a-secrev-head b { color: #e8ecff; }
+.a-secrev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.a-secrev-actions { display: flex; gap: 6px; }
 
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 .a-input {

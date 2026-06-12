@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 // Одно вложение пруфа: фото (клик → новая вкладка), видео, голос или текст.
-function Attachment({ a }) {
+export function Attachment({ a }) {
   const box = { width: '100%', height: 96, objectFit: 'cover', borderRadius: 8, background: '#000', display: 'block' }
   if (a.kind === 'video') return <video src={a.file_url} controls preload="metadata" style={box} />
   if (a.kind === 'audio') return <audio src={a.file_url} controls style={{ width: '100%', gridColumn: '1 / -1' }} />

@@ -154,3 +154,45 @@ describe('очередь и публичный отчёт', () => {
     expect(bad.status).toBe(404)
   })
 })
+
+describe('приёмка: перенос невыполненного участка (carry-over)', () => {
+  it('POST /subtasks/:id/carry-over без assign → новая заявка «new» с участком', async () => {
+    const { order, s2 } = await fixtures({ status: 'awaiting_confirmation' })
+    await db('order_subtasks').where({ id: s2.id }).update({ status: 'failed', reason_code: 'blocked' })
+    const res = await request(app).post(`/api/subtasks/${s2.id}/carry-over`)
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('new')
+    expect(res.body.split_from_order_id).toBe(order.id)
+    const moved = await db('order_subtasks').where({ id: s2.id }).first()
+    expect(moved.order_id).toBe(res.body.id)
+    expect(moved.status).toBe('pending')
+    const left = await db('order_subtasks').where({ order_id: order.id })
+    expect(left).toHaveLength(1) // осталась только выполненная s1
+  })
+
+  it('POST /subtasks/:id/carry-over с assign → новая заявка «assigned» на водителя', async () => {
+    const { s2, drv } = await fixtures({ status: 'awaiting_confirmation' })
+    await db('order_subtasks').where({ id: s2.id }).update({ status: 'failed' })
+    const res = await request(app).post(`/api/subtasks/${s2.id}/carry-over`)
+      .send({ assign: { driver_id: drv.id, shift_date: '2026-06-15', shift_type: 'day' } })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('assigned')
+    expect(res.body.assigned_driver_id).toBe(drv.id)
+    expect(res.body.shift_date.slice(0, 10)).toBe('2026-06-15')
+  })
+
+  it('confirm с невыполненным участком → участок уходит в Задачи (new), заявка done', async () => {
+    const { order, s2 } = await fixtures({ status: 'awaiting_confirmation' })
+    await db('order_subtasks').where({ id: s2.id }).update({ status: 'failed', reason_code: 'blocked' })
+    const res = await request(app).post(`/api/orders/${order.id}/confirm`)
+    expect(res.status).toBe(200)
+    const o = await db('orders').where({ id: order.id }).first()
+    expect(o.status).toBe('done')
+    const child = await db('orders').where({ split_from_order_id: order.id }).first()
+    expect(child.status).toBe('new')
+    const movedS2 = await db('order_subtasks').where({ id: s2.id }).first()
+    expect(movedS2.order_id).toBe(child.id)
+    const msgs = await db('client_messages').where({ order_id: order.id })
+    expect(msgs[0].body).toContain('передали менеджеру')
+  })
+})

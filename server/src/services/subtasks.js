@@ -52,11 +52,10 @@ export async function markSubtask(subtaskId, { status, reason_code = null, comme
 }
 
 // «Завершить заявку»: коммит работы водителя по объекту.
-//  - есть хотя бы один done-участок → заявка → 'awaiting_confirmation' (ждёт менеджера),
-//    а КАЖДЫЙ невыполненный участок выделяется в ОТДЕЛЬНУЮ новую заявку (в пул, на ручную
-//    обработку); сама заявка остаётся только с выполненными участками;
-//  - ни одного done → вся заявка обратно в пул как 'new' (подтверждать нечего);
-//  - done-участки остаются закрытыми навсегда.
+//  - есть хотя бы один done-участок → заявка → 'awaiting_confirmation' (ждёт менеджера);
+//    ВСЕ участки (и выполненные, и невыполненные) остаются в заявке — невыполненные
+//    менеджер сам разрулит при приёмке (Переназначить / Оставить в Задачах);
+//  - ни одного done → вся заявка обратно в пул как 'new' (подтверждать нечего).
 // Клиенту уходит событие order_attempt_committed с результатами по участкам.
 // Защита: чужой водитель → 403; повторный коммит уже завершённой → no-op (idempotent).
 export async function commitOrderByDriver(orderId, driverId) {
@@ -91,37 +90,49 @@ export async function commitOrderByDriver(orderId, driverId) {
       return { order: finalOrder, all_done: false, carried_over: [] }
     }
 
-    // Невыполненные участки → каждый в отдельную новую заявку (тот же объект, только этот участок).
-    const carriedOver = []
-    for (const s of notDone) {
-      const [child] = await trx('orders').insert({
-        client_id: order.client_id,
-        object_id: order.object_id,
-        trusted_person_id: order.trusted_person_id,
-        payment_method: order.payment_method,
-        amount: null, // сумму по «остаточной» заявке менеджер назначит при перераспределении
-        desired_date: order.desired_date,
-        desired_time: order.desired_time,
-        note: order.note,
-        status: 'new',
-        number: trx.raw("nextval('orders_number_seq')"),
-        split_from_order_id: orderId,
-      }).returning('*')
-      // позиции этого участка и под-задачу — переносим на новую заявку
-      await trx('order_items').where({ order_id: orderId, section_id: s.section_id ?? null }).update({ order_id: child.id })
-      await trx('order_subtasks').where({ id: s.id }).update({
-        order_id: child.id, sub_no: 1, status: 'pending', proof_status: 'unreviewed',
-        reason_code: null, comment: null, completed_at: null, completed_by_driver_id: null,
-        review_comment: null, reviewed_by: null, reviewed_at: null,
-      })
-      await trx('attachments').where({ subtask_id: s.id }).update({ order_id: child.id })
-      const sec = s.section_id ? await trx('sections').where({ id: s.section_id }).first() : null
-      carriedOver.push({ order_id: child.id, number: child.number, section_id: s.section_id, section_name: sec?.name || null })
-    }
-
-    // На исходной заявке остаются только выполненные участки → ждёт подтверждения менеджера.
+    // Заявка ждёт приёмки менеджером; все участки (вкл. невыполненные) остаются в ней.
     await trx('orders').where({ id: orderId }).update({ status: 'awaiting_confirmation' })
     const finalOrder = await trx('orders').where({ id: orderId }).first()
-    return { order: finalOrder, all_done: allDone, carried_over: carriedOver }
+    return { order: finalOrder, all_done: allDone, carried_over: [] }
+  })
+}
+
+// Перенести один участок (под-задачу) в ОТДЕЛЬНУЮ новую заявку. Используется менеджером
+// при приёмке для невыполненных участков: «Оставить в Задачах» (assign=null → новая заявка
+// в пул) либо «Переназначить» (новая заявка + assign дату/водителя отдельным вызовом).
+// Переносит позиции участка, саму под-задачу и её вложения. Возвращает дочернюю заявку.
+async function carryOverSubtaskTx(trx, st, order) {
+  const [child] = await trx('orders').insert({
+    client_id: order.client_id,
+    object_id: order.object_id,
+    trusted_person_id: order.trusted_person_id,
+    payment_method: order.payment_method,
+    amount: null, // сумму «остаточной» заявки менеджер задаст при распределении
+    desired_date: order.desired_date,
+    desired_time: order.desired_time,
+    note: order.note,
+    status: 'new',
+    number: trx.raw("nextval('orders_number_seq')"),
+    split_from_order_id: order.id,
+  }).returning('*')
+  await trx('order_items').where({ order_id: order.id, section_id: st.section_id ?? null }).update({ order_id: child.id })
+  await trx('order_subtasks').where({ id: st.id }).update({
+    order_id: child.id, sub_no: 1, status: 'pending', proof_status: 'unreviewed',
+    reason_code: null, comment: null, completed_at: null, completed_by_driver_id: null,
+    review_comment: null, reviewed_by: null, reviewed_at: null,
+  })
+  await trx('attachments').where({ subtask_id: st.id }).update({ order_id: child.id })
+  return child
+}
+export { carryOverSubtaskTx }
+
+// Обёртка над carryOverSubtaskTx с собственной транзакцией (для роута /carry-over).
+export async function carryOverSubtask(subtaskId) {
+  return db.transaction(async (trx) => {
+    const st = await trx('order_subtasks').where({ id: subtaskId }).first()
+    if (!st) throw Object.assign(new Error('not_found'), { status: 404 })
+    const order = await trx('orders').where({ id: st.order_id }).first()
+    if (!order) throw Object.assign(new Error('not_found'), { status: 404 })
+    return carryOverSubtaskTx(trx, st, order)
   })
 }

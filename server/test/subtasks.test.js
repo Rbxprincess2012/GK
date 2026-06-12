@@ -83,7 +83,7 @@ describe('subtasks — коммит', () => {
     expect(res.order.status).toBe('awaiting_confirmation')
   })
 
-  it('часть done → невыполненный участок выделен в новую заявку, оригинал ждёт подтверждения', async () => {
+  it('часть done → ВСЕ участки остаются в заявке, оригинал ждёт подтверждения (split делает менеджер)', async () => {
     const d = await mkDriver()
     const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }, { action: 'replace', section: '63' }])
     const subs = await syncSubtasks(order.id)
@@ -93,18 +93,14 @@ describe('subtasks — коммит', () => {
     expect(res.all_done).toBe(false)
     expect(res.order.status).toBe('awaiting_confirmation')
     expect(res.order.assigned_driver_id).toBe(d.id) // водитель остаётся на подтверждаемой
-    expect(res.carried_over).toHaveLength(1)
-    // на оригинале остался только выполненный участок
-    const orig = await db('order_subtasks').where({ order_id: order.id })
-    expect(orig).toHaveLength(1)
-    expect(orig[0].status).toBe('done')
-    // выделенная заявка — в пул, со своим невыполненным участком (pending)
-    const child = await db('orders').where({ id: res.carried_over[0].order_id }).first()
-    expect(child.status).toBe('new')
-    expect(child.split_from_order_id).toBe(order.id)
-    const childSubs = await db('order_subtasks').where({ order_id: child.id })
-    expect(childSubs).toHaveLength(1)
-    expect(childSubs[0].status).toBe('pending')
+    expect(res.carried_over).toHaveLength(0) // авто-split больше нет
+    // оба участка остаются в заявке: done + failed
+    const orig = await db('order_subtasks').where({ order_id: order.id }).orderBy('sub_no')
+    expect(orig).toHaveLength(2)
+    expect(orig.map((s) => s.status).sort()).toEqual(['done', 'failed'])
+    // дочерних заявок не создано
+    const children = await db('orders').where({ split_from_order_id: order.id })
+    expect(children).toHaveLength(0)
   })
 
   it('ни одного done → вся заявка обратно в пул', async () => {

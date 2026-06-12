@@ -1,5 +1,7 @@
 import { Router } from 'express'
 import * as svc from '../services/proofReview.js'
+import { carryOverSubtask } from '../services/subtasks.js'
+import { assign } from '../services/orders.js'
 import { rejectInput } from '../validators/proofReview.js'
 import { requireRole } from '../middleware/authUser.js'
 
@@ -23,6 +25,26 @@ r.post('/subtasks/:id/reject', async (req, res, next) => {
   try {
     const { comment } = rejectInput.parse(req.body)
     res.json(await svc.rejectSubtask(Number(req.params.id), userId(req), comment))
+  } catch (e) { next(e) }
+})
+
+// Перенести невыполненный участок в отдельную новую заявку (приёмка менеджером).
+//  - без assign → заявка остаётся в Задачах как «Новая» («Оставить в Задачах»);
+//  - с assign {driver_id, shift_date, shift_type, vehicle_id?} → сразу назначается водителю.
+r.post('/subtasks/:id/carry-over', async (req, res, next) => {
+  try {
+    const child = await carryOverSubtask(Number(req.params.id))
+    const a = req.body?.assign
+    if (a && a.driver_id && a.shift_date) {
+      const assigned = await assign(child.id, {
+        driver_id: Number(a.driver_id),
+        shift_date: a.shift_date,
+        shift_type: a.shift_type || 'day',
+        vehicle_id: a.vehicle_id != null ? Number(a.vehicle_id) : null,
+      })
+      return res.json(assigned)
+    }
+    res.json(child)
   } catch (e) { next(e) }
 })
 

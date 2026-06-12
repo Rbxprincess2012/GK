@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useShiftsStore } from '@/store/shiftsStore'
@@ -9,32 +9,56 @@ import { useToast } from '@/components/admin/Toast'
 import { ContainerJob } from '@/components/admin/ContainerJob'
 import { ItemsEditor } from '@/components/admin/ItemsEditor'
 import { ProofGallery } from '@/components/admin/ProofGallery'
+import { SectionReview } from '@/components/admin/SectionReview'
+import { ReassignModal } from '@/components/admin/ReassignModal'
 import { ClientMessageModal } from '@/components/admin/ClientMessageModal'
 import { DesiredTime, TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, yandexMapsUrl } from '@/lib/orderUi'
 
 // Модалка управления заявкой: просмотр + правка (дата/объект/работы/комментарий) +
-// «Отправить в Заявки» (для входящих) + назначение / перенос / завершение / архив.
+// «Отправить в Заявки» (для входящих) + назначение / перенос / завершение / архив +
+// приёмка по участкам (статус «Ожидает подтверждения») с кнопкой «Принять заказ».
 // props: order (полный, с items), onClose, onChanged
 export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
-  const { assign, complete, close, accept, updateOrder, cancelOrder, confirm } = useOrdersStore()
+  const { assign, complete, close, accept, updateOrder, cancelOrder, confirm, getOrder } = useOrdersStore()
   const { fetchAvailable, available } = useShiftsStore()
   const { drivers, fetchDrivers } = useDriversStore()
   const { containers, fetchContainers } = useContainersStore()
   const toast = useToast()
+  // Локальная копия заявки: перезагружается на месте (приёмка не должна закрывать модалку).
+  const [data, setData] = useState(order)
+  const o = data
   const [mode, setMode] = useState(initialMode) // 'assign' | 'complete' | 'edit'
   const [editForm, setEditForm] = useState(null)
   const [assignForm, setAssignForm] = useState({
     shift_date: order.shift_date?.slice(0, 10) || ymd(new Date()),
     shift_type: order.shift_type || 'day',
-    driver_id: order.assigned_driver_id ? String(order.assigned_driver_id) : '', // по умолчанию — текущий водитель
+    driver_id: order.assigned_driver_id ? String(order.assigned_driver_id) : '',
   })
   const [movements, setMovements] = useState([])
   const [photoUrl, setPhotoUrl] = useState('')
   const [msgOpen, setMsgOpen] = useState(false)
   const [confirmFlow, setConfirmFlow] = useState(false) // сообщение открыто после «Подтверждаю»
   const [proofBusy, setProofBusy] = useState(false)
+  // Приёмка: локально принятые участки (фиксируются на сервере при «Принять заказ»).
+  const [accepted, setAccepted] = useState(() => new Set())
+  const [reassign, setReassign] = useState(null) // под-задача в дочерней модалке переназначения
 
+  const reload = useCallback(async () => {
+    const full = await getOrder(order.id)
+    if (full) setData((d) => ({ ...d, ...full }))
+  }, [order.id, getOrder])
+
+  // ── Приёмка по участкам (awaiting_confirmation) ──
+  const toggleAccept = (id) => setAccepted((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const doRejectSection = async (id, comment) => {
+    setProofBusy(true)
+    try { await api.post(`/subtasks/${id}/reject`, { comment }); toast.success('Возвращено водителю на пересъёмку'); await reload() }
+    catch { toast.error('Не удалось вернуть') }
+    finally { setProofBusy(false) }
+  }
+
+  // ── Приёмка пруфов на странице «Проверка пруфов» (другие статусы) ──
   const doAcceptSub = async (id) => {
     setProofBusy(true)
     try { await api.post(`/subtasks/${id}/accept`); toast.success('Пруф принят'); onChanged() }
@@ -55,7 +79,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
 
   const doAssign = async () => {
     const id = Number(assignForm.driver_id)
-    const onShiftDrv = available.find((d) => d.id === id) // машина смены, если водитель на смене
+    const onShiftDrv = available.find((d) => d.id === id)
     const drv = drivers.find((d) => d.id === id)
     try {
       await assign(order.id, {
@@ -64,7 +88,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         shift_type: assignForm.shift_type,
         vehicle_id: onShiftDrv?.vehicle_id ?? drv?.default_vehicle_id ?? null,
       })
-      toast.success(order.status === 'new' ? 'Назначено' : 'Перенесено'); onChanged()
+      toast.success(o.status === 'new' ? 'Назначено' : 'Перенесено'); onChanged()
     } catch (e) {
       toast.error(e?.response?.data?.error === 'driver_not_available' ? 'Водитель недоступен в этот день (отпуск/больничный)' : 'Ошибка назначения')
     }
@@ -85,8 +109,8 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     catch { toast.error('Можно закрыть только выполненную') }
   }
 
-  // «Подтверждаю»: заявка → done, формируется сообщение клиенту. Списки обновляем
-  // при закрытии окна сообщения (onChanged закрывает модалку — нельзя звать раньше).
+  // «Принять заказ»: заявка → done, пруфы приняты, формируется и рассылается сообщение клиенту.
+  // Списки обновляем при закрытии окна сообщения (onChanged закрывает модалку).
   const doConfirm = async () => {
     try {
       const res = await confirm(order.id)
@@ -95,13 +119,12 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         toast.success(`Отчёт отправлен получателям: ${d.sent}${d.failed ? `, ошибок ${d.failed}` : ''}`)
         onChanged()
       } else {
-        toast.success('Заявка подтверждена. Получателей в Telegram нет — отправьте вручную.')
+        toast.success('Заказ принят. Получателей в Telegram нет — отправьте вручную.')
         setConfirmFlow(true); setMsgOpen(true)
       }
-    } catch { toast.error('Не удалось подтвердить заявку') }
+    } catch { toast.error('Не удалось принять заказ') }
   }
 
-  // «Отправить в Заявки»: входящая (pending_review) → new + номер.
   const doSendToOrders = async () => {
     try { const r = await accept(order.id); toast.success(`Отправлено в Заявки, №${r.number}`); onChanged() }
     catch { toast.error('Не удалось отправить в Заявки') }
@@ -109,18 +132,17 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
 
   const startEdit = () => {
     setEditForm({
-      payment_method: order.payment_method || '',
-      amount: order.amount ?? '',
-      desired_date: order.desired_date?.slice(0, 10) || '',
-      desired_time: order.desired_time?.slice(0, 5) || '',
-      note: order.note || '',
-      items: (order.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null })),
+      payment_method: o.payment_method || '',
+      amount: o.amount ?? '',
+      desired_date: o.desired_date?.slice(0, 10) || '',
+      desired_time: o.desired_time?.slice(0, 5) || '',
+      note: o.note || '',
+      items: (o.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null })),
     })
     setMode('edit')
   }
 
   const doSave = async () => {
-    // Позиция = вид работы + количество (тип/класс на заглушке); пустой массив опускаем.
     const items = (editForm.items || [])
       .map((it) => ({ action: it.action, quantity: Math.max(1, Number(it.quantity) || 1), section_id: it.section_id ? Number(it.section_id) : null }))
     try {
@@ -142,7 +164,13 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     catch { toast.error('Не удалось убрать в архив') }
   }
 
-  const canAssign = ['new', 'assigned', 'in_progress'].includes(order.status)
+  // Гейт «Принять заказ»: все выполненные участки приняты локально + нет невыполненных.
+  const subs = o.subtasks || []
+  const doneSubs = subs.filter((s) => s.status === 'done')
+  const notDoneSubs = subs.filter((s) => s.status !== 'done')
+  const canConfirm = doneSubs.length > 0 && doneSubs.every((s) => accepted.has(s.id)) && notDoneSubs.length === 0
+
+  const canAssign = ['new', 'assigned', 'in_progress'].includes(o.status)
   const footer = mode ? (
     <>
       <button className="a-btn a-btn--ghost" onClick={() => setMode(null)}>Назад</button>
@@ -152,103 +180,133 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     </>
   ) : (
     <>
-      {order.status !== 'done' && order.status !== 'closed' && order.status !== 'cancelled' && <button className="a-btn a-btn--ghost" onClick={doArchive}>В архив</button>}
-      {order.status !== 'done' && order.status !== 'closed' && <button className="a-btn a-btn--ghost" onClick={startEdit}>✎ Редактировать</button>}
-      {order.status === 'pending_review' && <button className="a-btn a-btn--success" onClick={doSendToOrders}>Отправить в Заявки →</button>}
-      {canAssign && <button className="a-btn a-btn--primary" onClick={() => setMode('assign')}>{order.status === 'new' ? 'Назначить' : 'Переназначить / перенести'}</button>}
-      {(order.status === 'assigned' || order.status === 'in_progress') && <button className="a-btn a-btn--success" onClick={() => setMode('complete')}>Завершить</button>}
-      {order.status === 'awaiting_confirmation' && <button className="a-btn a-btn--success" onClick={doConfirm}>✓ Подтверждаю</button>}
-      {(order.status === 'done' || order.status === 'closed') && <button className="a-btn a-btn--ghost" onClick={() => setMsgOpen(true)}>✉ Сообщить клиенту</button>}
-      {order.status === 'done' && <button className="a-btn a-btn--primary" onClick={doClose}>Закрыть заявку</button>}
+      {o.status !== 'done' && o.status !== 'closed' && o.status !== 'cancelled' && o.status !== 'awaiting_confirmation' && <button className="a-btn a-btn--ghost" onClick={doArchive}>В архив</button>}
+      {o.status !== 'done' && o.status !== 'closed' && o.status !== 'awaiting_confirmation' && <button className="a-btn a-btn--ghost" onClick={startEdit}>✎ Редактировать</button>}
+      {o.status === 'pending_review' && <button className="a-btn a-btn--success" onClick={doSendToOrders}>Отправить в Заявки →</button>}
+      {canAssign && <button className="a-btn a-btn--primary" onClick={() => setMode('assign')}>{o.status === 'new' ? 'Назначить' : 'Переназначить / перенести'}</button>}
+      {(o.status === 'assigned' || o.status === 'in_progress') && <button className="a-btn a-btn--success" onClick={() => setMode('complete')}>Завершить</button>}
+      {o.status === 'awaiting_confirmation' && (
+        <button className="a-btn a-btn--primary" onClick={doConfirm} disabled={!canConfirm}
+          title={!canConfirm ? 'Примите все выполненные участки и разрулите невыполненные' : undefined}>
+          Принять заказ
+        </button>
+      )}
+      {(o.status === 'done' || o.status === 'closed') && <button className="a-btn a-btn--ghost" onClick={() => setMsgOpen(true)}>✉ Сообщить клиенту</button>}
+      {o.status === 'done' && <button className="a-btn a-btn--primary" onClick={doClose}>Закрыть заявку</button>}
     </>
   )
 
   return (
     <>
-    {msgOpen && <ClientMessageModal order={order} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
-    <Modal title={order.number ? `Заявка #${order.number}` : 'Входящая заявка'} onClose={onClose} width={520} footer={footer}>
+    {reassign && (
+      <ReassignModal
+        subtask={reassign}
+        onClose={() => setReassign(null)}
+        onDone={() => { setReassign(null); reload() }}
+      />
+    )}
+    {msgOpen && <ClientMessageModal order={o} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
+    <Modal title={o.number ? `Заявка #${o.number}` : 'Входящая заявка'} onClose={onClose} width={520} footer={footer}>
       {!mode && (
         <>
-          {/* Статус + вид оплаты — самое верхнее, крупным акцентом */}
+          {/* Статус + вид оплаты */}
           <div className="a-order-head">
-            <span className={`a-badge a-badge--${STATUS[order.status]?.[1]}`}>{STATUS[order.status]?.[0]}</span>
-            {isCash(order)
-              ? <span className="a-cash a-cash--lg">💵 {order.amount != null ? `${fmtMoney(order.amount)} наличными` : 'наличные · сумма не указана'}</span>
+            <span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span>
+            {isCash(o)
+              ? <span className="a-cash a-cash--lg">💵 {o.amount != null ? `${fmtMoney(o.amount)} наличными` : 'наличные · сумма не указана'}</span>
               : <span className="a-muted">Безналичный расчёт</span>}
           </div>
 
           {/* Дата заезда */}
           <div className="a-fl">Дата заезда</div>
           <div className="a-fv">
-            {order.desired_date?.slice(0, 10) || '—'}
-            <DesiredTime time={order.desired_time} />
+            {o.desired_date?.slice(0, 10) || '—'}
+            <DesiredTime time={o.desired_time} />
           </div>
 
           {/* Водитель */}
-          {order.driver_name && (
+          {o.driver_name && (
             <>
               <div className="a-fl">Водитель</div>
-              <div className="a-fv">{order.driver_name}{order.shift_date ? ` · ${order.shift_date.slice(0, 10)}` : ''}</div>
+              <div className="a-fv">{o.driver_name}{o.shift_date ? ` · ${o.shift_date.slice(0, 10)}` : ''}</div>
             </>
           )}
 
           {/* Объект + адрес */}
           <div className="a-fl">Объект</div>
-          <div className="a-fv a-fv--obj">{objectLine(order)}</div>
+          <div className="a-fv a-fv--obj">{objectLine(o)}</div>
           <div className="a-fsub">
             {(() => {
-              const u = yandexMapsUrl(order)
+              const u = yandexMapsUrl(o)
               return u
-                ? <a href={u} target="_blank" rel="noreferrer" className="a-maplink" title="Открыть точку в Яндекс.Картах">📍 {streetLine(order)}</a>
-                : <>📍 {streetLine(order)}</>
+                ? <a href={u} target="_blank" rel="noreferrer" className="a-maplink" title="Открыть точку в Яндекс.Картах">📍 {streetLine(o)}</a>
+                : <>📍 {streetLine(o)}</>
             })()}
-            {(order.district_alias || order.district) ? ` · ${order.district_alias || order.district}` : ''}
+            {(o.district_alias || o.district) ? ` · ${o.district_alias || o.district}` : ''}
           </div>
 
           {/* Заказчик */}
           <div className="a-fl">Заказчик</div>
-          <div className="a-fv">{clientLegal(order)}</div>
+          <div className="a-fv">{clientLegal(o)}</div>
 
-          {/* Доверенное лицо (телефон кликабельный) */}
-          {order.trusted_person_name && (
+          {/* Доверенное лицо */}
+          {o.trusted_person_name && (
             <>
               <div className="a-fl">Контакт</div>
               <div className="a-fv">
-                {order.trusted_person_name}
-                {order.trusted_person_phone && <a href={`tel:${order.trusted_person_phone}`} className="a-maplink">{order.trusted_person_phone}</a>}
+                {o.trusted_person_name}
+                {o.trusted_person_phone && <a href={`tel:${o.trusted_person_phone}`} className="a-maplink">{o.trusted_person_phone}</a>}
               </div>
             </>
           )}
 
           {/* Участки / действия + плашка + рейсы */}
-          {(order.items?.length > 0 || order.empties > 0 || order.fulls > 0) && (
+          {(o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (
             <>
               <div className="a-section-title">Участки — задание водителю</div>
-              <ContainerJob o={order} />
+              <ContainerJob o={o} />
             </>
           )}
 
-          {/* Проверка пруфов по участкам */}
-          {order.subtasks?.some((s) => s.status === 'done' || s.attachments?.length) && (
+          {/* Приёмка по участкам (Ожидает подтверждения) */}
+          {o.status === 'awaiting_confirmation' && subs.length > 0 && (
+            <>
+              <div className="a-section-title">Приёмка по участкам</div>
+              {subs.map((s) => (
+                <SectionReview
+                  key={s.id}
+                  subtask={s}
+                  accepted={accepted.has(s.id)}
+                  onToggleAccept={toggleAccept}
+                  onReject={doRejectSection}
+                  onReassign={(st) => setReassign(st)}
+                  busy={proofBusy}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Проверка пруфов (прочие статусы — очередь «Проверка пруфов») */}
+          {o.status !== 'awaiting_confirmation' && o.subtasks?.some((s) => s.status === 'done' || s.attachments?.length) && (
             <>
               <div className="a-section-title">Проверка пруфов</div>
-              {order.subtasks.filter((s) => s.status === 'done' || s.attachments?.length).map((s) => (
+              {o.subtasks.filter((s) => s.status === 'done' || s.attachments?.length).map((s) => (
                 <ProofGallery key={s.id} subtask={s} onAccept={doAcceptSub} onReject={doRejectSub} busy={proofBusy} />
               ))}
             </>
           )}
 
-          {/* Комментарий — показываем только если есть */}
-          {order.note && (
+          {/* Комментарий */}
+          {o.note && (
             <>
               <div className="a-section-title">Комментарий</div>
-              <div className="a-muted" style={{ whiteSpace: 'pre-wrap' }}>{order.note}</div>
+              <div className="a-muted" style={{ whiteSpace: 'pre-wrap' }}>{o.note}</div>
             </>
           )}
 
-          {order.movements?.length > 0 && (
+          {o.movements?.length > 0 && (
             <><div className="a-section-title">Движения контейнеров</div>
-              {order.movements.map((m) => (
+              {o.movements.map((m) => (
                 <div key={m.id} className="a-muted">{m.direction === 'delivered' ? 'Привезён' : 'Забран'} контейнер #{m.container_id}</div>
               ))}
             </>

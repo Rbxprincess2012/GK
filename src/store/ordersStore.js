@@ -128,6 +128,14 @@ export const useOrdersStore = create((set, get) => ({
     return data
   },
 
+  // Перенести невыполненный участок (под-задачу) в отдельную новую заявку.
+  //  assign = { driver_id, shift_date, shift_type, vehicle_id } → сразу назначить водителю;
+  //  assign = null → «Оставить в Задачах» (новая заявка в пул).
+  carryOverSubtask: async (subtaskId, assign = null) => {
+    const { data } = await api.post(`/subtasks/${subtaskId}/carry-over`, assign ? { assign } : {})
+    return data
+  },
+
   getByStatus: (status) => get().orders.filter((o) => o.status === status),
 
   getTodayOrders: () => {
