@@ -99,19 +99,7 @@ export default function Orders() {
             </div>
 
             <div className="a-table-wrap">
-              <table className="a-table a-table--fixed a-table--rows">
-                <colgroup>
-                  <col style={{ width: 54 }} />
-                  <col style={{ width: '19%' }} />
-                  <col style={{ width: '21%' }} />
-                  <col style={{ width: 88 }} />
-                  <col style={{ width: '17%' }} />
-                  <col style={{ width: 96 }} />
-                  <col style={{ width: 112 }} />
-                  <col style={{ width: 140 }} />
-                  <col style={{ width: 120 }} />
-                  <col style={{ width: 92 }} />
-                </colgroup>
+              <table className="a-table">
                 <thead>
                   <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
                 </thead>

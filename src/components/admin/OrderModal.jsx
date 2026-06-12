@@ -210,18 +210,17 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     )}
     {msgOpen && <ClientMessageModal order={o} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
     <Modal
-      title={<>{o.number ? `Заявка #${o.number}` : 'Входящая заявка'}{STATUS[o.status] && <span className="a-modal-status" style={{ color: STATUS_TEXT[STATUS[o.status][1]] || '#92a2d4' }}> · {STATUS[o.status][0]}</span>}</>}
+      title={<>
+        {o.number ? `Заявка #${o.number}` : 'Входящая заявка'}
+        {STATUS[o.status] && <span className="a-modal-status" style={{ color: STATUS_TEXT[STATUS[o.status][1]] || '#92a2d4' }}> · {STATUS[o.status][0]}</span>}
+        {isCash(o)
+          ? <span className="a-cash a-modal-pay">💵 {o.amount != null ? fmtMoney(o.amount) : 'нал'}</span>
+          : <span className="a-modal-pay a-inline-meta">Безнал</span>}
+      </>}
       onClose={onClose} width={520} footer={footer}
     >
       {!mode && (
         <>
-          {/* Вид оплаты (статус вынесен в шапку модалки) */}
-          <div className="a-order-head">
-            {isCash(o)
-              ? <span className="a-cash a-cash--lg">💵 {o.amount != null ? `${fmtMoney(o.amount)} наличными` : 'наличные · сумма не указана'}</span>
-              : <span className="a-inline-meta">Безналичный расчёт</span>}
-          </div>
-
           {/* Дата заезда */}
           <div className="a-fl">Дата заезда</div>
           <div className="a-fv">
