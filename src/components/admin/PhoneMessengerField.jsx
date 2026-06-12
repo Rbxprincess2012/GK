@@ -1,3 +1,5 @@
+import { toNational, toFull, formatNat } from '@/lib/phone'
+
 // Иконка Telegram (бумажный самолётик — официальный логотип, а не эмодзи-авиалайнер).
 export function TelegramIcon({ size = 13 }) {
   return (
@@ -64,23 +66,6 @@ export function MessengerChatInputs({ messengers = [], chats = {}, onChange }) {
 // Поле телефона с автоматическим префиксом +7 и выбором мессенджера (Telegram / MAX).
 // Значение наружу — полный номер вида "+79991234567" и messenger: 'telegram'|'max'|null.
 // Используется в формах водителя и доверенного лица.
-
-function digitsOnly(s) { return (s || '').replace(/\D/g, '') }
-// Национальная часть (10 цифр) из любого формата: убираем ведущую 7/8.
-function toNational(phone) {
-  let d = digitsOnly(phone)
-  if (d.startsWith('7') || d.startsWith('8')) d = d.slice(1)
-  return d.slice(0, 10)
-}
-function toFull(national) { return national ? '+7' + national : '' }
-function formatNat(d) {
-  if (!d) return ''
-  let s = d.slice(0, 3)
-  if (d.length > 3) s += ' ' + d.slice(3, 6)
-  if (d.length > 6) s += '-' + d.slice(6, 8)
-  if (d.length > 8) s += '-' + d.slice(8, 10)
-  return s
-}
 
 // multi=false → одиночный выбор, наружу { phone, messenger }.
 // multi=true  → можно отметить оба, наружу { phone, messengers: [...] }.

@@ -5,7 +5,8 @@ import api from '@/lib/api'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { StreetPicker } from '@/components/admin/StreetPicker'
-import { PhoneMessengerField, MessengerTag, MessengerChatInputs } from '@/components/admin/PhoneMessengerField'
+import { PhoneMessengerField, MessengerTag, MessengerChatInputs, TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
+import { formatPhone } from '@/lib/phone'
 import { ClientRecipients } from '@/components/admin/ClientRecipients'
 
 const PAY = { cashless: 'Безнал', cash: 'Нал' }
@@ -310,7 +311,7 @@ export default function Clients() {
                                 <span key={i} className="a-obj-cell a-person-line">
                                   {r.person ? <>
                                     <span className="a-person-name">👤 {r.person.name}</span>
-                                    <span className="a-person-phone a-muted">{r.person.phone || '—'}</span>
+                                    <span className="a-person-phone a-muted">{r.person.phone ? formatPhone(r.person.phone) : '—'}</span>
                                     <MessengerTag value={r.person.messengers} />
                                   </> : <span className="a-muted">—</span>}
                                 </span>
@@ -813,8 +814,9 @@ function ClientPersonsModal({ client, onClose }) {
         {persons.map((p) => (
           <div key={p.id} className="a-person-row">
             <span className="a-person-name">👤 {p.name}</span>
-            <span className="a-person-phone a-muted">{p.phone || '—'}</span>
-            <span className="a-person-row-msgr"><MessengerTag value={p.messengers} /></span>
+            <span className="a-person-phone a-muted">{p.phone ? formatPhone(p.phone) : '—'}</span>
+            <span className="a-person-tg">{(p.messengers || []).includes('telegram') && <span className="a-mtag a-mtag--tg"><TelegramIcon /></span>}</span>
+            <span className="a-person-max">{(p.messengers || []).includes('max') && <MaxIcon />}</span>
             <span className="a-person-row-actions">
               <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
               <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>
@@ -893,8 +895,9 @@ function GroupPersonsModal({ group, onClose }) {
         {persons.map((p) => (
           <div key={p.id} className="a-person-row">
             <span className="a-person-name">👤 {p.name}</span>
-            <span className="a-person-phone a-muted">{p.phone || '—'}</span>
-            <span className="a-person-row-msgr"><MessengerTag value={p.messengers} /></span>
+            <span className="a-person-phone a-muted">{p.phone ? formatPhone(p.phone) : '—'}</span>
+            <span className="a-person-tg">{(p.messengers || []).includes('telegram') && <span className="a-mtag a-mtag--tg"><TelegramIcon /></span>}</span>
+            <span className="a-person-max">{(p.messengers || []).includes('max') && <MaxIcon />}</span>
             <span className="a-person-row-actions">
               <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
               <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>

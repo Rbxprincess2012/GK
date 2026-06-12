@@ -847,11 +847,13 @@
 .a-mtag--tg { color: #34a7e0; }
 .a-mtag--max { color: #9b85ff; font-size: 0.72rem; letter-spacing: 0.02em; }
 
-/* строка лица в списке (модалка доверенных лиц): имя | телефон | мессенджеры | действия */
-.a-person-row { display: grid; grid-template-columns: minmax(0,1fr) 150px 58px auto; align-items: center; gap: 10px; }
+/* строка лица в списке (модалка доверенных лиц): имя | телефон | TG | MAX | действия.
+   TG и MAX — отдельные фикс-столбцы, чтобы иконки выравнивались между строками
+   (телега всегда слева, MAX всегда справа — не оказывается одна под другой). */
+.a-person-row { display: grid; grid-template-columns: minmax(0,1fr) 150px 20px 20px auto; align-items: center; gap: 10px; }
 .a-person-row .a-person-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .a-person-row .a-person-phone { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.a-person-row-msgr { display: inline-flex; gap: 6px; align-items: center; }
+.a-person-tg, .a-person-max { display: inline-flex; align-items: center; justify-content: center; }
 .a-person-row-actions { display: inline-flex; gap: 6px; justify-content: flex-end; }
 
 /* адреса чатов под выбранными мессенджерами (куда слать точечно) */
