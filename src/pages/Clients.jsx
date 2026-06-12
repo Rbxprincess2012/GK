@@ -5,7 +5,7 @@ import api from '@/lib/api'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { StreetPicker } from '@/components/admin/StreetPicker'
-import { PhoneMessengerField, MessengerTag } from '@/components/admin/PhoneMessengerField'
+import { PhoneMessengerField, MessengerTag, MessengerChatInputs } from '@/components/admin/PhoneMessengerField'
 import { ClientRecipients } from '@/components/admin/ClientRecipients'
 
 const PAY = { cashless: 'Безнал', cash: 'Нал' }
@@ -604,7 +604,7 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
   const { trustedByClient, fetchTrusted, addTrusted, updateTrusted, addSection, removeSection } = useClientsStore()
   const toast = useToast()
   const persons = trustedByClient[clientId] || []
-  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [], forSection: null }
+  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [], chats: {}, forSection: null }
   const [pf, setPf] = useState(emptyPf)
   // Черновики новых участков: каждая строка — поле + своя кнопка «Сохранить».
   const [drafts, setDrafts] = useState([])
@@ -653,12 +653,12 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
     const p = persons.find((x) => x.id === personId)
     if (!p) return
     const sp = splitName(p.name)
-    setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [], forSection: null })
+    setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [], chats: p.chats || {}, forSection: null })
   }
   const closePf = () => setPf(emptyPf)
   const savePf = async () => {
     if (!fullName(pf.last_name, pf.first_name)) { toast.error('Укажите фамилию или имя'); return }
-    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers }
+    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers, chats: pf.chats || {} }
     try {
       if (pf.mode === 'edit') {
         await updateTrusted(pf.id, payload)
@@ -749,6 +749,10 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
             multi phone={pf.phone} messengers={pf.messengers}
             onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
           />
+          <MessengerChatInputs
+            messengers={pf.messengers} chats={pf.chats}
+            onChange={(chats) => setPf({ ...pf, chats })}
+          />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={closePf}>Отмена</button>
             <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={savePf} disabled={!fullName(pf.last_name, pf.first_name)}>
@@ -767,17 +771,17 @@ function ClientPersonsModal({ client, onClose }) {
   const { trustedByClient, fetchTrusted, addTrusted, updateTrusted, removeTrusted } = useClientsStore()
   const toast = useToast()
   const persons = trustedByClient[client.id] || []
-  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [] }
+  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [], chats: {} }
   const [pf, setPf] = useState(emptyPf)
 
   useEffect(() => { fetchTrusted(client.id) }, [client.id, fetchTrusted])
 
   const openCreate = () => setPf({ ...emptyPf, open: true, mode: 'create' })
-  const openEdit = (p) => { const sp = splitName(p.name); setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [] }) }
+  const openEdit = (p) => { const sp = splitName(p.name); setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [], chats: p.chats || {} }) }
   const close = () => setPf(emptyPf)
   const save = async () => {
     if (!fullName(pf.last_name, pf.first_name)) { toast.error('Укажите фамилию или имя'); return }
-    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers }
+    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers, chats: pf.chats || {} }
     try {
       if (pf.mode === 'edit') await updateTrusted(pf.id, payload)
       else await addTrusted({ client_id: client.id, ...payload })
@@ -797,12 +801,14 @@ function ClientPersonsModal({ client, onClose }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {persons.length === 0 && <div className="a-empty">Лиц пока нет</div>}
         {persons.map((p) => (
-          <div key={p.id} className="a-trust-row">
-            <span className="a-person-name" style={{ flex: '1 1 auto' }}>👤 {p.name}</span>
+          <div key={p.id} className="a-person-row">
+            <span className="a-person-name">👤 {p.name}</span>
             <span className="a-person-phone a-muted">{p.phone || '—'}</span>
-            <MessengerTag value={p.messengers} />
-            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
-            <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>
+            <span className="a-person-row-msgr"><MessengerTag value={p.messengers} /></span>
+            <span className="a-person-row-actions">
+              <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
+              <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>
+            </span>
           </div>
         ))}
       </div>
@@ -826,6 +832,10 @@ function ClientPersonsModal({ client, onClose }) {
             multi phone={pf.phone} messengers={pf.messengers}
             onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
           />
+          <MessengerChatInputs
+            messengers={pf.messengers} chats={pf.chats}
+            onChange={(chats) => setPf({ ...pf, chats })}
+          />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>
             <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={save} disabled={!fullName(pf.last_name, pf.first_name)}>Сохранить</button>
@@ -841,17 +851,17 @@ function GroupPersonsModal({ group, onClose }) {
   const { trustedByGroup, fetchGroupTrusted, addTrusted, updateTrusted, removeTrusted } = useClientsStore()
   const toast = useToast()
   const persons = trustedByGroup[group.id] || []
-  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [] }
+  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [], chats: {} }
   const [pf, setPf] = useState(emptyPf)
 
   useEffect(() => { fetchGroupTrusted(group.id) }, [group.id, fetchGroupTrusted])
 
   const openCreate = () => setPf({ ...emptyPf, open: true, mode: 'create' })
-  const openEdit = (p) => { const sp = splitName(p.name); setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [] }) }
+  const openEdit = (p) => { const sp = splitName(p.name); setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [], chats: p.chats || {} }) }
   const close = () => setPf(emptyPf)
   const save = async () => {
     if (!fullName(pf.last_name, pf.first_name)) { toast.error('Укажите фамилию или имя'); return }
-    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers }
+    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers, chats: pf.chats || {} }
     try {
       if (pf.mode === 'edit') await updateTrusted(pf.id, payload)
       else await addTrusted({ group_id: group.id, ...payload })
@@ -871,12 +881,14 @@ function GroupPersonsModal({ group, onClose }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {persons.length === 0 && <div className="a-empty">Лиц пока нет</div>}
         {persons.map((p) => (
-          <div key={p.id} className="a-trust-row">
-            <span className="a-person-name" style={{ flex: '1 1 auto' }}>👤 {p.name}</span>
+          <div key={p.id} className="a-person-row">
+            <span className="a-person-name">👤 {p.name}</span>
             <span className="a-person-phone a-muted">{p.phone || '—'}</span>
-            <MessengerTag value={p.messengers} />
-            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
-            <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>
+            <span className="a-person-row-msgr"><MessengerTag value={p.messengers} /></span>
+            <span className="a-person-row-actions">
+              <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => openEdit(p)} title="Редактировать">✎</button>
+              <button type="button" className="a-btn a-btn--danger a-btn--sm" onClick={() => del(p)} title="Удалить">✕</button>
+            </span>
           </div>
         ))}
       </div>
@@ -899,6 +911,10 @@ function GroupPersonsModal({ group, onClose }) {
           <PhoneMessengerField
             multi phone={pf.phone} messengers={pf.messengers}
             onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
+          />
+          <MessengerChatInputs
+            messengers={pf.messengers} chats={pf.chats}
+            onChange={(chats) => setPf({ ...pf, chats })}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>

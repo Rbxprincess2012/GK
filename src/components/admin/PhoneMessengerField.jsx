@@ -36,6 +36,28 @@ export function MessengerTag({ value, label = false }) {
   return <>{list.map((v) => <OneTag key={v} value={v} label={label} />)}</>
 }
 
+// Поля адресов чатов под выбранные мессенджеры: менеджер вставляет, куда слать точечно.
+// Показываются только для отмеченных мессенджеров. chats — { telegram?, max? }.
+export function MessengerChatInputs({ messengers = [], chats = {}, onChange }) {
+  const set = (key, v) => onChange({ ...chats, [key]: v })
+  const rows = [
+    messengers.includes('telegram') && ['telegram', <TelegramIcon key="i" />, 'Telegram', '@username, ссылка t.me/… или chat id'],
+    messengers.includes('max') && ['max', <MaxIcon key="i" />, 'MAX', 'ссылка max.ru/u/… или id чата'],
+  ].filter(Boolean)
+  if (!rows.length) return null
+  return (
+    <div className="a-chataddr">
+      {rows.map(([key, icon, label, ph]) => (
+        <label key={key} className="a-chataddr-row">
+          <span className="a-chataddr-label">{icon}<span>{label}</span></span>
+          <input className="a-input" value={chats[key] || ''} placeholder={ph}
+            onChange={(e) => set(key, e.target.value)} />
+        </label>
+      ))}
+    </div>
+  )
+}
+
 // Поле телефона с автоматическим префиксом +7 и выбором мессенджера (Telegram / MAX).
 // Значение наружу — полный номер вида "+79991234567" и messenger: 'telegram'|'max'|null.
 // Используется в формах водителя и доверенного лица.

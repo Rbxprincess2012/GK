@@ -10,6 +10,11 @@ const base = {
   last_name: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   messengers: z.array(z.enum(['telegram', 'max'])).optional(),
+  // Адреса чатов по мессенджерам (ручной ввод менеджера) — для точечной отправки.
+  chats: z.object({
+    telegram: z.string().nullable().optional(),
+    max: z.string().nullable().optional(),
+  }).strict().optional(),
 }
 
 export const createTrustedPerson = z.object(base).strict()

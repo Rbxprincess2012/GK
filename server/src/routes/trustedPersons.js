@@ -49,12 +49,18 @@ async function resolveScope({ client_id, group_id }) {
   return { client_id: null, group_id: null }
 }
 
+// jsonb-поле chats передаём в БД строкой (knex/pg не сериализует объект в jsonb сам).
+function serializeChats(data) {
+  if (data.chats && typeof data.chats === 'object') return { ...data, chats: JSON.stringify(data.chats) }
+  return data
+}
+
 r.post('/', async (req, res, next) => {
   try {
     const data = createTrustedPerson.parse(req.body)
     const { client_id, group_id, ...rest } = data
     const scope = await resolveScope({ client_id, group_id })
-    const [row] = await db('trusted_persons').insert({ ...rest, ...scope }).returning('*')
+    const [row] = await db('trusted_persons').insert(serializeChats({ ...rest, ...scope })).returning('*')
     res.status(201).json(row)
   } catch (e) { next(e) }
 })
@@ -62,7 +68,7 @@ r.post('/', async (req, res, next) => {
 r.patch('/:id', async (req, res, next) => {
   try {
     const data = updateTrustedPerson.parse(req.body)
-    const [row] = await db('trusted_persons').where({ id: Number(req.params.id) }).update(data).returning('*')
+    const [row] = await db('trusted_persons').where({ id: Number(req.params.id) }).update(serializeChats(data)).returning('*')
     if (!row) return res.status(404).json({ error: 'not_found' })
     res.json(row)
   } catch (e) { next(e) }
