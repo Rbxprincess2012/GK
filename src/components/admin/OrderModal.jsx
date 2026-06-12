@@ -201,14 +201,6 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
 
   return (
     <>
-    {reassign && (
-      <ReassignModal
-        subtask={reassign}
-        onClose={() => setReassign(null)}
-        onDone={() => { setReassign(null); reload() }}
-      />
-    )}
-    {msgOpen && <ClientMessageModal order={o} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
     <Modal
       title={<>
         {o.number ? `Заявка #${o.number}` : 'Входящая заявка'}
@@ -270,8 +262,10 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             )}
           </div>
 
-          {/* Участки / действия + плашка + рейсы */}
-          {(o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (
+          {/* Задание водителю (что взять с базы) — только пока заявка в работе.
+              Для отчёта/проверки/закрытых это неактуально — скрываем. */}
+          {!['done', 'closed', 'awaiting_confirmation', 'review'].includes(o.status)
+            && (o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (
             <>
               <div className="a-section-title">Участки — задание водителю</div>
               <ContainerJob o={o} />
@@ -409,6 +403,15 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         </>
       )}
     </Modal>
+    {/* Вложенные модалки — ПОСЛЕ основной в DOM, чтобы рисовались поверх неё */}
+    {reassign && (
+      <ReassignModal
+        subtask={reassign}
+        onClose={() => setReassign(null)}
+        onDone={() => { setReassign(null); reload() }}
+      />
+    )}
+    {msgOpen && <ClientMessageModal order={o} onClose={() => { setMsgOpen(false); if (confirmFlow) { setConfirmFlow(false); onChanged() } }} />}
     </>
   )
 }
