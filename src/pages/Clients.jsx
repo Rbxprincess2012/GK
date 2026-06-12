@@ -547,6 +547,11 @@ export default function Clients() {
             onSectionsChange={(sections) => setObjForm((f) => ({ ...f, sections }))}
             links={objForm.trusted_links}
             onLinksChange={(trusted_links) => setObjForm((f) => ({ ...f, trusted_links }))}
+            onRemoveSection={(id) => setObjForm((f) => ({
+              ...f,
+              sections: (f.sections || []).filter((s) => s.id !== id),
+              trusted_links: (f.trusted_links || []).filter((l) => l.section_id !== id),
+            }))}
           />
 
           <label className="a-field"><span>Фотоотчёт</span>
@@ -613,7 +618,7 @@ function objAddr(o) {
 }
 
 // Участки объекта + доверенные лица (с уровнем: весь объект или конкретный участок).
-function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, onLinksChange }) {
+function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, onLinksChange, onRemoveSection }) {
   const { trustedByClient, fetchTrusted, addSection, removeSection } = useClientsStore()
   const toast = useToast()
   const persons = trustedByClient[clientId] || []
@@ -638,9 +643,7 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
   const doRemoveSection = async (id) => {
     try {
       await removeSection(id)
-      onSectionsChange((sections || []).filter((s) => s.id !== id))
-      // снимаем назначение, висевшее на этом участке
-      onLinksChange(links.filter((l) => l.section_id !== id))
+      onRemoveSection(id) // атомарно убирает и участок, и висевшее на нём лицо
     } catch (e) { toast.error(apiErr(e, 'Не удалось удалить участок')) }
   }
 
