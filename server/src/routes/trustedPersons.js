@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { db } from '../db.js'
 import { createTrustedPerson, updateTrustedPerson } from '../validators/trustedPerson.js'
+import { issuePersonInvite, revokePersonChannel } from '../services/trustedPersonChannels.js'
+import { getClientBotUsername } from '../services/botConfig.js'
 
 const r = Router()
 
@@ -69,6 +71,25 @@ r.patch('/:id', async (req, res, next) => {
   try {
     const data = updateTrustedPerson.parse(req.body)
     const [row] = await db('trusted_persons').where({ id: Number(req.params.id) }).update(serializeChats(data)).returning('*')
+    if (!row) return res.status(404).json({ error: 'not_found' })
+    res.json(row)
+  } catch (e) { next(e) }
+})
+
+// Онбординг лица в Telegram: выдать персональную ссылку /start p<code>.
+r.post('/:id/invite', async (req, res, next) => {
+  try {
+    const row = await issuePersonInvite(Number(req.params.id))
+    if (!row) return res.status(404).json({ error: 'not_found' })
+    const u = await getClientBotUsername()
+    res.status(201).json({ ...row, invite_link: u ? `https://t.me/${u}?start=p${row.tg_verify_code}` : null })
+  } catch (e) { next(e) }
+})
+
+// Отвязать Telegram-канал лица (перестать слать).
+r.post('/:id/revoke', async (req, res, next) => {
+  try {
+    const row = await revokePersonChannel(Number(req.params.id))
     if (!row) return res.status(404).json({ error: 'not_found' })
     res.json(row)
   } catch (e) { next(e) }

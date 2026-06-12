@@ -122,6 +122,9 @@ export const useClientsStore = create((set, get) => ({
     return data
   },
   removeTrusted: async (id) => { await api.delete(`/trusted-persons/${id}`) },
+  // Онбординг лица в Telegram: выдать ссылку-приглашение / отвязать канал.
+  invitePerson: async (id) => (await api.post(`/trusted-persons/${id}/invite`)).data,
+  revokePerson: async (id) => (await api.post(`/trusted-persons/${id}/revoke`)).data,
 
   // ── Участки объекта ───────────────────────────────────────────────────────
   addSection: async (object_id, name, note) => {

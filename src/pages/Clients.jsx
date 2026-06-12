@@ -8,6 +8,7 @@ import { StreetPicker } from '@/components/admin/StreetPicker'
 import { PhoneMessengerField, MessengerTag, MessengerChatInputs, TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 import { formatPhone } from '@/lib/phone'
 import { ClientRecipients } from '@/components/admin/ClientRecipients'
+import { TrustedPersonChannels } from '@/components/admin/TrustedPersonChannels'
 
 const PAY = { cashless: 'Безнал', cash: 'Нал' }
 
@@ -682,6 +683,9 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
       closePf()
     } catch { toast.error('Не удалось сохранить доверенное лицо') }
   }
+  // Онбординг-канал лица: статус берём из общего пула, перечитка — тот же пул.
+  const reloadPersons = () => fetchTrusted(clientId)
+  const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
 
   return (
     <>
@@ -760,9 +764,14 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
             multi phone={pf.phone} messengers={pf.messengers}
             onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
           />
-          <MessengerChatInputs
-            messengers={pf.messengers} chats={pf.chats}
-            onChange={(chats) => setPf({ ...pf, chats })}
+          <TrustedPersonChannels
+            personId={pf.mode === 'edit' ? pf.id : null}
+            tgStatus={pfTgStatus}
+            hasTg={(pf.messengers || []).includes('telegram')}
+            hasMax={(pf.messengers || []).includes('max')}
+            maxAddr={pf.chats?.max || ''}
+            onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
+            onChanged={reloadPersons}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={closePf}>Отмена</button>
@@ -803,6 +812,8 @@ function ClientPersonsModal({ client, onClose }) {
     if (!(await toast.confirm(`Удалить лицо «${p.name}»? Оно снимется со всех объектов клиента.`))) return
     try { await removeTrusted(p.id); await fetchTrusted(client.id) } catch { toast.error('Не удалось удалить') }
   }
+  const reloadPersons = () => fetchTrusted(client.id)
+  const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
 
   return (
     <Modal title={`Доверенные лица — ${client.nickname || client.legal_name}`} onClose={onClose} width={520}>
@@ -844,9 +855,14 @@ function ClientPersonsModal({ client, onClose }) {
             multi phone={pf.phone} messengers={pf.messengers}
             onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
           />
-          <MessengerChatInputs
-            messengers={pf.messengers} chats={pf.chats}
-            onChange={(chats) => setPf({ ...pf, chats })}
+          <TrustedPersonChannels
+            personId={pf.mode === 'edit' ? pf.id : null}
+            tgStatus={pfTgStatus}
+            hasTg={(pf.messengers || []).includes('telegram')}
+            hasMax={(pf.messengers || []).includes('max')}
+            maxAddr={pf.chats?.max || ''}
+            onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
+            onChanged={reloadPersons}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>
@@ -884,6 +900,8 @@ function GroupPersonsModal({ group, onClose }) {
     if (!(await toast.confirm(`Удалить лицо «${p.name}»? Оно снимется со всех объектов группы.`))) return
     try { await removeTrusted(p.id); await fetchGroupTrusted(group.id) } catch { toast.error('Не удалось удалить') }
   }
+  const reloadPersons = () => fetchGroupTrusted(group.id)
+  const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
 
   return (
     <Modal title={`Доверенные лица — ${group.name}`} onClose={onClose} width={520}>
@@ -925,9 +943,14 @@ function GroupPersonsModal({ group, onClose }) {
             multi phone={pf.phone} messengers={pf.messengers}
             onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
           />
-          <MessengerChatInputs
-            messengers={pf.messengers} chats={pf.chats}
-            onChange={(chats) => setPf({ ...pf, chats })}
+          <TrustedPersonChannels
+            personId={pf.mode === 'edit' ? pf.id : null}
+            tgStatus={pfTgStatus}
+            hasTg={(pf.messengers || []).includes('telegram')}
+            hasMax={(pf.messengers || []).includes('max')}
+            maxAddr={pf.chats?.max || ''}
+            onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
+            onChanged={reloadPersons}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={close}>Отмена</button>
