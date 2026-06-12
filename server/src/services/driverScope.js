@@ -36,5 +36,11 @@ export async function orderCardForDriver(orderId, driverId) {
     .leftJoin('sections as s', 's.id', 'st.section_id')
     .where('st.order_id', orderId)
     .select('st.*', 's.name as section_name').orderBy('st.sub_no')
+  // Доверенные лица объекта с привязкой к участку (section_id=null → на весь объект).
+  // Водитель видит контакт под каждым участком; лицо «на весь объект» дублируется.
+  order.section_contacts = await db('object_trusted_persons as otp')
+    .join('trusted_persons as tp', 'tp.id', 'otp.trusted_person_id')
+    .where('otp.object_id', order.object_id)
+    .select('otp.section_id', 'tp.name', 'tp.phone')
   return order
 }

@@ -614,7 +614,7 @@
   background: rgba(134,95,255,0.1); border: 1px solid rgba(134,95,255,0.22);
   border-radius: 999px; padding: 0 7px; margin-right: 2px;
 }
-.a-cjob-base { font-weight: 700; color: #57c98a; }
+.a-cjob-base { font-weight: 700; color: #57c98a; margin-top: 8px; }
 .a-cjob-emo { font-size: 0.95rem; }
 .a-cjob-trips { color: #8fa0c8; font-size: 0.72rem; }
 /* «Действие» в фикс. колонке — выровнено по левому краю независимо от длины участка. */

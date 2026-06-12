@@ -62,8 +62,16 @@ function orderText(order) {
     addrLine,
     timeLine,
   ].filter(Boolean).join('\n')
+  // Контакты по участку: своё лицо участка, иначе — лицо «на весь объект» (дублируем под каждым).
+  const sc = order.section_contacts || []
+  const contactsFor = (sid) => {
+    const own = sc.filter((c) => c.section_id === sid)
+    return own.length ? own : sc.filter((c) => c.section_id == null)
+  }
+  const contactSuffix = (it) => contactsFor(it.section_id).map((c) =>
+    `\n   👤 ${esc(c.name)}${c.phone ? ` · 📞 <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}`).join('')
   const lines = (order.items || []).map((it) =>
-    `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`)
+    `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}${contactSuffix(it)}`)
   if (!lines.length) lines.push('• позиции не указаны')
   const E = Number(order.empties) || 0
   const base = E > 0 ? `\n\nС базы взять: ${'📦'.repeat(Math.min(E, 6))}${E > 6 ? `×${E}` : ''}` : ''
@@ -72,8 +80,8 @@ function orderText(order) {
   const cash = order.payment_method === 'cash'
     ? `\n\n💵 Оплата НАЛИЧНЫМИ${order.amount != null ? `: ${Number(order.amount)} ₽` : ''}`
     : ''
-  // Доверенное лицо: ФИО + кликабельный телефон.
-  const contact = order.trusted_person_name
+  // Лицо уровня заявки — только если у объекта нет привязок по участкам (иначе контакты уже под участками).
+  const contact = (!sc.length && order.trusted_person_name)
     ? `\n\n👤 ${esc(order.trusted_person_name)}`
       + (order.trusted_person_phone ? `\n📞 <a href="tel:${esc(order.trusted_person_phone)}">${esc(order.trusted_person_phone)}</a>` : '')
     : ''
