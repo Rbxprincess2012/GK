@@ -48,8 +48,8 @@ export async function reviewOutcome(orderId) {
     .leftJoin('sections as s', 's.id', 'st.section_id')
     .leftJoin('drivers as d', 'd.id', 'o.assigned_driver_id')
     .where('o.split_from_order_id', orderId).whereNot('o.status', 'cancelled')
-    .select('o.number as child_number', 'o.status as child_status', 'o.shift_date',
-      's.name as section_name', 'd.name as driver_name')
+    .select('o.number as child_number', 'o.status as child_status', 'o.shift_date', 'o.desired_date',
+      'o.desired_time', 's.name as section_name', 'd.name as driver_name')
   const out = []
   for (const st of own) {
     const outcome = st.status === 'done' ? (st.proof_status === 'accepted' ? 'accepted' : 'done') : 'pending'
@@ -59,7 +59,8 @@ export async function reviewOutcome(orderId) {
     out.push({
       section_name: k.section_name || 'Объект целиком', done: false,
       outcome: k.child_status === 'new' ? 'left_in_pool' : 'reassigned',
-      child_number: k.child_number, driver_name: k.driver_name, shift_date: k.shift_date,
+      child_number: k.child_number, driver_name: k.driver_name,
+      shift_date: k.shift_date, desired_date: k.desired_date, desired_time: k.desired_time,
     })
   }
   return out

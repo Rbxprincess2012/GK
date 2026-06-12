@@ -860,12 +860,12 @@
   border-radius: 6px; padding: 2px 8px; text-transform: uppercase; }
 /* статусы по участкам — выровнены в столбцы по левому краю */
 .a-proof-secs { display: flex; flex-direction: column; gap: 3px; }
-.a-proof-sec { display: grid; grid-template-columns: minmax(0,1.4fr) 120px minmax(0,1.6fr);
-  align-items: center; gap: 12px; font-size: 0.86rem; }
+.a-proof-sec { display: grid; grid-template-columns: minmax(0,1.2fr) 116px minmax(0,2.2fr);
+  align-items: baseline; gap: 12px; font-size: 0.86rem; }
 .a-proof-sec-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #dbe3ff; }
 .a-proof-sec-done.is-ok { color: #2ecc71; }
 .a-proof-sec-done.is-no { color: #ff8f8f; }
-.a-proof-sec-res { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-proof-sec-res { min-width: 0; }
 .a-pd-ok { color: #2ecc71; font-weight: 600; }
 .a-pd-wait { color: #92a2d4; }
 .a-pd-move { color: #f4a840; }

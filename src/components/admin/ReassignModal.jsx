@@ -4,6 +4,7 @@ import { useToast } from '@/components/admin/Toast'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useShiftsStore } from '@/store/shiftsStore'
 import { useDriversStore } from '@/store/driversStore'
+import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { ymd } from '@/lib/orderUi'
 
 // Вложенная модалка переназначения невыполненного участка (поверх модалки приёмки).
@@ -16,6 +17,7 @@ export function ReassignModal({ subtask, onClose, onDone }) {
   const { drivers, fetchDrivers } = useDriversStore()
   const toast = useToast()
   const [shiftDate, setShiftDate] = useState(ymd(new Date()))
+  const [desiredTime, setDesiredTime] = useState(subtask.desired_time ?? null)
   const [driverId, setDriverId] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -28,10 +30,13 @@ export function ReassignModal({ subtask, onClose, onDone }) {
     setBusy(true)
     try {
       const res = await carryOverSubtask(subtask.id, {
-        driver_id: id,
-        shift_date: shiftDate,
-        shift_type: 'day',
-        vehicle_id: onShift?.vehicle_id ?? drv?.default_vehicle_id ?? null,
+        assign: {
+          driver_id: id,
+          shift_date: shiftDate,
+          shift_type: 'day',
+          vehicle_id: onShift?.vehicle_id ?? drv?.default_vehicle_id ?? null,
+        },
+        desired_time: desiredTime,
       })
       toast.success('Участок переназначен — в работе у водителя')
       onDone(res)
@@ -45,7 +50,7 @@ export function ReassignModal({ subtask, onClose, onDone }) {
   const doLeaveInTasks = async () => {
     setBusy(true)
     try {
-      const res = await carryOverSubtask(subtask.id, null)
+      const res = await carryOverSubtask(subtask.id, { desired_time: desiredTime })
       toast.success(`Готово: отдельная заявка${res?.number ? ` №${res.number}` : ''} в «Заявках в работе»${res?.desired_date ? ` на ${res.desired_date.slice(0, 10)}` : ''}`)
       onDone(res)
     } catch { toast.error('Не удалось оставить в Заявках в работе') }
@@ -70,15 +75,18 @@ export function ReassignModal({ subtask, onClose, onDone }) {
         <label className="a-field"><span>Дата исполнения</span>
           <input className="a-input" type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} />
         </label>
-        <label className="a-field"><span>Водитель</span>
-          <select className="a-select" value={driverId} onChange={(e) => setDriverId(e.target.value)}>
-            <option value="">— выберите —</option>
-            {drivers.filter((d) => d.is_active).map((d) => (
-              <option key={d.id} value={d.id}>{d.name}{available.some((a) => a.id === d.id) ? ' · на смене' : ''}</option>
-            ))}
-          </select>
+        <label className="a-field"><span>Время заезда</span>
+          <TimeSlotSelect value={desiredTime} onChange={setDesiredTime} />
         </label>
       </div>
+      <label className="a-field"><span>Водитель</span>
+        <select className="a-select" value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+          <option value="">— выберите —</option>
+          {drivers.filter((d) => d.is_active).map((d) => (
+            <option key={d.id} value={d.id}>{d.name}{available.some((a) => a.id === d.id) ? ' · на смене' : ''}</option>
+          ))}
+        </select>
+      </label>
     </Modal>
   )
 }

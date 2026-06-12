@@ -4,7 +4,7 @@ import { useDriversStore } from '@/store/driversStore'
 import { useOrdersStore } from '@/store/ordersStore'
 import { OrderModal } from '@/components/admin/OrderModal'
 import { DesiredTime } from '@/components/admin/DesiredTime'
-import { clientLegal, objectLine, streetLine } from '@/lib/orderUi'
+import { clientLegal, objectLine, streetLine, fmtDesiredTime } from '@/lib/orderUi'
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
@@ -14,12 +14,21 @@ function dateLabel(d10) {
   return `${dd} ${MON[m - 1]}, ${DOW[new Date(y, m - 1, dd).getDay()]}`
 }
 
+function fmtRu(d10) {
+  if (!d10) return '—'
+  const [y, m, dd] = d10.slice(0, 10).split('-')
+  return `${dd}.${m}.${y}`
+}
+
 // Текст решения менеджера по участку (правый столбец).
 function decision(s) {
   if (s.outcome === 'accepted') return ['принято', 'ok']
   if (s.outcome === 'done') return ['ожидает приёмки', 'wait']
-  if (s.outcome === 'reassigned') return [`переназначено №${s.child_number}${s.driver_name ? ` · ${s.driver_name}` : ''}`, 'move']
-  if (s.outcome === 'left_in_pool') return [`в Заявках в работе №${s.child_number}`, 'move']
+  if (s.outcome === 'reassigned') {
+    const t = fmtDesiredTime(s.desired_time) || 'как можно быстрее'
+    return [`переназначена на ${fmtRu(s.shift_date || s.desired_date)} под №${s.child_number} · 🕐 ${t}${s.driver_name ? ` · ${s.driver_name}` : ''}`, 'move']
+  }
+  if (s.outcome === 'left_in_pool') return [`отправлена в Заявки в работе под №${s.child_number}`, 'move']
   return ['ожидает решения', 'wait']
 }
 
