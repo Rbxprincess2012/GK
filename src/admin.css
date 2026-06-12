@@ -886,7 +886,7 @@
 
 /* строка назначения доверенного лица на участок/объект (в модалке объекта) */
 .a-trust-row { display: flex; align-items: center; gap: 10px; }
-.a-trust-target { flex: 0 0 42%; min-width: 0; font-size: 0.86rem; color: #cdd6f4;
+.a-trust-target { flex: 0 0 34%; min-width: 0; font-size: 0.86rem; color: #cdd6f4;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .a-trust-row .a-select { flex: 1; min-width: 0; }
 .a-group-name { font-weight: 700; font-size: 0.97rem; color: #eaf1ff; flex: 1; min-width: 0;
@@ -994,6 +994,10 @@
   box-sizing: border-box;
 }
 .a-objmodal .a-trusted-x { width: 38px; }
+/* воздух между полями модалки объекта (поля больше не слеплены) */
+.a-objmodal .a-field { margin-bottom: 10px; }
+.a-objmodal .a-field-row { margin-bottom: 10px; }
+.a-objmodal .a-section-title { margin-top: 14px; }
 
 .a-person-line { display: flex; align-items: center; gap: 0; }
 .a-person-line > * + * { margin-left: 12px; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.14); }

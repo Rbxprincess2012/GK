@@ -12,6 +12,13 @@ import { TrustedPersonChannels } from '@/components/admin/TrustedPersonChannels'
 
 const PAY = { cashless: 'Безнал', cash: 'Нал' }
 
+// Достаём осмысленную причину из ответа API (раскрываем «глухие» тосты).
+const apiErr = (e, fallback) => {
+  const d = e?.response?.data
+  const reason = d?.error || d?.message || e?.message
+  return reason ? `${fallback}: ${reason}` : fallback
+}
+
 // Сборка/разбор «Фамилия Имя» для доверенных лиц.
 const fullName = (last, first) => [last, first].map((s) => (s || '').trim()).filter(Boolean).join(' ')
 const splitName = (name) => {
@@ -38,7 +45,7 @@ const emptyClient = {
 
 const emptyObject = {
   city: '', street_id: '', street_name: '', district_id: '', district: '', district_alias: '',
-  house: '', building: '', informal_name: '', requires_photo: null, note: '',
+  house: '', building: '', informal_name: '', requires_photo: true, note: '',
   lat: '', lng: '', geo_source: null,
   trusted_links: [], // [{ trusted_person_id, section_id|null }]
   sections: [],       // участки объекта (только у существующего объекта)
@@ -193,7 +200,7 @@ export default function Clients() {
     building: objForm.building || undefined,
     informal_name: objForm.informal_name || undefined,
     note: objForm.note || undefined,
-    requires_photo: objForm.requires_photo,
+    requires_photo: objForm.requires_photo === false ? false : true,
     lat: objForm.lat === '' || objForm.lat == null ? undefined : Number(objForm.lat),
     lng: objForm.lng === '' || objForm.lng == null ? undefined : Number(objForm.lng),
     trusted_links: objForm.trusted_links || [],
@@ -211,7 +218,7 @@ export default function Clients() {
       setObjForm((f) => ({ ...f, sections: fresh.sections || f.sections }))
       loadInventory(objs)
       toast.success('Объект сохранён')
-    } catch { toast.error('Ошибка сохранения объекта') }
+    } catch (e) { toast.error(apiErr(e, 'Ошибка сохранения объекта')) }
     finally { setObjSaving(false) }
   }
 
@@ -222,7 +229,7 @@ export default function Clients() {
       const objs = await fetchObjects(objModal.clientId)
       loadInventory(objs)
       toast.success('Объект сохранён'); closeObject()
-    } catch { toast.error('Ошибка сохранения объекта') }
+    } catch (e) { toast.error(apiErr(e, 'Ошибка сохранения объекта')) }
   }
   const delObject = async (clientId, o) => {
     if (!(await toast.confirm(`Удалить объект «${objLabel(o)}»?`))) return
@@ -501,11 +508,6 @@ export default function Clients() {
               onPick={(s) => setObjForm({ ...objForm, ...s })}
             />
           </label>
-          {objForm.district && (
-            <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: -6, marginBottom: 6 }}>
-              Район: <b style={{ color: '#c4acff' }}>{objForm.district}</b>{objForm.district_alias ? ` (${objForm.district_alias})` : ''} — подставлен автоматически
-            </div>
-          )}
           <div className="a-field-row">
             <label className="a-field"><span>Дом</span>
               <input className="a-input" value={objForm.house} onChange={(e) => setObjForm({ ...objForm, house: e.target.value })} />
@@ -549,11 +551,10 @@ export default function Clients() {
 
           <label className="a-field"><span>Фотоотчёт</span>
             <select className="a-select"
-              value={objForm.requires_photo === null ? '' : String(objForm.requires_photo)}
-              onChange={(e) => setObjForm({ ...objForm, requires_photo: e.target.value === '' ? null : e.target.value === 'true' })}>
-              <option value="">Как у клиента</option>
-              <option value="true">Обязателен</option>
-              <option value="false">Не нужен</option>
+              value={objForm.requires_photo === false ? 'false' : 'true'}
+              onChange={(e) => setObjForm({ ...objForm, requires_photo: e.target.value === 'true' })}>
+              <option value="true">Необходим</option>
+              <option value="false">Не требуется</option>
             </select>
           </label>
           </div>
@@ -613,11 +614,9 @@ function objAddr(o) {
 
 // Участки объекта + доверенные лица (с уровнем: весь объект или конкретный участок).
 function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, onLinksChange }) {
-  const { trustedByClient, fetchTrusted, addTrusted, updateTrusted, addSection, removeSection } = useClientsStore()
+  const { trustedByClient, fetchTrusted, addSection, removeSection } = useClientsStore()
   const toast = useToast()
   const persons = trustedByClient[clientId] || []
-  const emptyPf = { open: false, mode: 'create', id: null, last_name: '', first_name: '', name: '', phone: '', messengers: [], chats: {}, forSection: null }
-  const [pf, setPf] = useState(emptyPf)
   // Черновики новых участков: каждая строка — поле + своя кнопка «Сохранить».
   const [drafts, setDrafts] = useState([])
 
@@ -634,7 +633,7 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
     try {
       const s = await addSection(objectId, name)
       onSectionsChange([...(sections || []), s]); removeDraft(key)
-    } catch { toast.error('Не удалось добавить участок') }
+    } catch (e) { toast.error(apiErr(e, 'Не удалось добавить участок')) }
   }
   const doRemoveSection = async (id) => {
     try {
@@ -642,7 +641,7 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
       onSectionsChange((sections || []).filter((s) => s.id !== id))
       // снимаем назначение, висевшее на этом участке
       onLinksChange(links.filter((l) => l.section_id !== id))
-    } catch { toast.error('Не удалось удалить участок') }
+    } catch (e) { toast.error(apiErr(e, 'Не удалось удалить участок')) }
   }
 
   // ── доверенные лица: одно лицо на каждую «цель» (участок, либо объект если участков нет) ──
@@ -657,39 +656,11 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
     onLinksChange(personId ? [...rest, { trusted_person_id: personId, section_id: sectionId ?? null }] : rest)
   }
 
-  const onSelectFor = (sectionId, v) => {
-    if (v === '__new__') { setPf({ ...emptyPf, open: true, mode: 'create', forSection: sectionId ?? null }); return }
-    setAssignment(sectionId, v ? Number(v) : null)
-  }
-  const openEdit = (personId) => {
-    const p = persons.find((x) => x.id === personId)
-    if (!p) return
-    const sp = splitName(p.name)
-    setPf({ open: true, mode: 'edit', id: p.id, last_name: p.last_name ?? sp.last_name, first_name: p.first_name ?? sp.first_name, name: p.name, phone: p.phone || '', messengers: p.messengers || [], chats: p.chats || {}, forSection: null })
-  }
-  const closePf = () => setPf(emptyPf)
-  const savePf = async () => {
-    if (!fullName(pf.last_name, pf.first_name)) { toast.error('Укажите фамилию или имя'); return }
-    const payload = { last_name: pf.last_name.trim() || null, first_name: pf.first_name.trim() || null, name: fullName(pf.last_name, pf.first_name), phone: pf.phone || null, messengers: pf.messengers, chats: pf.chats || {} }
-    try {
-      if (pf.mode === 'edit') {
-        await updateTrusted(pf.id, payload)
-        await fetchTrusted(clientId)
-      } else {
-        const p = await addTrusted({ client_id: clientId, ...payload })
-        await fetchTrusted(clientId)
-        setAssignment(pf.forSection, p.id)
-      }
-      closePf()
-    } catch { toast.error('Не удалось сохранить доверенное лицо') }
-  }
-  // Онбординг-канал лица: статус берём из общего пула, перечитка — тот же пул.
-  const reloadPersons = () => fetchTrusted(clientId)
-  const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
+  const onSelectFor = (sectionId, v) => setAssignment(sectionId, v ? Number(v) : null)
 
   return (
     <>
-      <div className="a-section-title">Участки {objectId ? <span className="a-count">{sections?.length || 0}</span> : ''}</div>
+      <div className="a-section-title">Участки</div>
       {!objectId ? (
         <div className="a-muted" style={{ fontSize: '0.8rem', marginBottom: 4 }}>
           Участки можно добавить после сохранения объекта (кнопка «Создать» у названия).
@@ -719,13 +690,9 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
         </>
       )}
 
-      <div className="a-section-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        Доверенные лица
-        <button type="button" className="a-btn a-btn--ghost a-btn--sm"
-          onClick={() => setPf({ ...emptyPf, open: true, mode: 'create', forSection: null })}>+ Доверенное лицо</button>
-      </div>
+      <div className="a-section-title">Доверенные лица</div>
       <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 6 }}>
-        Напротив каждого {sections?.length ? 'участка' : 'объекта'} — доверенное лицо из общего списка группы компаний.
+        Напротив каждого {sections?.length ? 'участка' : 'объекта'} — лицо из списка клиента/ГК. Создаются и редактируются кнопкой «👤 Лица» у клиента или группы.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
         {targets.map((t) => {
@@ -733,54 +700,15 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
           return (
             <div key={String(t.section_id)} className="a-trust-row">
               <span className="a-trust-target">{t.label}</span>
-              <select className="a-select" value={assignedId} onChange={(e) => onSelectFor(t.section_id, e.target.value)}>
+              <select className="a-select" value={assignedId} title={persons.find((p) => p.id === assignedId)?.name || ''}
+                onChange={(e) => onSelectFor(t.section_id, e.target.value)}>
                 <option value="">— не назначено —</option>
                 {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                <option value="__new__">➕ Создать нового…</option>
               </select>
-              <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={!assignedId}
-                onClick={() => openEdit(Number(assignedId))} title="Редактировать лицо (имя, телефон, мессенджеры)">✎</button>
             </div>
           )
         })}
       </div>
-
-      {pf.open && (
-        <div className="a-card" style={{ padding: 12, marginTop: 4 }}>
-          <div className="a-section-title" style={{ marginTop: 0 }}>
-            {pf.mode === 'edit' ? 'Редактирование лица (применится во всей ГК)' : 'Новое доверенное лицо'}
-          </div>
-          <div className="a-field-row">
-            <label className="a-field"><span>Фамилия</span>
-              <input className="a-input" value={pf.last_name} autoFocus
-                onChange={(e) => setPf({ ...pf, last_name: e.target.value })} placeholder="Иванов" />
-            </label>
-            <label className="a-field"><span>Имя</span>
-              <input className="a-input" value={pf.first_name}
-                onChange={(e) => setPf({ ...pf, first_name: e.target.value })} placeholder="Иван" />
-            </label>
-          </div>
-          <PhoneMessengerField
-            multi phone={pf.phone} messengers={pf.messengers}
-            onChange={({ phone, messengers }) => setPf({ ...pf, phone, messengers })}
-          />
-          <TrustedPersonChannels
-            personId={pf.mode === 'edit' ? pf.id : null}
-            tgStatus={pfTgStatus}
-            hasTg={(pf.messengers || []).includes('telegram')}
-            hasMax={(pf.messengers || []).includes('max')}
-            maxAddr={pf.chats?.max || ''}
-            onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
-            onChanged={reloadPersons}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={closePf}>Отмена</button>
-            <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={savePf} disabled={!fullName(pf.last_name, pf.first_name)}>
-              {pf.mode === 'edit' ? 'Сохранить' : 'Добавить лицо'}
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }

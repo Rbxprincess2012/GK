@@ -21,8 +21,21 @@ export const sectionsAgg = (alias = 'o') => db.raw(`COALESCE((
 
 async function syncTrustedLinks(trx, objectId, links) {
   await trx('object_trusted_persons').where({ object_id: objectId }).del()
-  if (links?.length) {
-    await trx('object_trusted_persons').insert(links.map((l) => ({
+  if (!links?.length) return
+  // Защита от FK-падений: оставляем только привязки на существующие участки этого объекта
+  // (или весь объект) и на лица, реально доступные клиенту (его лица или лица его ГК).
+  const obj = await trx('objects').where({ id: objectId }).first()
+  const sectionIds = new Set(await trx('sections').where({ object_id: objectId }).pluck('id'))
+  const client = obj ? await trx('clients').where({ id: obj.client_id }).first() : null
+  const poolIds = new Set(await trx('trusted_persons')
+    .where((b) => client?.group_id
+      ? b.where({ group_id: client.group_id }).orWhere({ client_id: obj.client_id })
+      : b.where({ client_id: obj?.client_id }))
+    .pluck('id'))
+  const clean = links.filter((l) =>
+    poolIds.has(l.trusted_person_id) && (l.section_id == null || sectionIds.has(l.section_id)))
+  if (clean.length) {
+    await trx('object_trusted_persons').insert(clean.map((l) => ({
       object_id: objectId, trusted_person_id: l.trusted_person_id, section_id: l.section_id ?? null,
     })))
   }
