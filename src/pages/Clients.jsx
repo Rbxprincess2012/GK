@@ -544,9 +544,9 @@ export default function Clients() {
             clientId={objModal.clientId}
             objectId={objModal.object?.id}
             sections={objForm.sections}
-            onSectionsChange={(sections) => setObjForm({ ...objForm, sections })}
+            onSectionsChange={(sections) => setObjForm((f) => ({ ...f, sections }))}
             links={objForm.trusted_links}
-            onLinksChange={(trusted_links) => setObjForm({ ...objForm, trusted_links })}
+            onLinksChange={(trusted_links) => setObjForm((f) => ({ ...f, trusted_links }))}
           />
 
           <label className="a-field"><span>Фотоотчёт</span>
