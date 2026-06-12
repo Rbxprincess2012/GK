@@ -161,10 +161,15 @@ async function sendMenu(ctx) {
   await ctx.reply(onShift ? `🟢 Вы на смене.${veh}` : '⚪ Вы не на смене.', { reply_markup: menuKeyboard(onShift) })
 }
 
-async function sendOrderCard(ctx, orderId) {
+async function sendOrderCard(ctx, orderId, onShift = true) {
   const order = await orderCardForDriver(orderId, ctx.session.driverId)
   if (!order) return ctx.reply('Заявка недоступна.')
-  await ctx.reply(orderText(order), { parse_mode: 'HTML', reply_markup: orderKeyboard(order), link_preview_options: { is_disabled: true } })
+  // Вне смены — только просмотр: карточку показываем без кнопок действий (П1).
+  await ctx.reply(orderText(order), {
+    parse_mode: 'HTML',
+    reply_markup: onShift ? orderKeyboard(order) : undefined,
+    link_preview_options: { is_disabled: true },
+  })
 }
 
 // ── Навигация: чистая перерисовка экрана. НЕ меняет статусы заявок и не запускает действия. ──
@@ -175,7 +180,9 @@ async function renderScreen(ctx, token) {
   if (token === 'tasks') {
     const orders = await ordersForDriver(driverId, { date: today(), statuses: ['in_progress'] })
     if (!orders.length) return ctx.reply('Заявок в работе пока нет. Менеджер ещё не отправил их в работу.')
-    for (const o of orders) await sendOrderCard(ctx, o.id)
+    const onShift = await isOnShift(driverId)
+    if (!onShift) await ctx.reply('⚪ Вы не на смене — сейчас только просмотр. Выйдите на смену в меню, чтобы отмечать работу.')
+    for (const o of orders) await sendOrderCard(ctx, o.id, onShift)
     return
   }
   if (token === 'tomorrow') {
@@ -196,8 +203,9 @@ async function renderScreen(ctx, token) {
     const orders = await ordersForDriver(driverId, { date })
     if (!orders.length) return ctx.reply(`На ${dmOf(date)} заявок нет.`)
     await ctx.reply(`🗓 Задачи на ${dmOf(date)}:`)
+    const onShift = date === today() ? await isOnShift(driverId) : false
     for (const o of orders) {
-      if (o.status === 'in_progress') await sendOrderCard(ctx, o.id)
+      if (o.status === 'in_progress') await sendOrderCard(ctx, o.id, onShift)
       else {
         const order = await orderCardForDriver(o.id, driverId)
         if (order) await ctx.reply(orderText(order), { parse_mode: 'HTML', link_preview_options: { is_disabled: true } })
@@ -352,6 +360,12 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     if (data === 'datepick') return showScreen(ctx, 'datepick')
     if (data.startsWith('day:')) return showScreen(ctx, data)
     // ── ниже — действия по заявке (меняют статусы), не навигация ──
+    // Вне смены — только просмотр: любое действие по заявке требует «на смене» (П1).
+    if (data === 'pdone' || /^(sd|sf|sr|oc):/.test(data)) {
+      if (!(await isOnShift(driverId))) {
+        return ctx.reply('Вы не на смене — сейчас только просмотр. Выйдите на смену в меню, чтобы отмечать работу.')
+      }
+    }
     // sd:<subId>:<orderId> — отметить выполнено (сбор пруфа, можно несколько)
     if (data.startsWith('sd:')) {
       const [, subId, orderId] = data.split(':')
@@ -387,6 +401,15 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     // oc:<orderId> — завершить заявку (коммит)
     if (data.startsWith('oc:')) {
       const [, orderId] = data.split(':')
+      // Нельзя завершить, пока по каждому участку не отмечено «выполнено» или «не смог» (П1).
+      const pending = await db('order_subtasks as st')
+        .leftJoin('sections as s', 's.id', 'st.section_id')
+        .where({ 'st.order_id': Number(orderId), 'st.status': 'pending' })
+        .select('s.name as section_name')
+      if (pending.length) {
+        const names = pending.map((p) => (p.section_name ? `«${p.section_name}»` : 'участок')).join(', ')
+        return ctx.reply(`Сначала отметьте по каждому участку «✅ выполнено» или «⚠️ не смог». Осталось: ${names}.`)
+      }
       try {
         const res = await commitOrderByDriver(Number(orderId), driverId)
         if (res.already) return ctx.reply('Заявка уже отправлена менеджеру.')
