@@ -290,6 +290,20 @@
   font-size: 1.4rem;
 }
 
+/* Вкладки внутри страницы (напр. «Отчёты»: Статистика | Сверка) */
+.a-tabs {
+  display: flex; gap: 6px; margin-bottom: 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.a-tab {
+  background: none; border: none; cursor: pointer;
+  padding: 9px 16px; font-size: 0.875rem; color: #92a2d4;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .12s, border-color .12s;
+}
+.a-tab:hover { color: #e8ecff; }
+.a-tab.is-active { color: #c4acff; border-bottom-color: #865fff; font-weight: 600; }
+
 .a-count {
   display: inline-block;
   font-size: 0.875rem;
@@ -1783,18 +1797,6 @@
 }
 .a-daycell--today .a-daycell-head { color: #c4acff; }
 .a-daycell--today .a-daycell-date b { color: #c4acff; }
-.a-daycell-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #92a2d4;
-  width: 20px; height: 20px;
-  border-radius: 5px;
-  font-size: 0.78rem; line-height: 1;
-  cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: background .12s, color .12s, border-color .12s;
-}
-.a-daycell-btn:hover { background: rgba(134,95,255,0.25); color: #e8ecff; border-color: rgba(134,95,255,0.5); }
 .a-daycell-body { display: flex; flex-direction: column; gap: 3px; }
 .a-daycell-empty {
   flex: 1; display: flex; align-items: center; justify-content: center;

@@ -18,7 +18,7 @@ function dateLabelFull(d10) {
 
 // «Сверка с водителем»: менеджер выбирает водителя и период → по исполненным заявкам
 // формируются ведомости (одна на каждый день) с полями Улица / Объект / Заказчик → печать.
-export default function Reconcile() {
+export default function Reconcile({ embedded = false }) {
   const { queryOrders } = useOrdersStore()
   const { drivers, fetchDrivers } = useDriversStore()
   const toast = useToast()
@@ -54,12 +54,8 @@ export default function Reconcile() {
     finally { setLoading(false) }
   }
 
-  return (
-    <div className="a-page">
-      <div className="a-page-header no-print">
-        <h2>Сверка с водителем</h2>
-      </div>
-
+  const content = (
+    <>
       {/* Панель параметров */}
       <div className="a-card no-print" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -171,6 +167,16 @@ export default function Reconcile() {
           ))}
         </div>
       )}
+    </>
+  )
+
+  if (embedded) return content
+  return (
+    <div className="a-page">
+      <div className="a-page-header no-print">
+        <h2>Сверка с водителем</h2>
+      </div>
+      {content}
     </div>
   )
 }

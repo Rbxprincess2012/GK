@@ -4,7 +4,6 @@ import { useShiftsStore } from '@/store/shiftsStore'
 import { useDriversStore } from '@/store/driversStore'
 import { useToast } from '@/components/admin/Toast'
 import { Draggable, Droppable } from '@/components/admin/dnd'
-import { DayModal } from '@/components/admin/DayModal'
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'] // getDay(): 0=Вс
 const MON_GEN = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
@@ -29,7 +28,6 @@ export default function Schedule() {
   const toast = useToast()
   const [shiftType] = useState('day') // смена одна (день/ночь убраны)
   const [activeDrag, setActiveDrag] = useState(null)
-  const [dayOpen, setDayOpen] = useState(null)
   // 0 = текущее окно (сегодня + 20). >0 = архив: N-й 21-дневный блок в прошлом.
   const [pastPage, setPastPage] = useState(0)
 
@@ -136,7 +134,7 @@ export default function Schedule() {
         <div className="a-chip-bar">
           <span className="a-muted" style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>
             {isArchive
-              ? 'Архив: только просмотр. «План дня» (⤢) — заявки этого дня.'
+              ? 'Архив: только просмотр.'
               : 'Все на смене по умолчанию · клик по фамилии: Смена → Выходной → Болеет · перетаскивание тоже работает'}
           </span>
         </div>
@@ -173,11 +171,7 @@ export default function Schedule() {
                         <b>{d.getDate()}</b> {MON_GEN[d.getMonth()]}
                         <span className="a-daycell-dow">{DOW[d.getDay()]}</span>
                       </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <span className="a-count" title="на смене">{onShift}</span>
-                        <button className="a-daycell-btn" title="План дня"
-                          onClick={() => setDayOpen(key)}>⤢</button>
-                      </span>
+                      <span className="a-count" title="на смене">{onShift}</span>
                     </div>
                     <div className="a-daycell-body">
                       {roster.length === 0
@@ -229,10 +223,6 @@ export default function Schedule() {
           </div>
         )}
       </DragOverlay>
-
-      {dayOpen && (
-        <DayModal date={dayOpen} shiftType={shiftType} onClose={() => setDayOpen(null)} onReload={reload} />
-      )}
     </DndContext>
   )
 }

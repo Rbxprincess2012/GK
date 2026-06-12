@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useAuth } from '@/context/AuthContext'
 import api from '@/lib/api'
+import Reconcile from '@/pages/Reconcile'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return ymd(d) }
@@ -10,6 +11,7 @@ export default function Reports() {
   const { user } = useAuth()
   const { orders, fetchOrders } = useOrdersStore()
   const today = ymd(new Date())
+  const [tab, setTab] = useState('reports')
 
   useEffect(() => { fetchOrders({}) }, [fetchOrders])
 
@@ -52,6 +54,13 @@ export default function Reports() {
         <h2>{user?.role === 'director' ? 'Статистика' : 'Отчёты'}</h2>
       </div>
 
+      <div className="a-tabs">
+        <button className={'a-tab' + (tab === 'reports' ? ' is-active' : '')} onClick={() => setTab('reports')}>Статистика и нагрузка</button>
+        <button className={'a-tab' + (tab === 'recon' ? ' is-active' : '')} onClick={() => setTab('recon')}>Сверка с водителем</button>
+      </div>
+
+      {tab === 'recon' ? <Reconcile embedded /> : (
+      <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
         {cards.map(([label, value, accent]) => (
           <div key={label} className="a-card">
@@ -110,6 +119,8 @@ export default function Reports() {
           Выгрузка реестров (Excel/PDF) появится на следующем этапе.
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

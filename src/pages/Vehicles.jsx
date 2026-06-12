@@ -60,7 +60,7 @@ export default function Vehicles() {
         <table className="a-table">
           <thead>
             <tr>
-              <th>Госномер</th><th>Марка</th><th>Слотов</th><th>Пустых/рейс</th><th>Норма л/100км</th><th>Статус</th><th></th>
+              <th>Госномер</th><th>Марка</th><th>Пустых/рейс</th><th>Норма л/100км</th><th>Статус</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -68,7 +68,6 @@ export default function Vehicles() {
               <tr key={v.id}>
                 <td style={{ fontWeight: 600 }}>{v.gov_number}</td>
                 <td className="a-muted">{v.model || '—'}</td>
-                <td>{v.capacity_slots}</td>
                 <td title="Пустых контейнеров за рейс (по умолчанию 2)">{v.empty_capacity ?? 2}</td>
                 <td>{v.fuel_norm ?? '—'}</td>
                 <td><span className={`a-badge a-badge--${STATUS[v.status]?.[1]}`}>{STATUS[v.status]?.[0]}</span></td>
@@ -81,7 +80,7 @@ export default function Vehicles() {
               </tr>
             ))}
             {vehicles.length === 0 && (
-              <tr><td colSpan={7} className="a-loading">Машин пока нет</td></tr>
+              <tr><td colSpan={6} className="a-loading">Машин пока нет</td></tr>
             )}
           </tbody>
         </table>
@@ -103,9 +102,6 @@ export default function Vehicles() {
             <input className="a-input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
           </label>
           <div className="a-field-row">
-            <label className="a-field"><span>Слотов (лодочек)</span>
-              <input className="a-input" type="number" min={1} value={form.capacity_slots} onChange={(e) => setForm({ ...form, capacity_slots: e.target.value })} />
-            </label>
             <label className="a-field"><span>Пустых за рейс</span>
               <input className="a-input" type="number" min={1} value={form.empty_capacity} onChange={(e) => setForm({ ...form, empty_capacity: e.target.value })} />
             </label>
