@@ -31,7 +31,7 @@ const emptyClient = {
   type: 'ooo', legal_name: '', nickname: '', inn: '', kpp: '', ogrn: '',
   legal_address: '', bank_name: '', bank_account: '', bik: '', corr_account: '',
   email: '', phone: '', default_payment_method: 'cashless', requires_photo: false,
-  group_id: '',
+  group_id: '', chats: {},
 }
 
 const emptyObject = {
@@ -120,7 +120,9 @@ export default function Clients() {
     }
     const payload = { ...form }
     delete payload.newGroupName
+    delete payload.id; delete payload.created_at // строго-валидатор не примет служебные ключи
     Object.keys(payload).forEach((k) => { if (payload[k] === '') delete payload[k] })
+    payload.chats = form.chats || {}
     payload.type = form.type
     payload.legal_name = form.legal_name
     payload.requires_photo = !!form.requires_photo
@@ -434,6 +436,14 @@ export default function Clients() {
               <input className="a-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </label>
           </div>
+          <div className="a-section-title">Чаты в мессенджерах</div>
+          <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 6 }}>
+            Адрес общего чата клиента/ГК (ссылка на группу или личку) — куда слать отчёты по заявкам.
+          </div>
+          <MessengerChatInputs
+            messengers={['telegram', 'max']} chats={form.chats}
+            onChange={(chats) => setForm({ ...form, chats })}
+          />
           {editing.id && <ClientRecipients clientId={editing.id} />}
 
           <div className="a-section-title">Банк</div>

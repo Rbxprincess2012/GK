@@ -17,6 +17,11 @@ const base = {
   phone: z.string().optional(),
   default_payment_method: z.enum(['cashless', 'cash']).optional(),
   requires_photo: z.boolean().optional(),
+  // Адреса общих чатов клиента по мессенджерам (ручной ввод) — куда слать отчёты.
+  chats: z.object({
+    telegram: z.string().nullable().optional(),
+    max: z.string().nullable().optional(),
+  }).strict().optional(),
 }
 
 export const createClient = z.object(base).strict()

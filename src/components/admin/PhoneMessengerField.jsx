@@ -7,17 +7,20 @@ export function TelegramIcon({ size = 13 }) {
   )
 }
 
-// Иконка мессенджера MAX: скруглённый квадрат с фирменным градиентом и белой «M».
+// Логотип мессенджера MAX: squircle с фирменным сине-голубым градиентом и белой «M».
+// Единственный источник логотипа в проекте — используйте этот компонент везде.
 export function MaxIcon({ size = 14 }) {
+  const gid = 'max-g' // один градиент на документ — id может повторяться, браузер берёт первый
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" style={{ display: 'block' }}>
       <defs>
-        <linearGradient id="max-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2d7ff9" /><stop offset="1" stopColor="#6c5ce7" />
+        <linearGradient id={gid} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#2ccbff" /><stop offset="1" stopColor="#2b7bff" />
         </linearGradient>
       </defs>
-      <rect width="24" height="24" rx="6" fill="url(#max-g)" />
-      <path d="M5 17.5V6.5h2.3l4.7 5.9 4.7-5.9H19v11h-2.4v-7.1L12 16.1 7.4 10.4v7.1z" fill="#fff" />
+      {/* squircle вместо прямого rx — ближе к фирменной форме */}
+      <path fill={`url(#${gid})`} d="M12 1.2c5.4 0 7.2.3 8.7 1.8C22.5 4.8 22.8 6.6 22.8 12s-.3 7.2-2.1 8.9c-1.5 1.6-3.3 1.9-8.7 1.9s-7.2-.3-8.7-1.9C1.5 19.2 1.2 17.4 1.2 12s.3-7.2 2.1-9C4.8 1.5 6.6 1.2 12 1.2z" />
+      <path fill="#fff" d="M6.3 17.4V6.6h2.5l3.2 4.9 3.2-4.9h2.5v10.8h-2.6v-6.5l-3.1 4.6-3.1-4.6v6.5z" />
     </svg>
   )
 }
@@ -108,8 +111,8 @@ export function PhoneMessengerField({ phone, messenger, messengers, multi = fals
         <span className="a-muted" style={{ fontSize: '0.76rem' }}>{multi ? 'Мессенджеры:' : 'Мессенджер:'}</span>
         <button type="button" className={'a-msgr-btn a-msgr-btn--tgwrap' + (isOn('telegram') ? ' is-on a-msgr-btn--tg' : '')}
           onClick={() => toggle('telegram')} title="Отправлять сообщения в Telegram"><TelegramIcon /> Telegram</button>
-        <button type="button" className={'a-msgr-btn' + (isOn('max') ? ' is-on a-msgr-btn--max' : '')}
-          onClick={() => toggle('max')} title="Отправлять сообщения в MAX">MAX</button>
+        <button type="button" className={'a-msgr-btn a-msgr-btn--maxwrap' + (isOn('max') ? ' is-on a-msgr-btn--max' : '')}
+          onClick={() => toggle('max')} title="Отправлять сообщения в MAX"><MaxIcon /> MAX</button>
       </div>
     </div>
   )
