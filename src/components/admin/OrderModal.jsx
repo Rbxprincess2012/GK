@@ -12,8 +12,8 @@ import { ProofGallery } from '@/components/admin/ProofGallery'
 import { SectionReview } from '@/components/admin/SectionReview'
 import { ReassignModal } from '@/components/admin/ReassignModal'
 import { ClientMessageModal } from '@/components/admin/ClientMessageModal'
-import { DesiredTime, TimeSlotSelect } from '@/components/admin/DesiredTime'
-import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, yandexMapsUrl } from '@/lib/orderUi'
+import { TimeSlotSelect } from '@/components/admin/DesiredTime'
+import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, fmtMoney, fmtDesiredTime, yandexMapsUrl } from '@/lib/orderUi'
 
 // Цвет текста статуса в шапке (тон бейджа, но без плашки — меньше визуального шума).
 const STATUS_TEXT = { purple: '#a87fff', orange: '#f4a840', green: '#2ecc71', red: '#ff4655' }
@@ -221,48 +221,54 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     >
       {!mode && (
         <>
-          {/* Дата заезда */}
-          <div className="a-fl">Дата заезда</div>
-          <div className="a-fv">
-            {o.desired_date?.slice(0, 10) || '—'}
-            <DesiredTime time={o.desired_time} />
-          </div>
+          {/* Поля заявки: ярлык + значение в одну строку (ярлык крупнее, значение мельче) */}
+          <div className="a-fields">
+            <div className="a-frow">
+              <span className="a-frl">Дата заезда</span>
+              <span className="a-frv a-frv--split">
+                <span>{o.desired_date?.slice(0, 10) || '—'}</span>
+                <span className="a-frv-time">{fmtDesiredTime(o.desired_time) || '⚡'}</span>
+              </span>
+            </div>
 
-          {/* Водитель */}
-          {o.driver_name && (
-            <>
-              <div className="a-fl">Водитель</div>
-              <div className="a-fv">{o.driver_name}{o.shift_date ? ` · ${o.shift_date.slice(0, 10)}` : ''}</div>
-            </>
-          )}
-
-          {/* Объект + адрес */}
-          <div className="a-fl">Объект</div>
-          <div className="a-fv a-fv--obj">{objectLine(o)}</div>
-          <div className="a-fsub">
-            {(() => {
-              const u = yandexMapsUrl(o)
-              return u
-                ? <a href={u} target="_blank" rel="noreferrer" className="a-maplink" title="Открыть точку в Яндекс.Картах">📍 {streetLine(o)}</a>
-                : <>📍 {streetLine(o)}</>
-            })()}
-            {(o.district_alias || o.district) ? ` · ${o.district_alias || o.district}` : ''}
-          </div>
-
-          {/* Заказчик */}
-          <div className="a-fl">Заказчик</div>
-          <div className="a-fv">{clientLegal(o)}</div>
-
-          {/* Доверенное лицо */}
-          {o.trusted_person_name && (
-            <>
-              <div className="a-fl">Контакт</div>
-              <div className="a-fv">
-                {o.trusted_person_name}
-                {o.trusted_person_phone && <a href={`tel:${o.trusted_person_phone}`} className="a-inline-meta" style={{ textDecoration: 'none' }}>{o.trusted_person_phone}</a>}
+            {o.driver_name && (
+              <div className="a-frow">
+                <span className="a-frl">Водитель</span>
+                <span className="a-frv">{o.driver_name}{o.shift_date ? ` · ${o.shift_date.slice(0, 10)}` : ''}</span>
               </div>
-            </>
-          )}
+            )}
+
+            <div className="a-frow">
+              <span className="a-frl">Объект</span>
+              <span className="a-frv">
+                {objectLine(o)}
+                <span className="a-frv-sub">
+                  {(() => {
+                    const u = yandexMapsUrl(o)
+                    return u
+                      ? <a href={u} target="_blank" rel="noreferrer" className="a-maplink" title="Открыть точку в Яндекс.Картах">📍 {streetLine(o)}</a>
+                      : <>📍 {streetLine(o)}</>
+                  })()}
+                  {(o.district_alias || o.district) ? ` · ${o.district_alias || o.district}` : ''}
+                </span>
+              </span>
+            </div>
+
+            <div className="a-frow">
+              <span className="a-frl">Заказчик</span>
+              <span className="a-frv">{clientLegal(o)}</span>
+            </div>
+
+            {o.trusted_person_name && (
+              <div className="a-frow">
+                <span className="a-frl">Контакт</span>
+                <span className="a-frv">
+                  {o.trusted_person_name}
+                  {o.trusted_person_phone && <a href={`tel:${o.trusted_person_phone}`} className="a-frv-phone">{o.trusted_person_phone}</a>}
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Участки / действия + плашка + рейсы */}
           {(o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (

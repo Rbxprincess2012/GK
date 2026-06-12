@@ -617,6 +617,13 @@
 .a-cjob-base { font-weight: 700; color: #57c98a; }
 .a-cjob-emo { font-size: 0.95rem; }
 .a-cjob-trips { color: #8fa0c8; font-size: 0.72rem; }
+/* «Действие» в фикс. колонке — выровнено по левому краю независимо от длины участка. */
+.a-cjob-task--grid { display: grid; grid-template-columns: 116px 1fr; gap: 8px; align-items: baseline; }
+.a-cjob-task--grid .a-cjob-sec-label {
+  display: inline-block; max-width: 100%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+}
+.a-cjob-act { color: #cdd6f4; }
 
 /* Кликабельный адрес → точка в Яндекс.Картах */
 .a-maplink { color: #e8ecff; text-decoration: none; border-bottom: 1px dashed rgba(132,160,255,0.5); }
@@ -1510,7 +1517,7 @@
 
 /* ── Секции / вложенные блоки ── */
 .a-section-title {
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #92a2d4;
@@ -1537,6 +1544,19 @@
 .a-fv--obj { font-weight: 800; }
 .a-fsub { color: #92a2d4; font-size: 0.82rem; line-height: 1.5; margin-top: 3px; }
 .a-fsub .a-maplink { color: #92a2d4; }
+
+/* Поля заявки: «ярлык — значение» в одну строку. Один шрифт, два кегля:
+   ярлык (заглавие) крупнее и жирнее, значение (содержание) мельче. */
+.a-fields { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 6px; }
+.a-frow { display: flex; gap: 12px; align-items: baseline; }
+.a-frl { flex: 0 0 92px; font-size: 0.88rem; font-weight: 700; color: #e8ecff; line-height: 1.4; }
+.a-frv { flex: 1; min-width: 0; font-size: 0.82rem; font-weight: 500; color: #c7cfeb; line-height: 1.4; }
+.a-frv--split { display: flex; align-items: baseline; gap: 8px; }
+/* Время — в строке с датой, прижато к правому краю с фиксированным отступом. */
+.a-frv-time { margin-left: auto; padding-right: 2px; color: #92a2d4; white-space: nowrap; }
+.a-frv-sub { display: block; margin-top: 2px; font-size: 0.78rem; color: #92a2d4; }
+.a-frv-sub .a-maplink { color: #92a2d4; }
+.a-frv-phone { margin-left: 8px; color: #92a2d4; text-decoration: none; }
 .a-empty { color: #92a2d4; font-size: 0.86rem; padding: 14px 0; }
 .a-linklike {
   background: none; border: none; padding: 0; cursor: pointer;
@@ -1800,11 +1820,18 @@
 .a-orders-group-head .a-count { margin-left: 2px; }
 .a-orders-group-head .a-badge:last-child { margin-left: auto; }
 
-/* Строка-разделитель даты внутри общей таблицы заявок. */
-.a-orders-group-row > td { padding: 16px 10px 0; border: none; }
-.a-orders-table > tbody:first-of-type > .a-orders-group-row > td { padding-top: 4px; }
-.a-orders-group-row:hover > td { background: none !important; cursor: default; }
-.a-orders-group-row .a-orders-group-head { margin-bottom: 0; }
+/* Контейнер дня — лёгкая заливка; между днями прозрачный зазор-разделитель. */
+.a-day td, .a-day th { background: rgba(255,255,255,0.022); }
+.a-day tr:not(.a-orders-group-row):not(.a-day-gap):hover td { background: rgba(255,255,255,0.05); }
+.a-day-gap td { background: transparent !important; height: 12px; padding: 0 !important; border: none !important; }
+
+/* Шапка дня — band с центрированной датой (без подчёркивания — заливка уже отделяет). */
+.a-orders-group-row > td { background: rgba(255,255,255,0.045); padding: 9px 10px; border: none; }
+.a-orders-group-row:hover > td { background: rgba(255,255,255,0.045); cursor: default; }
+.a-orders-group-row .a-orders-group-head {
+  justify-content: center; margin-bottom: 0; padding-bottom: 0; border-bottom: none;
+}
+.a-orders-group-row .a-orders-group-head .a-badge:last-child { margin-left: 0; }
 
 /* ── Сверка с водителем: «бумажная» ведомость ─────────────────────────────── */
 .recon-sheet {

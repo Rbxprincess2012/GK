@@ -19,9 +19,9 @@ export function ContainerJob({ o, showTrips = true }) {
       {/* Уровень 1 — по участкам текстом (или агрегат «Забрать N» без позиций) */}
       {items.length > 0
         ? items.map((it, i) => (
-            <div key={i} className="a-cjob-task">
+            <div key={i} className={'a-cjob-task' + (it.section_name ? ' a-cjob-task--grid' : '')}>
               {it.section_name && <span className="a-cjob-sec-label">📍 {it.section_name}</span>}
-              {' '}{ACTION[it.action] || it.action} {it.quantity}
+              <span className="a-cjob-act">{ACTION[it.action] || it.action} {it.quantity}</span>
             </div>
           ))
         : j.fulls > 0 && <div className="a-cjob-task">Забрать {j.fulls}</div>}

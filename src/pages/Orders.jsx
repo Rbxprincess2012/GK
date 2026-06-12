@@ -93,10 +93,11 @@ export default function Orders() {
               <thead>
                 <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
               </thead>
-              {groups.map(({ date, list, unassigned }) => {
+              {groups.map(({ date, list, unassigned }, gi) => {
                 const overdue = date && date < todayStr
                 return (
-                  <tbody key={date || 'none'}>
+                  <tbody key={date || 'none'} className="a-day">
+                    {gi > 0 && <tr className="a-day-gap"><td colSpan={10} /></tr>}
                     <tr className="a-orders-group-row">
                       <td colSpan={10}>
                         <div className={'a-orders-group-head' + (overdue ? ' is-overdue' : '')}>
