@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import * as svc from '../services/settings.js'
 import { geocode } from '../lib/geocode.js'
+import { findPartyByInn } from '../services/dadata.js'
 
 const r = Router()
 
@@ -14,6 +15,7 @@ const tokensInput = z.object({
   yandex_folder_id: z.string().optional(),
   yandex_geocoder_key: z.string().optional(),
   yandex_jsapi_key: z.string().optional(),
+  dadata_token: z.string().optional(),
   n8n_service_token: z.string().optional(),
 }).passthrough()
 
@@ -105,6 +107,17 @@ r.put('/org', async (req, res, next) => {
   try {
     const cur = (await svc.getSetting('org')) || {}
     res.json(await svc.setSetting('org', { ...cur, ...orgInput.parse(req.body) }))
+  } catch (e) { next(e) }
+})
+
+// Автоподстановка реквизитов организации по ИНН/ОГРН через DaData.
+r.post('/dadata/party', async (req, res, next) => {
+  try {
+    const query = String(req.body?.query || '').trim()
+    if (!query) return res.status(400).json({ error: 'query_required' })
+    const data = await findPartyByInn(query)
+    if (!data) return res.status(404).json({ error: 'not_found' })
+    res.json(data)
   } catch (e) { next(e) }
 })
 

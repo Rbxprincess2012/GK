@@ -26,6 +26,7 @@ const TOKEN_GROUPS = [
   },
   {
     title: 'Прочее', icon: '🔗', items: [
+      ['dadata_token', 'Токен DaData', 'Автозаполнение реквизитов по ИНН · dadata.ru → личный кабинет → API-ключ (бесплатно)'],
       ['n8n_service_token', 'Сервисный токен n8n', 'Для интеграционных сценариев'],
     ],
   },
@@ -82,6 +83,32 @@ export default function Settings() {
     api.get('/settings/org').then(({ data }) => setOrg({ company_name: '', ...data })).catch(() => {})
   }, [])
   const setOrgField = (k) => (e) => setOrg({ ...org, [k]: e.target.value })
+  const [pulling, setPulling] = useState(false)
+  const pullByInn = async () => {
+    const query = (org.inn || '').trim()
+    if (!query) { toast.error('Сначала укажите ИНН'); return }
+    setPulling(true)
+    try {
+      const { data } = await api.post('/settings/dadata/party', { query })
+      setOrg((o) => ({
+        ...o,
+        company_name: data.company_name || o.company_name,
+        legal_name: data.legal_name || o.legal_name,
+        inn: data.inn || o.inn,
+        kpp: data.kpp || o.kpp,
+        ogrn: data.ogrn || o.ogrn,
+        legal_address: data.legal_address || o.legal_address,
+      }))
+      toast.success('Реквизиты подтянуты — проверьте и сохраните')
+    } catch (e) {
+      const err = e?.response?.data?.error
+      toast.error(
+        err === 'dadata_token_missing' ? 'Впишите токен DaData в «Токены интеграций» и сохраните'
+          : err === 'not_found' ? 'Организация по ИНН не найдена'
+            : 'Не удалось получить данные DaData',
+      )
+    } finally { setPulling(false) }
+  }
   const saveOrg = async () => {
     try {
       const { data } = await api.put('/settings/org', org)
@@ -173,9 +200,9 @@ export default function Settings() {
             <input className="a-input" value={org.legal_name || ''} placeholder="ООО «Чистый город»" onChange={setOrgField('legal_name')} />
           </label>
         </div>
-        <div className="a-field-row">
+        <div className="a-field-row" style={{ alignItems: 'flex-end' }}>
           <label className="a-field"><span>ИНН</span>
-            <input className="a-input" value={org.inn || ''} onChange={setOrgField('inn')} />
+            <input className="a-input" value={org.inn || ''} onChange={setOrgField('inn')} placeholder="10 или 12 цифр" />
           </label>
           <label className="a-field"><span>КПП</span>
             <input className="a-input" value={org.kpp || ''} onChange={setOrgField('kpp')} />
@@ -183,6 +210,10 @@ export default function Settings() {
           <label className="a-field"><span>ОГРН</span>
             <input className="a-input" value={org.ogrn || ''} onChange={setOrgField('ogrn')} />
           </label>
+          <button className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}
+            onClick={pullByInn} disabled={pulling} title="Заполнить юр. реквизиты по ИНН через DaData">
+            {pulling ? 'Загрузка…' : '↧ По ИНН'}
+          </button>
         </div>
         <label className="a-field"><span>Юридический адрес</span>
           <input className="a-input" value={org.legal_address || ''} onChange={setOrgField('legal_address')} />
