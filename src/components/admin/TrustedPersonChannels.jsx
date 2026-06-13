@@ -8,7 +8,7 @@ import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 //  • Telegram — онбординг: «Пригласить» выдаёт ссылку /start p<code>, лицо открывает
 //    её → бот узнаёт chat_id → статус active → отчёты уходят автоматически.
 //  • MAX — ручной адрес (бота у MAX пока нет): поле, хранится в chats.max.
-export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, maxAddr, onMaxChange, onChanged }) {
+export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, onChanged }) {
   const { invitePerson, revokePerson } = useClientsStore()
   const toast = useToast()
   const [link, setLink] = useState(null)
@@ -65,10 +65,14 @@ export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, maxAd
         <div className="a-msgr-card">
           <div className="a-msgr-card-head">
             <span className="a-msgr-card-title"><MaxIcon size={16} /><span>MAX</span></span>
+            <span className="a-msgr-badge a-msgr-badge--wait">скоро</span>
           </div>
+          {/* Бот MAX в разработке: поля те же, что у Telegram, но приглашение пока
+              не работает — кнопка отключена. Когда бот появится, включаем onClick. */}
           <div className="a-msgr-card-body">
-            <input className="a-input" value={maxAddr || ''} placeholder="ссылка max.ru/u/… или id чата"
-              onChange={(e) => onMaxChange(e.target.value)} />
+            <button type="button" className="a-btn a-btn--primary a-btn--sm" disabled
+              title="Бот MAX в разработке — приглашение заработает позже">Пригласить</button>
+            <span className="a-muted" style={{ fontSize: '0.78rem' }}>Бот MAX скоро — кнопка заработает позже.</span>
           </div>
         </div>
       )}
