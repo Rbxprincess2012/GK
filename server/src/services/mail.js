@@ -1,8 +1,31 @@
 import { db } from '../db.js'
 import { config, mailEnabled } from '../config.js'
 
-// Реальная отправка через SMTP. nodemailer ставится, когда настроим почтовую службу.
-async function deliver(row) {
+// Отправка через Resend HTTP API (порт 443). На VPS SMTP-порты заблокированы
+// провайдером, поэтому это основной канал. from должен быть с верифицированного
+// домена (напр. noreply@putevo.su) либо тестовый onboarding@resend.dev.
+async function deliverResend(row) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: config.MAIL_FROM || 'Putevo <onboarding@resend.dev>',
+      to: [row.to_email],
+      subject: row.subject,
+      text: row.body,
+    }),
+  })
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    throw new Error(`resend ${res.status}: ${txt}`)
+  }
+}
+
+// Реальная отправка через SMTP (запасной канал, если SMTP-порты доступны).
+async function deliverSmtp(row) {
   const { default: nodemailer } = await import('nodemailer')
   const transport = nodemailer.createTransport({
     host: config.SMTP_HOST,
@@ -16,6 +39,12 @@ async function deliver(row) {
     subject: row.subject,
     text: row.body,
   })
+}
+
+// Resend (HTTP) в приоритете — он работает на VPS, где SMTP закрыт провайдером.
+async function deliver(row) {
+  if (config.RESEND_API_KEY) return deliverResend(row)
+  return deliverSmtp(row)
 }
 
 async function markSent(id, attempts) {

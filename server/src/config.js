@@ -30,6 +30,8 @@ const schema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_SECURE: z.enum(['true', 'false']).optional(),
+  // Resend через HTTP API (порт 443): обходит блокировку SMTP-портов на VPS.
+  RESEND_API_KEY: z.string().optional(),
   // Водительский Telegram-бот (отдельный токен от клиентского!).
   DRIVER_BOT_TOKEN: z.string().optional(),
   DRIVER_BOT_USERNAME: z.string().optional(),   // без @, для ссылок t.me/<username>?start=<code>
@@ -42,8 +44,10 @@ const schema = z.object({
 
 export const config = schema.parse(process.env)
 
-// Почта реально отправляется, только когда задан SMTP-хост (иначе письма копятся в очереди).
-export const mailEnabled = Boolean(config.SMTP_HOST)
+// Почта реально отправляется, когда задан Resend API-ключ ИЛИ SMTP-хост
+// (иначе письма копятся в email_outbox). На VPS SMTP-порты заблокированы
+// провайдером, поэтому основной канал — Resend HTTP API (порт 443).
+export const mailEnabled = Boolean(config.RESEND_API_KEY || config.SMTP_HOST)
 
 // готовое соединение для knex (host/port/user/password/database + ssl)
 export function pgConnection() {
