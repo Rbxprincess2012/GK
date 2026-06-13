@@ -529,7 +529,7 @@ export default function Clients() {
             <input className="a-input" value={objForm.note} onChange={(e) => setObjForm({ ...objForm, note: e.target.value })} placeholder="Код от ворот, контакт на месте…" />
           </label>
 
-          <div className="a-field-row" style={{ alignItems: 'flex-end' }}>
+          <div className="a-field-row">
             <label className="a-field"><span>Широта (lat)</span>
               <input className="a-input" inputMode="decimal" value={objForm.lat ?? ''} placeholder="45.0355"
                 onChange={(e) => setObjForm({ ...objForm, lat: e.target.value, geo_source: 'manual' })} />
@@ -538,16 +538,13 @@ export default function Clients() {
               <input className="a-input" inputMode="decimal" value={objForm.lng ?? ''} placeholder="38.9753"
                 onChange={(e) => setObjForm({ ...objForm, lng: e.target.value, geo_source: 'manual' })} />
             </label>
-            <div className="a-field" style={{ flex: '0 0 auto' }}>
-              <span aria-hidden="true">&nbsp;</span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="a-btn a-btn--ghost" onClick={geocodeObj}
-                  title="Определить координаты по адресу через Яндекс">🔍 По адресу</button>
-                <button type="button" className="a-btn a-btn--ghost" onClick={copyCoords}
-                  disabled={objForm.lat == null || objForm.lat === '' || objForm.lng == null || objForm.lng === ''}
-                  title="Скопировать координаты в буфер обмена">📋 Координаты</button>
-              </div>
-            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <button type="button" className="a-btn a-btn--ghost" onClick={geocodeObj}
+              title="Определить координаты по адресу через Яндекс">🔍 По адресу</button>
+            <button type="button" className="a-btn a-btn--ghost" onClick={copyCoords}
+              disabled={objForm.lat == null || objForm.lat === '' || objForm.lng == null || objForm.lng === ''}
+              title="Скопировать координаты в буфер обмена">📋 Копировать координаты</button>
           </div>
           <div className="a-muted" style={{ fontSize: '0.76rem', marginTop: -4, marginBottom: 6 }}>
             {objForm.geo_source === 'manual'
