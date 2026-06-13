@@ -39,7 +39,7 @@ function clientInitial(c) {
 const emptyClient = {
   type: 'ooo', legal_name: '', nickname: '', inn: '', kpp: '', ogrn: '',
   legal_address: '', bank_name: '', bank_account: '', bik: '', corr_account: '',
-  email: '', phone: '', default_payment_method: 'cashless', requires_photo: false,
+  email: '', phone: '', default_payment_method: 'cashless',
   group_id: '', chats: {},
 }
 
@@ -134,7 +134,6 @@ export default function Clients() {
     payload.chats = form.chats || {}
     payload.type = form.type
     payload.legal_name = form.legal_name
-    payload.requires_photo = !!form.requires_photo
     payload.default_payment_method = form.default_payment_method
     payload.group_id = groupId
     try {
@@ -266,11 +265,10 @@ export default function Clients() {
                 {noAvatar
                   ? <span className="a-icon-slot" aria-hidden="true" />
                   : <span className={'a-client-avatar' + (c.type === 'ip' ? ' a-client-avatar--ip' : '')}>{clientInitial(c)}</span>}
-                <span className="a-client-id" style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) 1fr 1fr 1fr', alignItems: 'center', gap: 14 }}>
+                <span className="a-client-id" style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) 1fr 1fr', alignItems: 'center', gap: 14 }}>
                   <span className="a-client-legal">{c.legal_name}</span>
                   <span className="a-muted">{c.inn ? `ИНН ${c.inn}` : '—'}</span>
                   <span className="a-muted">{PAY[c.default_payment_method] || '—'}</span>
-                  <span className="a-muted">{c.requires_photo ? '📷 фотоотчёт' : 'без фото'}</span>
                 </span>
                 <div className="a-actions">
                   {!c.group_id && (
@@ -305,7 +303,7 @@ export default function Clients() {
                           <div key={o.id} className="a-objrow">
                             <span className="a-obj-title">
                               🏢 {objName(o)}
-                              {(o.requires_photo ?? c.requires_photo)
+                              {o.requires_photo !== false
                                 ? <span className="a-obj-photo" title="Требуется фотоотчёт"> · 📷</span>
                                 : <span className="a-obj-photo a-muted" title="Фотоотчёт не требуется"> · без фото</span>}
                             </span>
@@ -474,11 +472,6 @@ export default function Clients() {
           </div>
           <label className="a-field"><span>Корр. счёт</span>
             <input className="a-input" value={form.corr_account} onChange={(e) => setForm({ ...form, corr_account: e.target.value })} />
-          </label>
-
-          <label className="a-field a-field--check" style={{ marginTop: 14 }}>
-            <input type="checkbox" checked={!!form.requires_photo} onChange={(e) => setForm({ ...form, requires_photo: e.target.checked })} />
-            <span>Требует фотоотчёт по умолчанию <b style={{ color: '#ff4655' }}>*</b></span>
           </label>
         </Modal>
       )}
