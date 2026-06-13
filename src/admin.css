@@ -924,6 +924,21 @@
 .a-chataddr-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #cdd6f4; }
 .a-chataddr-row .a-input { font-size: 0.82rem; }
 
+/* Каналы доставки доверенного лица — карточка на мессенджер (Telegram / MAX) */
+.a-msgr-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.a-msgr-card {
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  padding: 10px 12px; background: rgba(255,255,255,0.03);
+}
+.a-msgr-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.a-msgr-card-title { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 0.85rem; color: #e8ecff; }
+.a-msgr-badge { font-size: 0.78rem; white-space: nowrap; }
+.a-msgr-badge--ok { color: #2ecc71; }
+.a-msgr-badge--wait { color: #f4a840; }
+.a-msgr-card-body { display: flex; flex-direction: column; gap: 8px; }
+.a-msgr-invite { display: flex; gap: 6px; }
+.a-msgr-invite .a-input { flex: 1; }
+
 /* ── Карточки заказчиков ──────────────────────────────────────────────────── */
 .a-client-list { display: flex; flex-direction: column; gap: 10px; }
 

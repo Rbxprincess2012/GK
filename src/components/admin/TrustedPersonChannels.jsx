@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useClientsStore } from '@/store/clientsStore'
 import { useToast } from '@/components/admin/Toast'
-import { MessengerChatInputs, TelegramIcon } from '@/components/admin/PhoneMessengerField'
+import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 
-// Каналы доставки отчёта доверенному лицу:
-//  • Telegram — онбординг (личный chat_id): «Пригласить» выдаёт ссылку /start p<code>,
-//    лицо открывает её → бот узнаёт chat_id → статус active → отчёты уходят автоматически.
-//  • MAX — ручной адрес (бота у MAX пока нет): обычное поле, хранится в chats.max.
-// Блоки показываются под выбранными мессенджерами (hasTg/hasMax).
+// Каналы доставки отчёта доверенному лицу — отдельной карточкой на мессенджер
+// (Telegram сверху, MAX ниже), каждая показывается под выбранным мессенджером:
+//  • Telegram — онбординг: «Пригласить» выдаёт ссылку /start p<code>, лицо открывает
+//    её → бот узнаёт chat_id → статус active → отчёты уходят автоматически.
+//  • MAX — ручной адрес (бота у MAX пока нет): поле, хранится в chats.max.
 export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, maxAddr, onMaxChange, onChanged }) {
   const { invitePerson, revokePerson } = useClientsStore()
   const toast = useToast()
@@ -32,33 +32,45 @@ export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, maxAd
 
   if (!hasTg && !hasMax) return null
   return (
-    <div className="a-chataddr">
+    <div className="a-msgr-cards">
       {hasTg && (
-        <div className="a-chataddr-row">
-          <span className="a-chataddr-label"><TelegramIcon /><span>Telegram</span></span>
-          {!personId ? (
-            <span className="a-muted" style={{ fontSize: '0.8rem' }}>Сохраните лицо, чтобы пригласить в Telegram</span>
-          ) : tgStatus === 'active' ? (
-            <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ color: '#2ecc71', fontSize: '0.82rem' }}>✅ привязан</span>
+        <div className="a-msgr-card">
+          <div className="a-msgr-card-head">
+            <span className="a-msgr-card-title"><TelegramIcon size={15} /><span>Telegram</span></span>
+            {personId && tgStatus === 'active' && <span className="a-msgr-badge a-msgr-badge--ok">✅ привязан</span>}
+            {personId && tgStatus === 'pending' && <span className="a-msgr-badge a-msgr-badge--wait">⏳ ожидает</span>}
+          </div>
+          <div className="a-msgr-card-body">
+            {!personId ? (
+              <span className="a-muted" style={{ fontSize: '0.8rem' }}>Сохраните лицо, чтобы пригласить в Telegram</span>
+            ) : tgStatus === 'active' ? (
               <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={revoke}>Отвязать</button>
-            </span>
-          ) : (
-            <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {tgStatus === 'pending' && <span style={{ color: '#f4a840', fontSize: '0.82rem' }}>⏳ ожидает</span>}
-              <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={invite} disabled={busy}>{busy ? '…' : 'Пригласить'}</button>
-            </span>
-          )}
-        </div>
-      )}
-      {hasTg && link && (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <input className="a-input" readOnly value={link} style={{ fontSize: '0.78rem' }} />
-          <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={() => copy(link)}>Копировать</button>
+            ) : (
+              <>
+                <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={invite} disabled={busy}>
+                  {busy ? '…' : 'Пригласить'}
+                </button>
+                {link && (
+                  <div className="a-msgr-invite">
+                    <input className="a-input" readOnly value={link} onFocus={(e) => e.target.select()} style={{ fontSize: '0.78rem' }} />
+                    <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => copy(link)}>Копировать</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
       {hasMax && (
-        <MessengerChatInputs messengers={['max']} chats={{ max: maxAddr }} onChange={(c) => onMaxChange(c.max || '')} />
+        <div className="a-msgr-card">
+          <div className="a-msgr-card-head">
+            <span className="a-msgr-card-title"><MaxIcon size={16} /><span>MAX</span></span>
+          </div>
+          <div className="a-msgr-card-body">
+            <input className="a-input" value={maxAddr || ''} placeholder="ссылка max.ru/u/… или id чата"
+              onChange={(e) => onMaxChange(e.target.value)} />
+          </div>
+        </div>
       )}
     </div>
   )
