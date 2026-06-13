@@ -262,10 +262,24 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 16px;
   padding: 10px 24px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
   background: rgba(255,255,255,0.01);
   flex-shrink: 0;
+}
+
+/* Переключатель «Смотреть как» — превью UI в роли (только для суперпользователя) */
+.a-roleswitch { display: inline-flex; align-items: center; gap: 4px; }
+.a-roleswitch-label { font-size: 0.72rem; color: #6f7fa6; margin-right: 2px; }
+.a-roleswitch-btn {
+  font-size: 0.74rem; font-weight: 600; padding: 4px 10px; border-radius: 7px;
+  background: rgba(255,255,255,0.05); color: #92a2d4;
+  border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.15s;
+}
+.a-roleswitch-btn:hover { color: #e8ecff; border-color: rgba(255,255,255,0.25); }
+.a-roleswitch-btn.is-active {
+  background: rgba(134,95,255,0.2); color: #c4acff; border-color: rgba(134,95,255,0.5);
 }
 
 .a-main {

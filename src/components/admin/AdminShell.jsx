@@ -13,8 +13,10 @@ const EXPANDED = 220
 const roleLabels = { superuser: 'Суперпользователь', director: 'Директор', manager: 'Менеджер' }
 const cloneDefault = () => JSON.parse(JSON.stringify(DEFAULT_LAYOUT))
 
+const SWITCH_ROLES = ['superuser', 'director', 'manager']
+
 export default function AdminShell() {
-  const { user, logout } = useAuth()
+  const { user, logout, isSuperuser, viewRole, setViewRole } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [expanded, setExpanded] = useState(false)
@@ -88,6 +90,20 @@ export default function AdminShell() {
           <span style={{ fontSize: '0.82rem', color: '#92a2d4' }}>
             {[user?.last_name, user?.first_name].filter(Boolean).join(' ') || user?.email} · {roleLabels[user?.role]}
           </span>
+          {isSuperuser && (
+            <div className="a-roleswitch" title="Просмотр интерфейса в роли (только вид; права в API остаются суперпользователя)">
+              <span className="a-roleswitch-label">Смотреть как:</span>
+              {SWITCH_ROLES.map((r) => (
+                <button
+                  key={r}
+                  className={'a-roleswitch-btn' + ((viewRole || 'superuser') === r ? ' is-active' : '')}
+                  onClick={() => setViewRole(r)}
+                >
+                  {roleLabels[r]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <main className="a-main">
           <Outlet />

@@ -4,9 +4,13 @@ import api from '@/lib/api'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [realUser, setRealUser] = useState(null)
   const [assignableRoles, setAssignableRoles] = useState([])
   const [loading, setLoading] = useState(true)
+  // «Просмотр в роли»: суперпользователь может временно смотреть UI как директор/менеджер.
+  // Влияет ТОЛЬКО на видимость в интерфейсе (сайдбар/разделы). Бэк авторизует по реальному
+  // токену (superuser), поэтому это превью режимов, а не настоящее ограничение прав.
+  const [viewRole, setViewRoleState] = useState(() => localStorage.getItem('viewRole') || null)
 
   useEffect(() => {
     (async () => {
@@ -14,7 +18,7 @@ export function AuthProvider({ children }) {
       if (!token) { setLoading(false); return }
       try {
         const { data } = await api.get('/auth/me')
-        setUser(data.user)
+        setRealUser(data.user)
         setAssignableRoles(data.assignable_roles || [])
       } catch {
         localStorage.removeItem('token')
@@ -26,7 +30,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
     localStorage.setItem('token', data.token)
-    setUser(data.user)
+    setRealUser(data.user)
     try {
       const me = await api.get('/auth/me')
       setAssignableRoles(me.data.assignable_roles || [])
@@ -38,19 +42,33 @@ export function AuthProvider({ children }) {
   const activateSession = async (token) => {
     localStorage.setItem('token', token)
     const { data } = await api.get('/auth/me')
-    setUser(data.user)
+    setRealUser(data.user)
     setAssignableRoles(data.assignable_roles || [])
     return data.user
   }
 
   const logout = () => {
     localStorage.removeItem('token')
-    setUser(null)
+    localStorage.removeItem('viewRole')
+    setRealUser(null)
     setAssignableRoles([])
+    setViewRoleState(null)
   }
 
+  const isSuperuser = realUser?.role === 'superuser'
+  const setViewRole = (r) => {
+    if (r && r !== 'superuser') localStorage.setItem('viewRole', r)
+    else localStorage.removeItem('viewRole')
+    setViewRoleState(r && r !== 'superuser' ? r : null)
+  }
+  // Эффективный пользователь: суперпользователю с активным viewRole подменяем роль для UI.
+  const user = realUser && isSuperuser && viewRole ? { ...realUser, role: viewRole } : realUser
+
   return (
-    <AuthContext.Provider value={{ user, assignableRoles, login, logout, activateSession, loading }}>
+    <AuthContext.Provider value={{
+      user, assignableRoles, login, logout, activateSession, loading,
+      realRole: realUser?.role, isSuperuser, viewRole, setViewRole,
+    }}>
       {children}
     </AuthContext.Provider>
   )
