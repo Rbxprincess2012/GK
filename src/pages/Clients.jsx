@@ -539,10 +539,10 @@ export default function Clients() {
                 onChange={(e) => setObjForm({ ...objForm, lng: e.target.value, geo_source: 'manual' })} />
             </label>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button type="button" className="a-btn a-btn--ghost" onClick={geocodeObj}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+            <button type="button" className="a-btn a-btn--ghost" style={{ flex: 1 }} onClick={geocodeObj}
               title="Определить координаты по адресу через Яндекс">🔍 По адресу</button>
-            <button type="button" className="a-btn a-btn--ghost" onClick={copyCoords}
+            <button type="button" className="a-btn a-btn--ghost" style={{ flex: 1 }} onClick={copyCoords}
               disabled={objForm.lat == null || objForm.lat === '' || objForm.lng == null || objForm.lng === ''}
               title="Скопировать координаты в буфер обмена">📋 Копировать координаты</button>
           </div>
