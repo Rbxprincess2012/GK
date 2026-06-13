@@ -3,6 +3,7 @@ import { z } from 'zod'
 import * as svc from '../services/settings.js'
 import { geocode } from '../lib/geocode.js'
 import { findPartyByInn } from '../services/dadata.js'
+import { requireRole } from '../middleware/authUser.js'
 
 const r = Router()
 
@@ -19,10 +20,14 @@ const tokensInput = z.object({
   n8n_service_token: z.string().optional(),
 }).passthrough()
 
-r.get('/tokens', async (_req, res, next) => {
+// Токены интеграций — платформенные секреты (общий бот/Яндекс/DaData/n8n).
+// Доступ и видимость только у суперпользователя (задел под SaaS): арендаторам
+// чужие общие ключи видеть/менять нельзя. Сами интеграции (напр. /dadata/party)
+// остаются доступны менеджеру — токен читается на сервере, в ответ не отдаётся.
+r.get('/tokens', requireRole('superuser'), async (_req, res, next) => {
   try { res.json(await svc.getTokens()) } catch (e) { next(e) }
 })
-r.put('/tokens', async (req, res, next) => {
+r.put('/tokens', requireRole('superuser'), async (req, res, next) => {
   try { res.json(await svc.setTokens(tokensInput.parse(req.body))) } catch (e) { next(e) }
 })
 

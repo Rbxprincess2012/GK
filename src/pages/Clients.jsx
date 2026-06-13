@@ -245,7 +245,7 @@ export default function Clients() {
       setForm((f) => ({
         ...f,
         legal_name: data.legal_name || f.legal_name,
-        nickname: f.nickname || data.company_name || '',
+        nickname: f.nickname || data.short_name || data.company_name || '',
         inn: data.inn || f.inn,
         kpp: data.kpp || f.kpp,
         ogrn: data.ogrn || f.ogrn,
@@ -474,7 +474,7 @@ export default function Clients() {
             <label className="a-field"><span>ОГРН</span>
               <input className="a-input" value={form.ogrn} onChange={(e) => setForm({ ...form, ogrn: e.target.value })} />
             </label>
-            <button type="button" className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}
+            <button type="button" className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap', height: 40, boxSizing: 'border-box' }}
               onClick={pullClientByInn} disabled={pullingInn} title="Заполнить реквизиты по ИНН через DaData">
               {pullingInn ? '…' : '↧ По ИНН'}
             </button>
@@ -500,7 +500,7 @@ export default function Clients() {
           />
           {editing.id && <ClientRecipients clientId={editing.id} />}
 
-          <div className="a-section-title">Банк</div>
+          <div className="a-section-title">Банковские реквизиты</div>
           <label className="a-field"><span>Банк</span>
             <input className="a-input" value={form.bank_name} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} />
           </label>

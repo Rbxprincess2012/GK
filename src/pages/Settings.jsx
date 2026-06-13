@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '@/lib/api'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
+import { useAuth } from '@/context/AuthContext'
 
 // Токены сгруппированы по интеграции; у каждого — своя подпись и подсказка.
 const TOKEN_GROUPS = [
@@ -59,6 +60,8 @@ function load() {
 
 export default function Settings() {
   const toast = useToast()
+  const { user } = useAuth()
+  const isSuper = user?.role === 'superuser' // токены интеграций — только суперпользователю
   const [form, setForm] = useState(load)
   const [confirmReset, setConfirmReset] = useState(false)
 
@@ -76,12 +79,12 @@ export default function Settings() {
   // Данные компании-оператора (название — для шаблона приглашения доверенного лица).
   const [org, setOrg] = useState({ company_name: '' })
   useEffect(() => {
-    api.get('/settings/tokens').then(({ data }) => setTokens(data || {})).catch(() => {})
+    if (isSuper) api.get('/settings/tokens').then(({ data }) => setTokens(data || {})).catch(() => {})
     api.get('/settings/base').then(({ data }) => setBase(data || { address: '', lat: null, lng: null })).catch(() => {})
     api.get('/settings/distribution').then(({ data }) => setDistribution({ km_weight: 0.1, region: '', geocoder: 'nominatim', ...data })).catch(() => {})
     api.get('/settings/client-templates').then(({ data }) => setTemplates(Array.isArray(data) ? data : [])).catch(() => {})
     api.get('/settings/org').then(({ data }) => setOrg({ company_name: '', ...data })).catch(() => {})
-  }, [])
+  }, [isSuper])
   const setOrgField = (k) => (e) => setOrg({ ...org, [k]: e.target.value })
   const [pulling, setPulling] = useState(false)
   const pullByInn = async () => {
@@ -163,10 +166,11 @@ export default function Settings() {
     <div className="a-page a-settings" style={{ maxWidth: 880 }}>
       <div className="a-page-header"><h2>Настройки</h2></div>
 
+      {isSuper && (
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Токены интеграций</div>
         <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: -6, marginBottom: 14 }}>
-          Используются ботами, геокодером и n8n. Доступны менеджеру, директору и суперпользователю.
+          Платформенные ключи (общий бот, Яндекс, DaData, n8n) — доступны только суперпользователю.
         </div>
         {TOKEN_GROUPS.map((group) => (
           <div key={group.title} className="a-token-group">
@@ -185,6 +189,7 @@ export default function Settings() {
         ))}
         <button className="a-btn a-btn--primary" style={{ marginTop: 16 }} onClick={saveTokens}>Сохранить токены</button>
       </div>
+      )}
 
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Наша компания — реквизиты</div>
@@ -210,7 +215,7 @@ export default function Settings() {
           <label className="a-field"><span>ОГРН</span>
             <input className="a-input" value={org.ogrn || ''} onChange={setOrgField('ogrn')} />
           </label>
-          <button className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}
+          <button className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap', height: 40, boxSizing: 'border-box' }}
             onClick={pullByInn} disabled={pulling} title="Заполнить юр. реквизиты по ИНН через DaData">
             {pulling ? 'Загрузка…' : '↧ По ИНН'}
           </button>

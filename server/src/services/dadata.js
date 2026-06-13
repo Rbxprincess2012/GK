@@ -22,6 +22,7 @@ export async function findPartyByInn(query, fetchImpl = fetch) {
   const d = s.data || {}
   return {
     company_name: d.name?.short_with_opf || d.name?.short || s.value || '',
+    short_name: d.name?.short || '', // сокращённое название без ОПФ — для ника клиента
     legal_name: d.name?.full_with_opf || s.value || '',
     inn: d.inn || '',
     kpp: d.kpp || '',
