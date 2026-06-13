@@ -4,7 +4,7 @@ import { hashPassword, verifyPassword } from '../lib/password.js'
 import { sendMail } from './mail.js'
 import * as tpl from '../lib/emailTemplates.js'
 
-const PUBLIC_COLS = ['id', 'email', 'last_name', 'first_name', 'phone', 'messengers', 'position', 'avatar', 'role', 'is_active', 'company_id', 'created_at']
+const PUBLIC_COLS = ['id', 'email', 'last_name', 'first_name', 'phone', 'messengers', 'position', 'avatar', 'role', 'is_active', 'company_id', 'nav_permissions', 'created_at']
 
 const INVITE_TTL_DAYS = 7
 const CODE_TTL_MIN = 15       // срок жизни кода подтверждения/сброса
@@ -77,6 +77,7 @@ export async function create(data, actorRole) {
     avatar: data.avatar ?? null,
     role,
     is_active: true,
+    nav_permissions: data.nav_permissions ?? null,
     invite_token: token,
     invite_expires: expires,
   }).returning('*')
@@ -127,7 +128,7 @@ export async function update(id, patch, actorRole) {
     }
   }
   const fields = {}
-  for (const k of ['last_name', 'first_name', 'phone', 'messengers', 'position', 'avatar', 'role', 'is_active']) {
+  for (const k of ['last_name', 'first_name', 'phone', 'messengers', 'position', 'avatar', 'role', 'is_active', 'nav_permissions']) {
     if (patch[k] !== undefined) fields[k] = patch[k]
   }
   const [row] = await db('users').where({ id }).update(fields).returning('*')

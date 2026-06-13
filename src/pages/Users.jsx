@@ -4,9 +4,16 @@ import { useAuth } from '@/context/AuthContext'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { PhoneMessengerField, MessengerTag } from '@/components/admin/PhoneMessengerField'
+import { ITEMS, SECTIONS, CONTAINER_ORDER, DEFAULT_LAYOUT } from '@/components/admin/navConfig'
 
 const ROLES = { manager: ['Менеджер', 'purple'], director: ['Директор', 'orange'], superuser: ['Суперпользователь', 'red'] }
-const empty = { email: '', last_name: '', first_name: '', phone: '', messengers: [], position: '', avatar: '', role: 'manager' }
+const empty = { email: '', last_name: '', first_name: '', phone: '', messengers: [], position: '', avatar: '', role: 'manager', nav_permissions: null }
+
+// Каталог пунктов сайдбара, доступных менеджеру (для индивидуальных прав, эпик #4).
+const MANAGER_NAV = CONTAINER_ORDER
+  .map((c) => ({ section: SECTIONS[c], keys: (DEFAULT_LAYOUT[c] || []).filter((k) => ITEMS[k] && (!ITEMS[k].roles || ITEMS[k].roles.includes('manager'))) }))
+  .filter((g) => g.keys.length > 0)
+const MANAGER_KEYS = MANAGER_NAV.flatMap((g) => g.keys)
 
 const userInitial = (u) => (u.last_name || u.first_name || u.email || '?').trim().charAt(0).toUpperCase()
 
@@ -36,8 +43,25 @@ export default function Users() {
     !q || `${u.last_name || ''} ${u.first_name || ''}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
 
   const open = (u) => {
-    setForm(u ? { ...empty, ...u, email: u.email, messengers: u.messengers || [], position: u.position || '', avatar: u.avatar || '' } : { ...empty, role: roleOpts[0] })
+    setForm(u ? { ...empty, ...u, email: u.email, messengers: u.messengers || [], position: u.position || '', avatar: u.avatar || '', nav_permissions: u.nav_permissions ?? null } : { ...empty, role: roleOpts[0] })
     setEditing(u || {})
+  }
+
+  // Индивидуальные права менеджера на разделы сайдбара. null = без ограничений (все).
+  const navSel = form.nav_permissions == null ? MANAGER_KEYS : form.nav_permissions
+  const navChecked = (k) => navSel.includes(k)
+  const setNav = (keys) => {
+    const all = MANAGER_KEYS.every((k) => keys.includes(k))
+    setForm((f) => ({ ...f, nav_permissions: all ? null : keys }))
+  }
+  const toggleNav = (k) => {
+    const cur = form.nav_permissions == null ? [...MANAGER_KEYS] : [...form.nav_permissions]
+    setNav(cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k])
+  }
+  const toggleNavSection = (keys, on) => {
+    const cur = new Set(form.nav_permissions == null ? MANAGER_KEYS : form.nav_permissions)
+    keys.forEach((k) => (on ? cur.add(k) : cur.delete(k)))
+    setNav([...cur])
   }
 
   const onPickAvatar = async (e) => {
@@ -55,6 +79,8 @@ export default function Users() {
       phone: form.phone || null, messengers: form.messengers || [],
       position: form.position || null, avatar: form.avatar || null,
       role: form.role,
+      // Права на разделы — только для менеджера; иначе сбрасываем ограничения.
+      nav_permissions: form.role === 'manager' ? (form.nav_permissions ?? null) : null,
     }
     try {
       if (editing.id) {
@@ -190,6 +216,41 @@ export default function Users() {
               {roleOpts.map((r) => <option key={r} value={r}>{ROLES[r]?.[0]}</option>)}
             </select>
           </label>
+
+          {form.role === 'manager' && (
+            <div className="a-field">
+              <span>Доступ к разделам</span>
+              <div className="a-muted" style={{ fontSize: '0.78rem', margin: '2px 0 8px' }}>
+                Отметьте разделы и подразделы, доступные этому менеджеру. По умолчанию — все.
+              </div>
+              <div className="a-navperm">
+                {MANAGER_NAV.map((g) => {
+                  const secOn = g.keys.every(navChecked)
+                  const secSome = !secOn && g.keys.some(navChecked)
+                  return (
+                    <div key={g.section.label} className="a-navperm-group">
+                      <label className="a-navperm-sec">
+                        <input type="checkbox" checked={secOn}
+                          ref={(el) => { if (el) el.indeterminate = secSome }}
+                          onChange={(e) => toggleNavSection(g.keys, e.target.checked)} />
+                        <g.section.Icon size={14} style={{ flexShrink: 0 }} />
+                        {g.section.label}
+                      </label>
+                      <div className="a-navperm-items">
+                        {g.keys.map((k) => (
+                          <label key={k} className="a-navperm-item">
+                            <input type="checkbox" checked={navChecked(k)} onChange={() => toggleNav(k)} />
+                            {ITEMS[k].label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {!editing.id && <div className="a-muted" style={{ fontSize: '0.8rem' }}>Сотруднику уйдёт письмо со ссылкой, по которой он сам задаст пароль. Обязателен только email.</div>}
         </Modal>
       )}

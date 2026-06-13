@@ -10,9 +10,22 @@ import { ITEMS, SECTIONS, CONTAINER_ORDER } from './navConfig'
 
 const ZONE = 'zone:' // префикс id droppable-контейнера, чтобы отличать от пунктов (маршруты с '/')
 
+// Видимость пункта: фильтр по роли + индивидуальные права менеджера (nav_permissions).
+// nav_permissions применяется только к роли manager; null/не-массив → без ограничений.
+function makeVisible(user) {
+  const navPerm = user?.role === 'manager' && Array.isArray(user?.nav_permissions) ? user.nav_permissions : null
+  return (key) => {
+    const it = ITEMS[key]
+    if (!it) return false
+    if (it.roles && !it.roles.includes(user?.role)) return false
+    if (navPerm && !navPerm.includes(key)) return false
+    return true
+  }
+}
+
 // ── Обычный режим: двухуровневый аккордеон, ведомый раскладкой ───────────────
 export function SidebarNav({ expanded, setExpanded, layout, user, pathname }) {
-  const visible = (key) => { const it = ITEMS[key]; return it && (!it.roles || it.roles.includes(user?.role)) }
+  const visible = makeVisible(user)
   // Контейнер-раздел с активной страницей раскрывается сам (пока не тронут вручную).
   const activeKey = CONTAINER_ORDER.find((c) => c !== 'main' && layout[c]?.includes(pathname))
   const [openKeys, setOpenKeys] = useState({})
@@ -130,7 +143,7 @@ function EditZone({ cKey, keys }) {
 export function SidebarNavEditor({ layout, setLayout, user }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [activeId, setActiveId] = useState(null)
-  const visible = (key) => { const it = ITEMS[key]; return it && (!it.roles || it.roles.includes(user?.role)) }
+  const visible = makeVisible(user)
 
   const findContainer = (id) => {
     if (id.startsWith(ZONE)) return id.slice(ZONE.length)

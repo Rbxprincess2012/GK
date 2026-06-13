@@ -14,16 +14,22 @@ const personFields = {
   avatar: z.string().nullable().optional(), // data-URL base64
 }
 
+// Индивидуальные права на пункты сайдбара (только для роли manager).
+// null → без ограничений (всё по роли); массив ключей-маршрутов → только они.
+const navPermissions = z.array(z.string()).nullable().optional()
+
 export const createUserInput = z.object({
   email: z.string().email(),
   ...personFields,
   role: z.enum(['manager', 'director', 'superuser']).optional(),
+  nav_permissions: navPermissions,
 }).strict()
 
 export const updateUserInput = z.object({
   ...personFields,
   role: z.enum(['manager', 'director', 'superuser']).optional(),
   is_active: z.boolean().optional(),
+  nav_permissions: navPermissions,
 }).strict()
 
 // Установка пароля сотрудником по ссылке-приглашению.

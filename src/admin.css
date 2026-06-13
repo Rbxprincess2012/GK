@@ -2116,3 +2116,40 @@
   box-shadow: 0 14px 34px rgba(0,0,0,0.6);
   transform: rotate(-1deg);
 }
+
+/* Права менеджера на разделы сайдбара (эпик #4) */
+.a-navperm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.02);
+}
+.a-navperm-group { display: flex; flex-direction: column; gap: 6px; }
+.a-navperm-sec {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #e8ecff;
+  cursor: pointer;
+}
+.a-navperm-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 12px;
+  padding-left: 22px;
+  margin-top: 2px;
+}
+.a-navperm-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  color: #b9c4ec;
+  cursor: pointer;
+}
+.a-navperm input[type="checkbox"] { cursor: pointer; accent-color: #865fff; }
