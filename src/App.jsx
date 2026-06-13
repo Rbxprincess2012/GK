@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { ToastProvider } from '@/components/admin/Toast'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import AdminShell from '@/components/admin/AdminShell'
-import Login from '@/pages/Login'
+import PublicSite from '@/pages/PublicSite'
 import SetPassword from '@/pages/SetPassword'
 import Dashboard from '@/pages/Dashboard'
 import Inbox from '@/pages/Inbox'
@@ -49,19 +49,25 @@ function AppRoutes() {
     </div>
   )
 
+  // Гость: публичная витрина putevo.su + установка пароля по приглашению.
+  // Любой другой путь показывает витрину (вход — модалкой на ней).
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/set-password" element={<SetPassword />} />
+        <Route path="*" element={<PublicSite />} />
+      </Routes>
+    )
+  }
+
+  // Сотрудник: рабочее пространство. Внутренние пути не меняются (navConfig,
+  // диплинки целы). Роль-гарды RequireAuth roles остаются на вложенных роутах.
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/" replace /> : <Login />}
-      />
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/set-password" element={<Navigate to="/" replace />} />
 
-      {/* Установка пароля по приглашению — публично, без входа */}
-      <Route path="/set-password" element={<SetPassword />} />
-
-      {/* Защищённые роуты через Layout Route */}
-      <Route element={<RequireAuth />}>
-        <Route element={<AdminShell />}>
+      <Route element={<AdminShell />}>
           <Route path="/"          element={<Dashboard />} />
           <Route path="/inbox"     element={<Inbox />} />
           <Route path="/incoming"  element={<Incoming />} />
@@ -89,7 +95,6 @@ function AppRoutes() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
-        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -99,7 +104,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+    <BrowserRouter basename="">
       <AuthProvider>
         <ToastProvider>
           <AppRoutes />

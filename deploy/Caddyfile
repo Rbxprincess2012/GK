@@ -8,7 +8,8 @@
 	acme_dns timeweb {env.TW_TOKEN}
 }
 
-# Основной домен: админка (/admin) + API (/api). Caddy сам выпускает и продлевает HTTPS.
+# Основной домен: публичная витрина + рабочее пространство SPA на корне + API.
+# Caddy сам выпускает и продлевает HTTPS.
 putevo.su {
 	encode zstd gzip
 
@@ -28,16 +29,18 @@ putevo.su {
 		reverse_proxy api:3000
 	}
 
-	# Админка: статика собранного фронта (Vite base = /admin/)
-	handle_path /admin/* {
+	# Совместимость: старые ссылки /admin/... (закладки, ранее отправленные
+	# письма-приглашения) → тот же путь на корне, с сохранением query/токена.
+	handle /admin/* {
+		uri strip_prefix /admin
+		redir {uri} 302
+	}
+
+	# Корень = SPA: витрина для гостя + рабочее пространство для сотрудника.
+	handle {
 		root * /srv/admin
 		try_files {path} /index.html
 		file_server
-	}
-
-	# Корень и всё остальное → в админку
-	handle {
-		redir /admin/ 302
 	}
 }
 

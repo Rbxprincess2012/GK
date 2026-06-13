@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
-// В проде админка живёт под /admin (за Caddy/nginx), в dev — в корне.
-export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/admin/' : '/',
+// SPA живёт на корне putevo.su (публичная витрина для гостя + рабочее
+// пространство для сотрудника). Старый префикс /admin остаётся редиректом в Caddy.
+export default defineConfig(() => ({
+  base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

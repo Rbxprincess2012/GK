@@ -2,10 +2,11 @@ import { config } from '../config.js'
 
 const APP_NAME = 'Putevo'
 
-// База фронта: в проде APP_URL (напр. https://putevo.su) + /admin, в dev — локальный Vite.
+// База фронта: в проде APP_URL (напр. https://putevo.su) на корне, в dev — локальный Vite.
+// SPA переехала с /admin на корень, поэтому префикс /admin больше не добавляем.
 function adminBase() {
   const b = config.APP_URL ? config.APP_URL.replace(/\/+$/, '') : null
-  return b ? `${b}/admin` : 'http://localhost:5174'
+  return b || 'http://localhost:5174'
 }
 
 // Ссылка, по которой сотрудник задаёт пароль.
