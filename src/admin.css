@@ -866,8 +866,9 @@
   transition: all .12s;
 }
 .a-msgr-btn:hover { color: #e8ecff; border-color: rgba(255,255,255,0.3); }
+/* Telegram/MAX — равная ширина, вместе тянутся до правого края (как поля выше/ниже) */
 .a-msgr-btn--tgwrap,
-.a-msgr-btn--maxwrap { display: inline-flex; align-items: center; gap: 6px; }
+.a-msgr-btn--maxwrap { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1; }
 .a-msgr-btn.is-on.a-msgr-btn--tg { background: #229ed9; border-color: #229ed9; color: #fff; }
 .a-msgr-btn.is-on.a-msgr-btn--max { background: #7d5cff; border-color: #7d5cff; color: #fff; }
 
