@@ -51,10 +51,15 @@ export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, onCha
                   {busy ? '…' : 'Пригласить'}
                 </button>
                 {link && (
-                  <div className="a-msgr-invite">
-                    <input className="a-input" readOnly value={link} onFocus={(e) => e.target.select()} style={{ fontSize: '0.78rem' }} />
-                    <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => copy(link)}>Копировать</button>
-                  </div>
+                  <>
+                    <div className="a-msgr-invite">
+                      <input className="a-input" readOnly value={link} onFocus={(e) => e.target.select()} style={{ fontSize: '0.78rem' }} />
+                      <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => copy(link)}>Копировать</button>
+                    </div>
+                    <span className="a-muted" style={{ fontSize: '0.76rem' }}>
+                      Отправьте эту ссылку доверенному лицу личным сообщением — любым способом (СМС, почта, мессенджер). Он откроет её и подтвердит привязку.
+                    </span>
+                  </>
                 )}
               </>
             )}
