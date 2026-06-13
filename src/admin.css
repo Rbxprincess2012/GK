@@ -595,7 +595,9 @@
 /* Кастомная стрелка дропдауна (тест в модалке новой заявки → потом на весь проект):
    убираем жирную белую браузерную галочку у самого края, ставим тонкий приглушённый
    chevron с воздухом справа. */
-.a-select--v2 {
+/* .a-select.a-select--v2 (специфичность 0,2,0) — чтобы перебить
+   .a-field select { background } (0,1,1), иначе chevron/padding не применяются. */
+.a-select.a-select--v2 {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -605,8 +607,8 @@
   background-position: right 14px center;
   background-size: 16px 16px;
 }
-.a-select--v2::-ms-expand { display: none; }
-.a-select--v2:hover { border-color: rgba(134,95,255,0.35); }
+.a-select.a-select--v2::-ms-expand { display: none; }
+.a-select.a-select--v2:hover { border-color: rgba(134,95,255,0.35); }
 
 /* ── Field ────────────────────────────────────────────────────────────────── */
 .a-field {
