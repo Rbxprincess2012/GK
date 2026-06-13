@@ -8,7 +8,21 @@ import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 //  • Telegram — онбординг: «Пригласить» выдаёт ссылку /start p<code>, лицо открывает
 //    её → бот узнаёт chat_id → статус active → отчёты уходят автоматически.
 //  • MAX — ручной адрес (бота у MAX пока нет): поле, хранится в chats.max.
-export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, onChanged }) {
+// Готовый текст приглашения для отправки лицу (имя и ссылка подставлены).
+// Название компании-оператора в системе не хранится — оставляем плейсхолдер,
+// который менеджер заменит (или единый текст компании).
+function inviteMessage(name, link) {
+  const hello = name?.trim() ? `${name.trim()}, приветствуем!` : 'Здравствуйте!'
+  return `${hello}
+
+Компания «[название вашей компании]» приглашает вас подключиться к сервису автоматических отчётов о выполнении заявок вашего предприятия. Просто перейдите по ссылке ниже — и отчёты начнут приходить вам в личные сообщения:
+
+${link}
+
+С надеждой на долгое и плодотворное сотрудничество!`
+}
+
+export function TrustedPersonChannels({ personId, personName, tgStatus, hasTg, hasMax, onChanged }) {
   const { invitePerson, revokePerson } = useClientsStore()
   const toast = useToast()
   const [link, setLink] = useState(null)
@@ -28,7 +42,8 @@ export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, onCha
     if (!(await toast.confirm('Отвязать Telegram у этого лица? Отчёты перестанут приходить.'))) return
     try { setLink(null); await revokePerson(personId); onChanged?.() } catch { toast.error('Не удалось отвязать') }
   }
-  const copy = (t) => navigator.clipboard.writeText(t).then(() => toast.success('Скопировано')).catch(() => {})
+  const copyMessage = () => navigator.clipboard.writeText(inviteMessage(personName, link))
+    .then(() => toast.success('Сообщение скопировано')).catch(() => {})
 
   if (!hasTg && !hasMax) return null
   return (
@@ -54,10 +69,12 @@ export function TrustedPersonChannels({ personId, tgStatus, hasTg, hasMax, onCha
                   <>
                     <div className="a-msgr-invite">
                       <input className="a-input" readOnly value={link} onFocus={(e) => e.target.select()} style={{ fontSize: '0.78rem' }} />
-                      <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => copy(link)}>Копировать</button>
+                      <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={copyMessage}>Копировать сообщение</button>
                     </div>
                     <span className="a-muted" style={{ fontSize: '0.76rem' }}>
-                      Отправьте эту ссылку доверенному лицу личным сообщением — любым способом (СМС, почта, мессенджер). Он откроет её и подтвердит привязку.
+                      Отправьте эту ссылку доверенному лицу личным сообщением — любым способом (СМС, почта, мессенджер).
+                      После перехода по ссылке лицо зарегистрируется в сервисе и начнёт получать отчёты о выполнении
+                      заявок в личные сообщения. Кнопка «Копировать сообщение» копирует готовый текст приглашения со ссылкой.
                     </span>
                   </>
                 )}

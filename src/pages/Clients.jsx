@@ -820,11 +820,10 @@ function ClientPersonsModal({ client, onClose }) {
           />
           <TrustedPersonChannels
             personId={pf.mode === 'edit' ? pf.id : null}
+            personName={pf.first_name || pf.name}
             tgStatus={pfTgStatus}
             hasTg={(pf.messengers || []).includes('telegram')}
             hasMax={(pf.messengers || []).includes('max')}
-            maxAddr={pf.chats?.max || ''}
-            onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
             onChanged={reloadPersons}
           />
           <div className="a-form-actions">
@@ -913,11 +912,10 @@ function GroupPersonsModal({ group, onClose }) {
           />
           <TrustedPersonChannels
             personId={pf.mode === 'edit' ? pf.id : null}
+            personName={pf.first_name || pf.name}
             tgStatus={pfTgStatus}
             hasTg={(pf.messengers || []).includes('telegram')}
             hasMax={(pf.messengers || []).includes('max')}
-            maxAddr={pf.chats?.max || ''}
-            onMaxChange={(v) => setPf({ ...pf, chats: { ...(pf.chats || {}), max: v } })}
             onChanged={reloadPersons}
           />
           <div className="a-form-actions">
