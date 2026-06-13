@@ -60,6 +60,33 @@ describe('orders create', () => {
     expect(res.body.items.find((i) => i.section_id === sec.id).section_name).toBe('Участок 58')
   })
 
+  it('container_numbers: для Заменить/Забрать сохраняется, для Поставить → null', async () => {
+    const { obj } = await fixtures()
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [
+        { action: 'replace', quantity: 1, container_numbers: '12, 15' },
+        { action: 'haul', quantity: 1, container_numbers: '7' },
+        { action: 'place', quantity: 1, container_numbers: '99' }, // для «Поставить» игнорируется
+      ],
+    })
+    expect(res.status).toBe(201)
+    const byAction = Object.fromEntries(res.body.items.map((i) => [i.action, i.container_numbers]))
+    expect(byAction.replace).toBe('12, 15')
+    expect(byAction.haul).toBe('7')
+    expect(byAction.place).toBeNull()
+  })
+
+  it('container_numbers: пустая строка нормализуется в null', async () => {
+    const { obj } = await fixtures()
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [{ action: 'replace', quantity: 1, container_numbers: '   ' }],
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.items[0].container_numbers).toBeNull()
+  })
+
   it('requested_container_ids на объекте → привязка; не на объекте → 409', async () => {
     const { obj, ct } = await fixtures()
     const [onObj] = await db('containers')

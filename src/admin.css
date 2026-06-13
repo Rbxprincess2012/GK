@@ -651,6 +651,8 @@
   text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
 }
 .a-cjob-act { color: #cdd6f4; }
+/* Номер(а) контейнера для «Заменить»/«Забрать» — приглушённо, моноширинные цифры */
+.a-cjob-cno { color: #9fb0d8; font-variant-numeric: tabular-nums; }
 
 /* Кликабельный адрес → точка в Яндекс.Картах */
 .a-maplink { color: #e8ecff; text-decoration: none; border-bottom: 1px dashed rgba(132,160,255,0.5); }

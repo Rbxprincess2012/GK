@@ -24,7 +24,10 @@ export function ContainerJob({ o, showTrips = true }) {
         ? items.map((it, i) => (
             <div key={i} className={'a-cjob-task' + (it.section_name ? ' a-cjob-task--grid' : '')}>
               {it.section_name && <span className="a-cjob-sec-label">📍 {sectionPin(it.section_name)}</span>}
-              <span className="a-cjob-act">{it.quantity} {(ACTION[it.action] || it.action).toLowerCase()}</span>
+              <span className="a-cjob-act">
+                {it.quantity} {(ACTION[it.action] || it.action).toLowerCase()}
+                {it.container_numbers ? <span className="a-cjob-cno"> · №{it.container_numbers}</span> : null}
+              </span>
             </div>
           ))
         : j.fulls > 0 && <div className="a-cjob-task">{j.fulls} забрать</div>}

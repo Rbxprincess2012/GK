@@ -5,10 +5,13 @@ import { ContainerJob } from '@/components/admin/ContainerJob'
 // Каждая строка = вид работы (Поставить/Заменить/Забрать) + (участок, если есть) + количество.
 // Тип контейнера и класс отходов временно убраны («на заглушке») — нигде не показываем.
 // value: [{ action, quantity, section_id? }]; onChange(next). sections — участки объекта.
+// Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
+const needsContainerNo = (action) => action === 'replace' || action === 'haul'
+
 export function ItemsEditor({ items, onChange, sections = [] }) {
   const hasSections = sections.length > 0
   const set = (i, patch) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
-  const add = () => onChange([...items, { action: 'haul', quantity: 1, section_id: null }])
+  const add = () => onChange([...items, { action: 'haul', quantity: 1, section_id: null, container_numbers: '' }])
   const del = (i) => onChange(items.filter((_, j) => j !== i))
 
   // Для предпросмотра подставляем имя участка по его id.
@@ -32,6 +35,11 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
               <option value="">весь объект</option>
               {sections.map((s) => <option key={s.id} value={s.id}>📍 {s.name}</option>)}
             </select>
+          )}
+          {needsContainerNo(it.action) && (
+            <input className="a-input" style={{ width: 110 }} value={it.container_numbers ?? ''}
+              onChange={(e) => set(i, { container_numbers: e.target.value })}
+              placeholder="№ напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
           )}
           <input className="a-input" type="number" min="1" step="1" inputMode="numeric" style={{ width: 70 }}
             value={it.quantity} onChange={(e) => set(i, { quantity: Math.max(1, Number(e.target.value) || 1) })} title="Количество" />

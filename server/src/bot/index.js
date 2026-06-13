@@ -71,7 +71,9 @@ function orderText(order) {
   const contactSuffix = (it) => contactsFor(it.section_id).map((c) =>
     `\n   👤 ${esc(c.name)}${c.phone ? ` · 📞 <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}`).join('')
   const lines = (order.items || []).map((it) =>
-    `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}${contactSuffix(it)}`)
+    `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`
+    + (it.container_numbers ? ` · №${esc(it.container_numbers)}` : '')
+    + contactSuffix(it))
   if (!lines.length) lines.push('• позиции не указаны')
   const E = Number(order.empties) || 0
   const base = E > 0 ? `\n\nС базы взять: ${'📦'.repeat(Math.min(E, 6))}${E > 6 ? `×${E}` : ''}` : ''

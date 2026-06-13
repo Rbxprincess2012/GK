@@ -4,6 +4,14 @@ import { enqueue } from './outbox.js'
 import { metricsForOrder } from './orderMetrics.js'
 import { syncSubtasks, createSubtasksForNewOrder } from './subtasks.js'
 
+// Номер(а) контейнера значимы только для «Заменить»/«Забрать» (забираем существующий).
+// Для «Поставить» — null (ставим новый). Пустую строку нормализуем в null.
+function containerNumbersFor(it) {
+  if (!['replace', 'haul'].includes(it.action)) return null
+  const v = (it.container_numbers ?? '').trim()
+  return v || null
+}
+
 async function assembleOrder(q, id) {
   // Заголовочные данные (имена объекта/клиента/водителя/машины) — теми же JOIN'ами,
   // что в listOrders, чтобы единая модалка и проверка пруфов имели полную шапку.
@@ -91,7 +99,8 @@ export function listOrders(filter = {}) {
       db.raw(`COALESCE((
         SELECT json_agg(json_build_object(
           'id', oi.id, 'action', oi.action, 'quantity', oi.quantity,
-          'section_id', oi.section_id, 'section_name', sec.name
+          'section_id', oi.section_id, 'section_name', sec.name,
+          'container_numbers', oi.container_numbers
         ) ORDER BY oi.id)
         FROM order_items oi LEFT JOIN sections sec ON sec.id = oi.section_id
         WHERE oi.order_id = o.id
@@ -145,6 +154,7 @@ export async function createOrder(payload) {
         container_type_id: it.container_type_id ?? null,
         quantity: it.quantity,
         waste_class: it.waste_class ?? null,
+        container_numbers: containerNumbersFor(it),
       }).returning('*')
 
       if (it.requested_container_ids?.length) {
@@ -287,6 +297,7 @@ export async function updateOrder(id, payload) {
           section_id: it.section_id && sectionIds.has(it.section_id) ? it.section_id : null,
           container_type_id: it.container_type_id ?? null,
           quantity: it.quantity, waste_class: it.waste_class ?? null,
+          container_numbers: containerNumbersFor(it),
         })
       }
       await syncSubtasks(id, trx)

@@ -139,14 +139,17 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       desired_date: o.desired_date?.slice(0, 10) || '',
       desired_time: o.desired_time?.slice(0, 5) || '',
       note: o.note || '',
-      items: (o.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null })),
+      items: (o.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null, container_numbers: it.container_numbers ?? '' })),
     })
     setMode('edit')
   }
 
   const doSave = async () => {
     const items = (editForm.items || [])
-      .map((it) => ({ action: it.action, quantity: Math.max(1, Number(it.quantity) || 1), section_id: it.section_id ? Number(it.section_id) : null }))
+      .map((it) => ({
+        action: it.action, quantity: Math.max(1, Number(it.quantity) || 1), section_id: it.section_id ? Number(it.section_id) : null,
+        container_numbers: (it.action === 'replace' || it.action === 'haul') ? (it.container_numbers?.trim() || null) : null,
+      }))
     try {
       await updateOrder(order.id, {
         payment_method: editForm.payment_method || null,

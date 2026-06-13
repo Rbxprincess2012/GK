@@ -26,7 +26,9 @@ const objLabel = (o, clientNames = []) => {
   return inf || addr || `Объект №${o.id}`
 }
 
-const newItem = () => ({ action: 'replace', section_id: '', quantity: 1 })
+const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_numbers: '' })
+// Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
+const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 
 // Ручное создание заявки менеджером (статус new → дальше распределяется как обычно).
 export function CreateOrderModal({ onClose, onCreated }) {
@@ -83,6 +85,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
         action: it.action,
         section_id: it.section_id === '' ? null : Number(it.section_id),
         quantity: Number(it.quantity),
+        container_numbers: needsContainerNo(it.action) ? (it.container_numbers?.trim() || null) : null,
       }))
     const payload = {
       object_id: Number(objectId),
@@ -143,6 +146,13 @@ export function CreateOrderModal({ onClose, onCreated }) {
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+            </label>
+          )}
+          {needsContainerNo(it.action) && (
+            <label className="a-field"><span>№ контейнера</span>
+              <input className="a-input" value={it.container_numbers}
+                onChange={(e) => setItem(i, { container_numbers: e.target.value })}
+                placeholder="напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
             </label>
           )}
           <label className="a-field" style={{ maxWidth: 96 }}><span>Кол-во</span>
