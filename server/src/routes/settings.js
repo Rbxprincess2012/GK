@@ -82,4 +82,30 @@ r.put('/client-templates', async (req, res, next) => {
   try { res.json(await svc.setSetting('client_message_templates', templatesInput.parse(req.body))) } catch (e) { next(e) }
 })
 
+// Реквизиты компании-оператора: название (для приглашений) + юр./банковские данные
+// (на будущее — счета и документы). Все поля опциональны.
+const orgInput = z.object({
+  company_name: z.string().optional(),
+  legal_name: z.string().optional(),
+  inn: z.string().optional(),
+  kpp: z.string().optional(),
+  ogrn: z.string().optional(),
+  legal_address: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_account: z.string().optional(),
+  bik: z.string().optional(),
+  corr_account: z.string().optional(),
+}).strict()
+r.get('/org', async (_req, res, next) => {
+  try { res.json((await svc.getSetting('org')) || { company_name: '' }) } catch (e) { next(e) }
+})
+r.put('/org', async (req, res, next) => {
+  try {
+    const cur = (await svc.getSetting('org')) || {}
+    res.json(await svc.setSetting('org', { ...cur, ...orgInput.parse(req.body) }))
+  } catch (e) { next(e) }
+})
+
 export default r

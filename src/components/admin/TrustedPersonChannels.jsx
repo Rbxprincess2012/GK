@@ -1,7 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import api from '@/lib/api'
 import { useClientsStore } from '@/store/clientsStore'
 import { useToast } from '@/components/admin/Toast'
 import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
+
+// Название компании-оператора грузим один раз за сессию (settings.org.company_name).
+let companyCache = null
+async function fetchCompany() {
+  if (companyCache !== null) return companyCache
+  try { const { data } = await api.get('/settings/org'); companyCache = data?.company_name || '' }
+  catch { companyCache = '' }
+  return companyCache
+}
 
 // Каналы доставки отчёта доверенному лицу — отдельной карточкой на мессенджер
 // (Telegram сверху, MAX ниже), каждая показывается под выбранным мессенджером:
@@ -11,11 +21,12 @@ import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 // Готовый текст приглашения для отправки лицу (имя и ссылка подставлены).
 // Название компании-оператора в системе не хранится — оставляем плейсхолдер,
 // который менеджер заменит (или единый текст компании).
-function inviteMessage(name, link) {
+function inviteMessage(name, link, company) {
   const hello = name?.trim() ? `${name.trim()}, приветствуем!` : 'Здравствуйте!'
+  const org = company?.trim() || '[название вашей компании]'
   return `${hello}
 
-Компания «[название вашей компании]» приглашает вас подключиться к сервису автоматических отчётов о выполнении заявок вашего предприятия. Просто перейдите по ссылке ниже — и отчёты начнут приходить вам в личные сообщения:
+Компания «${org}» приглашает вас подключиться к сервису автоматических отчётов о выполнении заявок вашего предприятия. Просто перейдите по ссылке ниже — и отчёты начнут приходить вам в личные сообщения:
 
 ${link}
 
@@ -27,6 +38,8 @@ export function TrustedPersonChannels({ personId, personName, tgStatus, hasTg, h
   const toast = useToast()
   const [link, setLink] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [company, setCompany] = useState(companyCache || '')
+  useEffect(() => { fetchCompany().then(setCompany) }, [])
 
   const invite = async () => {
     setBusy(true)
@@ -42,7 +55,7 @@ export function TrustedPersonChannels({ personId, personName, tgStatus, hasTg, h
     if (!(await toast.confirm('Отвязать Telegram у этого лица? Отчёты перестанут приходить.'))) return
     try { setLink(null); await revokePerson(personId); onChanged?.() } catch { toast.error('Не удалось отвязать') }
   }
-  const copyMessage = () => navigator.clipboard.writeText(inviteMessage(personName, link))
+  const copyMessage = () => navigator.clipboard.writeText(inviteMessage(personName, link, company))
     .then(() => toast.success('Сообщение скопировано')).catch(() => {})
 
   if (!hasTg && !hasMax) return null

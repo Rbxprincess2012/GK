@@ -72,12 +72,23 @@ export default function Settings() {
   const [savingBase, setSavingBase] = useState(false)
   // Шаблоны сообщений клиенту (диплинк в личку + бот).
   const [templates, setTemplates] = useState([])
+  // Данные компании-оператора (название — для шаблона приглашения доверенного лица).
+  const [org, setOrg] = useState({ company_name: '' })
   useEffect(() => {
     api.get('/settings/tokens').then(({ data }) => setTokens(data || {})).catch(() => {})
     api.get('/settings/base').then(({ data }) => setBase(data || { address: '', lat: null, lng: null })).catch(() => {})
     api.get('/settings/distribution').then(({ data }) => setDistribution({ km_weight: 0.1, region: '', geocoder: 'nominatim', ...data })).catch(() => {})
     api.get('/settings/client-templates').then(({ data }) => setTemplates(Array.isArray(data) ? data : [])).catch(() => {})
+    api.get('/settings/org').then(({ data }) => setOrg({ company_name: '', ...data })).catch(() => {})
   }, [])
+  const setOrgField = (k) => (e) => setOrg({ ...org, [k]: e.target.value })
+  const saveOrg = async () => {
+    try {
+      const { data } = await api.put('/settings/org', org)
+      setOrg({ company_name: '', ...data })
+      toast.success('Сохранено')
+    } catch { toast.error('Не удалось сохранить') }
+  }
   const setTpl = (i, patch) => setTemplates((arr) => arr.map((t, j) => (j === i ? { ...t, ...patch } : t)))
   const addTpl = () => setTemplates((arr) => [...arr, { id: `tpl_${Date.now()}`, title: 'Новый шаблон', body: '' }])
   const delTpl = (i) => setTemplates((arr) => arr.filter((_, j) => j !== i))
@@ -146,6 +157,64 @@ export default function Settings() {
           </div>
         ))}
         <button className="a-btn a-btn--primary" style={{ marginTop: 16 }} onClick={saveTokens}>Сохранить токены</button>
+      </div>
+
+      <div className="a-card" style={{ marginBottom: 16 }}>
+        <div className="a-section-title" style={{ marginTop: 0 }}>Наша компания — реквизиты</div>
+        <label className="a-field"><span>Название компании (для приглашений)</span>
+          <input className="a-input" value={org.company_name || ''} placeholder="напр. Чистый город"
+            onChange={setOrgField('company_name')} />
+        </label>
+        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 6, marginBottom: 10 }}>
+          Короткое название — подставляется в текст приглашения доверенного лица («Копировать сообщение»).
+        </div>
+        <div className="a-field-row">
+          <label className="a-field"><span>Юр. название</span>
+            <input className="a-input" value={org.legal_name || ''} placeholder="ООО «Чистый город»" onChange={setOrgField('legal_name')} />
+          </label>
+        </div>
+        <div className="a-field-row">
+          <label className="a-field"><span>ИНН</span>
+            <input className="a-input" value={org.inn || ''} onChange={setOrgField('inn')} />
+          </label>
+          <label className="a-field"><span>КПП</span>
+            <input className="a-input" value={org.kpp || ''} onChange={setOrgField('kpp')} />
+          </label>
+          <label className="a-field"><span>ОГРН</span>
+            <input className="a-input" value={org.ogrn || ''} onChange={setOrgField('ogrn')} />
+          </label>
+        </div>
+        <label className="a-field"><span>Юридический адрес</span>
+          <input className="a-input" value={org.legal_address || ''} onChange={setOrgField('legal_address')} />
+        </label>
+        <div className="a-field-row">
+          <label className="a-field"><span>Телефон</span>
+            <input className="a-input" value={org.phone || ''} onChange={setOrgField('phone')} />
+          </label>
+          <label className="a-field"><span>E-mail</span>
+            <input className="a-input" value={org.email || ''} onChange={setOrgField('email')} />
+          </label>
+        </div>
+
+        <div className="a-section-title">Банковские реквизиты</div>
+        <label className="a-field"><span>Банк</span>
+          <input className="a-input" value={org.bank_name || ''} onChange={setOrgField('bank_name')} />
+        </label>
+        <div className="a-field-row">
+          <label className="a-field"><span>Расчётный счёт</span>
+            <input className="a-input" value={org.bank_account || ''} onChange={setOrgField('bank_account')} />
+          </label>
+          <label className="a-field"><span>БИК</span>
+            <input className="a-input" value={org.bik || ''} onChange={setOrgField('bik')} />
+          </label>
+        </div>
+        <label className="a-field"><span>Корр. счёт</span>
+          <input className="a-input" value={org.corr_account || ''} onChange={setOrgField('corr_account')} />
+        </label>
+        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 8, marginBottom: 10 }}>
+          Понадобятся для выставления счетов и документов. Заполнять необязательно.
+        </div>
+        <button className="a-btn a-btn--primary" onClick={saveOrg}>Сохранить</button>
       </div>
 
       <div className="a-card" style={{ marginBottom: 16 }}>
