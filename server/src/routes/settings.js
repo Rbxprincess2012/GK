@@ -18,6 +18,7 @@ const tokensInput = z.object({
   yandex_jsapi_key: z.string().optional(),
   dadata_token: z.string().optional(),
   n8n_service_token: z.string().optional(),
+  resend_api_key: z.string().optional(),
 }).passthrough()
 
 // Токены интеграций — платформенные секреты (общий бот/Яндекс/DaData/n8n).

@@ -26,6 +26,11 @@ const TOKEN_GROUPS = [
     ],
   },
   {
+    title: 'Почта', icon: '✉️', items: [
+      ['resend_api_key', 'Resend API-ключ', 'Отправка писем (коды, приглашения) через Resend HTTP API · resend.com → API Keys. На VPS SMTP-порты закрыты, поэтому почта идёт через Resend.'],
+    ],
+  },
+  {
     title: 'Прочее', icon: '🔗', items: [
       ['dadata_token', 'Токен DaData', 'Автозаполнение реквизитов по ИНН · dadata.ru → личный кабинет → API-ключ (бесплатно)'],
       ['n8n_service_token', 'Сервисный токен n8n', 'Для интеграционных сценариев'],

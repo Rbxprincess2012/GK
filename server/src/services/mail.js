@@ -1,18 +1,32 @@
 import { db } from '../db.js'
-import { config, mailEnabled } from '../config.js'
+import { config } from '../config.js'
+import { getTokens, getSetting } from './settings.js'
+
+// Ключ Resend и адрес отправителя — из настроек суперпользователя (integration_tokens
+// / mail_from), с фолбэком на переменные окружения. Управляется через UI «Токены».
+async function mailCfg() {
+  let tokens = {}
+  let from = config.MAIL_FROM
+  try { tokens = (await getTokens()) || {} } catch { /* БД недоступна — env-фолбэк */ }
+  try { from = (await getSetting('mail_from')) || from } catch { /* игнор */ }
+  return {
+    resendKey: tokens.resend_api_key || config.RESEND_API_KEY || null,
+    from: from || 'Putevo <onboarding@resend.dev>',
+  }
+}
 
 // Отправка через Resend HTTP API (порт 443). На VPS SMTP-порты заблокированы
 // провайдером, поэтому это основной канал. from должен быть с верифицированного
 // домена (напр. noreply@putevo.su) либо тестовый onboarding@resend.dev.
-async function deliverResend(row) {
+async function deliverResend(row, key, from) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${config.RESEND_API_KEY}`,
+      Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: config.MAIL_FROM || 'Putevo <onboarding@resend.dev>',
+      from,
       to: [row.to_email],
       subject: row.subject,
       text: row.body,
@@ -42,9 +56,12 @@ async function deliverSmtp(row) {
 }
 
 // Resend (HTTP) в приоритете — он работает на VPS, где SMTP закрыт провайдером.
-async function deliver(row) {
-  if (config.RESEND_API_KEY) return deliverResend(row)
-  return deliverSmtp(row)
+// Возвращает функцию доставки или null, если канал не настроен.
+async function resolveDeliver() {
+  const { resendKey, from } = await mailCfg()
+  if (resendKey) return (row) => deliverResend(row, resendKey, from)
+  if (config.SMTP_HOST) return (row) => deliverSmtp(row)
+  return null
 }
 
 async function markSent(id, attempts) {
@@ -67,8 +84,9 @@ export async function sendMail({ to, subject, body, template = null, user_id = n
     return null
   }
 
-  if (!mailEnabled) {
-    console.log(`[mail] queued #${row.id} → ${to}: «${subject}» (SMTP не настроен — письмо в очереди)`)
+  const deliver = await resolveDeliver()
+  if (!deliver) {
+    console.log(`[mail] queued #${row.id} → ${to}: «${subject}» (почта не настроена — письмо в очереди)`)
     return row
   }
 
@@ -86,7 +104,8 @@ export function list({ status, limit = 100 } = {}) {
 
 // Повторная попытка для pending/failed — пригодится, когда SMTP уже настроят.
 export async function retryPending(limit = 50) {
-  if (!mailEnabled) return 0
+  const deliver = await resolveDeliver()
+  if (!deliver) return 0
   const rows = await db('email_outbox').whereIn('status', ['pending', 'failed']).orderBy('id').limit(limit)
   for (const row of rows) {
     try { await deliver(row); await markSent(row.id, row.attempts) }
