@@ -9,9 +9,10 @@ afterAll(() => db.destroy())
 async function mkDriver(name = 'A') { const [d] = await db('drivers').insert({ name }).returning('*'); return d }
 
 // itemDefs: [{ action, section, quantity }]; section — имя участка (или undefined = весь объект)
-async function fixture(driverId, itemDefs) {
+// requiresPhoto: флаг фотоотчёта объекта (по умолчанию false — тесты логики коммита фото не трогают)
+async function fixture(driverId, itemDefs, { requiresPhoto = false } = {}) {
   const [cl] = await db('clients').insert({ type: 'ooo', legal_name: 'X', default_payment_method: 'cashless' }).returning('*')
-  const [ob] = await db('objects').insert({ client_id: cl.id }).returning('*')
+  const [ob] = await db('objects').insert({ client_id: cl.id, requires_photo: requiresPhoto }).returning('*')
   const [o] = await db('orders').insert({
     client_id: cl.id, object_id: ob.id, payment_method: 'cashless',
     status: 'in_progress', assigned_driver_id: driverId, shift_date: '2026-06-09',
@@ -123,6 +124,33 @@ describe('subtasks — коммит', () => {
     await expect(markSubtask(subs[0].id, { status: 'done', driverId: b.id })).rejects.toMatchObject({ status: 403 })
     await db('orders').where({ id: order.id }).update({ status: 'closed' })
     await expect(markSubtask(subs[0].id, { status: 'done', driverId: a.id })).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('боевой фотоотчёт: объект требует фото → done без фото = 422, с фото = ok', async () => {
+    const d = await mkDriver()
+    const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }], { requiresPhoto: true })
+    const subs = await syncSubtasks(order.id)
+    await expect(markSubtask(subs[0].id, { status: 'done', driverId: d.id })).rejects.toMatchObject({ status: 422 })
+    await db('attachments').insert({ order_id: order.id, subtask_id: subs[0].id, kind: 'photo', tg_file_id: 'x' })
+    const row = await markSubtask(subs[0].id, { status: 'done', driverId: d.id })
+    expect(row.status).toBe('done')
+  })
+
+  it('боевой фотоотчёт: failed не требует фото даже на фото-объекте', async () => {
+    const d = await mkDriver()
+    const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }], { requiresPhoto: true })
+    const subs = await syncSubtasks(order.id)
+    const row = await markSubtask(subs[0].id, { status: 'failed', reason_code: 'blocked', driverId: d.id })
+    expect(row.status).toBe('failed')
+  })
+
+  it('боевой фотоотчёт: видео/текст без фото не закрывает фото-объект', async () => {
+    const d = await mkDriver()
+    const { order } = await fixture(d.id, [{ action: 'replace', section: '58' }], { requiresPhoto: true })
+    const subs = await syncSubtasks(order.id)
+    await db('attachments').insert({ order_id: order.id, subtask_id: subs[0].id, kind: 'video', tg_file_id: 'v' })
+    await db('attachments').insert({ order_id: order.id, subtask_id: subs[0].id, kind: 'text', transcript: 'сделал' })
+    await expect(markSubtask(subs[0].id, { status: 'done', driverId: d.id })).rejects.toMatchObject({ status: 422 })
   })
 
   it('событие order_attempt_committed с результатами по участкам', async () => {

@@ -56,6 +56,16 @@ export async function markSubtask(subtaskId, { status, reason_code = null, comme
   if (!['assigned', 'in_progress'].includes(order.status)) {
     throw Object.assign(new Error('not_active'), { status: 409 })
   }
+  // Боевой фотоотчёт: если объект требует фото (флаг ≠ false), участок нельзя закрыть как
+  // «выполнено» без хотя бы одного фото-вложения. Завершить заявку/объект тоже не выйдет —
+  // незакрытый участок не даст коммиту собрать all_done.
+  if (status === 'done') {
+    const obj = await db('objects').where({ id: order.object_id }).first()
+    if (obj && obj.requires_photo !== false) {
+      const photo = await db('attachments').where({ subtask_id: subtaskId, kind: 'photo' }).first()
+      if (!photo) throw Object.assign(new Error('photo_required'), { status: 422 })
+    }
+  }
   const [row] = await db('order_subtasks').where({ id: subtaskId })
     .update({ status, reason_code, comment, completed_by_driver_id: driverId, completed_at: db.fn.now() })
     .returning('*')

@@ -231,13 +231,24 @@ async function goBack(ctx) {
 }
 
 // Начать сбор пруфа (можно несколько файлов/текстов) — общий для «выполнено» и «не смог».
+// Требует ли объект заявки фотоотчёт. Флаг ≠ false (вкл. null) = «Необходим» —
+// так же, как показано менеджеру в карточке/модалке объекта.
+async function objectRequiresPhoto(orderId) {
+  const row = await db('orders as o').join('objects as ob', 'ob.id', 'o.object_id')
+    .where('o.id', orderId).select('ob.requires_photo as rp').first()
+  return !!row && row.rp !== false
+}
+
 // mode: 'done' — по «Готово» помечаем участок выполненным; 'failed' — уже помечен, пруф опционален.
 async function startProof(ctx, { subtaskId, orderId, mode }) {
   ctx.session.step = 'proof'
-  ctx.session.data = { subtaskId, orderId, mode, count: 0 }
+  const photoRequired = mode === 'done' ? await objectRequiresPhoto(orderId) : false
+  ctx.session.data = { subtaskId, orderId, mode, count: 0, photoCount: 0, photoRequired }
   const kb = new InlineKeyboard().text('✅ Готово', 'pdone')
   const prompt = mode === 'done'
-    ? 'Приложите подтверждение работы: фото / видео / голосовое или текст. Эти материалы попадут в отчёт заказчику — снимайте аккуратно и комментируйте по делу. Можно несколько, затем «Готово».'
+    ? (photoRequired
+        ? '📷 По этому объекту обязателен фотоотчёт: приложите минимум одно ФОТО (можно дополнить видео/голосом/текстом). Материалы попадут в отчёт заказчику — снимайте аккуратно. Затем «Готово».'
+        : 'Приложите подтверждение работы: фото / видео / голосовое или текст. Эти материалы попадут в отчёт заказчику — снимайте аккуратно и комментируйте по делу. Можно несколько, затем «Готово».')
     : 'По желанию приложите подтверждение, почему не вышло: фото / видео / голосовое или текст. Это тоже увидит заказчик — формулируйте корректно. Можно несколько, затем «Готово».'
   return ctx.reply(prompt, { reply_markup: kb })
 }
@@ -375,11 +386,17 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     if (data === 'pdone') {
       const d = ctx.session.data || {}
       if (d.mode === 'done' && !d.count) return ctx.reply('Нужен хотя бы один пруф: фото / видео / голос или текст.')
+      // Боевой фотоотчёт: участок нельзя закрыть без фото, если объект его требует.
+      // Сессию НЕ сбрасываем — водитель досылает фото и снова жмёт «Готово».
+      if (d.mode === 'done' && d.photoRequired && !d.photoCount) {
+        return ctx.reply('📷 По этому объекту обязателен фотоотчёт — приложите хотя бы одно фото, затем «Готово».')
+      }
       ctx.session.step = null
       if (d.mode === 'done') {
         try {
           await markSubtask(Number(d.subtaskId), { status: 'done', driverId })
-        } catch {
+        } catch (e) {
+          if (e?.status === 422) { ctx.session.step = 'proof'; return ctx.reply('📷 По этому объекту обязателен фотоотчёт — приложите фото и нажмите «Готово».') }
           return ctx.reply('Эта заявка уже не за вами или закрыта — отметить нельзя.')
         }
         await ctx.reply(`✅ Участок отмечен выполненным (пруфов: ${d.count}).`)
@@ -453,9 +470,13 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
       const d = ctx.session.data || {}
       const ok = await ingestProof(ctx.message, { orderId: d.orderId, subtaskId: d.subtaskId, driverId })
       if (!ok) return ctx.reply('Пришлите фото / видео / голосовое или текст.')
-      d.count = (d.count || 0) + 1; ctx.session.data = d
+      d.count = (d.count || 0) + 1
+      if (ctx.message.photo) d.photoCount = (d.photoCount || 0) + 1
+      ctx.session.data = d
+      const needPhoto = d.photoRequired && !d.photoCount
       const kb = new InlineKeyboard().text('✅ Готово', 'pdone')
-      return ctx.reply(`Принято (${d.count}). Пришлите ещё фото/текст или нажмите «Готово».`, { reply_markup: kb })
+      const tail = needPhoto ? ' 📷 Нужно ещё фото — заказчик требует фотоотчёт.' : ''
+      return ctx.reply(`Принято (${d.count}).${tail} Пришлите ещё фото/текст или нажмите «Готово».`, { reply_markup: kb })
     }
 
     // вне шага и не авторизован — пробуем распознать код привязки в тексте
