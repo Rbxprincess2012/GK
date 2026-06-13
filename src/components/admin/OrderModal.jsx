@@ -356,7 +356,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
                   <option value="delivered">Привезли</option><option value="picked_up">Забрали</option>
                 </select>
               </label>
-              <button className="a-btn a-btn--danger a-btn--sm" style={{ marginBottom: 2 }} onClick={() => setMovements((arr) => arr.filter((_, j) => j !== i))}>✕</button>
+              <button className="a-x" onClick={() => setMovements((arr) => arr.filter((_, j) => j !== i))}>✕</button>
             </div>
           ))}
           <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setMovements((arr) => [...arr, { container_id: '', direction: 'picked_up' }])}>+ Движение</button>

@@ -169,7 +169,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
             <input className="a-input" type="number" min={1} value={it.quantity}
               onChange={(e) => setItem(i, { quantity: e.target.value })} />
           </label>
-          <button type="button" className="a-btn a-btn--danger a-btn--sm" style={{ marginBottom: 2 }}
+          <button type="button" className="a-x"
             onClick={() => delRow(i)} disabled={items.length === 1} title="Удалить позицию">✕</button>
         </div>
       ))}

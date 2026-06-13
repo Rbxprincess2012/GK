@@ -392,6 +392,20 @@
 .a-btn--sm { padding: 6px 12px; font-size: 0.8rem; }
 .a-btn--full { width: 100%; }
 
+/* Квадратная кнопка-крестик в строках с полями: высота совпадает с .a-input/.a-select.
+   Единый стиль для удаления позиции/строки в формах (не путать со списками, где ✕ парный с ✎). */
+.a-x {
+  flex: 0 0 auto; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; padding: 0;
+  border-radius: 10px; cursor: pointer; line-height: 1; font-size: 0.95rem;
+  background: rgba(255,70,85,0.12); color: #ff4655;
+  border: 1px solid rgba(255,70,85,0.2);
+  transition: background 0.15s;
+}
+.a-x:hover { background: rgba(255,70,85,0.22); }
+.a-x:disabled { opacity: 0.45; cursor: default; }
+
 /* ── Приёмка по участкам (SectionReview) ──────────────────────────────────── */
 .a-secrev {
   border: 1px solid rgba(255,255,255,0.08);

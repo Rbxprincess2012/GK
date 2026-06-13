@@ -43,7 +43,7 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
           )}
           <input className="a-input" type="number" min="1" step="1" inputMode="numeric" style={{ width: 70 }}
             value={it.quantity} onChange={(e) => set(i, { quantity: Math.max(1, Number(e.target.value) || 1) })} title="Количество" />
-          <button className="a-btn a-btn--danger a-btn--sm" onClick={() => del(i)} title="Удалить позицию">✕</button>
+          <button className="a-x" onClick={() => del(i)} title="Удалить позицию">✕</button>
         </div>
       ))}
       <button className="a-btn a-btn--ghost a-btn--sm" onClick={add} style={{ marginTop: 4 }}>+ Позиция</button>
