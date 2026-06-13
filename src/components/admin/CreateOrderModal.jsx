@@ -137,13 +137,13 @@ export function CreateOrderModal({ onClose, onCreated }) {
     >
       <div className="a-field-row">
         <label className="a-field"><span>Заказчик *</span>
-          <select className="a-select a-select--v2" value={clientId} onChange={(e) => changeClient(e.target.value)}>
+          <select className="a-select" value={clientId} onChange={(e) => changeClient(e.target.value)}>
             <option value="">— выберите —</option>
             {sortedClients.map((c) => <option key={c.id} value={c.id}>{clientLabel(c)}</option>)}
           </select>
         </label>
         <label className="a-field"><span>Объект *</span>
-          <select className="a-select a-select--v2" value={objectId} onChange={(e) => changeObject(e.target.value)} disabled={!clientId}>
+          <select className="a-select" value={objectId} onChange={(e) => changeObject(e.target.value)} disabled={!clientId}>
             <option value="">{clientId ? '— выберите —' : 'сначала заказчик'}</option>
             {objects.map((o) => <option key={o.id} value={o.id}>{objLabel(o, clientNames)}</option>)}
           </select>
@@ -154,13 +154,13 @@ export function CreateOrderModal({ onClose, onCreated }) {
       {items.map((it, i) => (
         <div key={i} className="a-field-row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <label className="a-field" style={{ minWidth: 140 }}><span>Действие</span>
-            <select className="a-select a-select--v2" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
+            <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
               {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
           {sections.length > 0 && (
             <label className="a-field" style={{ minWidth: 140 }}><span>Участок</span>
-              <select className="a-select a-select--v2" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
+              <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -194,7 +194,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
       </div>
       <div className="a-field-row">
         <label className="a-field"><span>Оплата</span>
-          <select className="a-select a-select--v2" value={payment} onChange={(e) => setPayment(e.target.value)}>
+          <select className="a-select" value={payment} onChange={(e) => setPayment(e.target.value)}>
             <option value="cashless">Безнал</option>
             <option value="cash">Наличные</option>
           </select>
@@ -206,7 +206,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
         )}
       </div>
       <label className="a-field"><span>Доверенное лицо</span>
-        <select className="a-select a-select--v2" value={trustedId} onChange={(e) => setTrustedId(e.target.value)} disabled={!clientId}>
+        <select className="a-select" value={trustedId} onChange={(e) => setTrustedId(e.target.value)} disabled={!clientId}>
           <option value="">— не указано —</option>
           {persons.map((p) => <option key={p.id} value={p.id}>{p.name}{p.phone ? ` · ${p.phone}` : ''}</option>)}
         </select>

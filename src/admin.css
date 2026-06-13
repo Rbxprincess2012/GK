@@ -579,7 +579,7 @@
 .a-id-btn:hover { color: #a78bff; text-decoration-color: #a78bff; }
 
 .a-select {
-  background: rgba(255,255,255,0.05);
+  background-color: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
   padding: 10px 14px;
@@ -591,24 +591,6 @@
 }
 
 .a-select option { background: #07192e; }
-
-/* Кастомная стрелка дропдауна (тест в модалке новой заявки → потом на весь проект):
-   убираем жирную белую браузерную галочку у самого края, ставим тонкий приглушённый
-   chevron с воздухом справа. */
-/* .a-select.a-select--v2 (специфичность 0,2,0) — чтобы перебить
-   .a-field select { background } (0,1,1), иначе chevron/padding не применяются. */
-.a-select.a-select--v2 {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding-right: 38px;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%2392a2d4' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 16px 16px;
-}
-.a-select.a-select--v2::-ms-expand { display: none; }
-.a-select.a-select--v2:hover { border-color: rgba(134,95,255,0.35); }
 
 /* ── Field ────────────────────────────────────────────────────────────────── */
 .a-field {
@@ -629,7 +611,7 @@
 .a-field input,
 .a-field select,
 .a-field textarea {
-  background: rgba(255,255,255,0.05);
+  background-color: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
   padding: 10px 14px;
@@ -643,6 +625,24 @@
   min-width: 0; /* date-инпуты не сжимаются по умолчанию → даём сжиматься внутри flex */
   box-sizing: border-box;
 }
+
+/* Единая стрелка для ВСЕХ дропдаунов проекта: убираем нативную галочку
+   (appearance:none) и рисуем тонкий приглушённый chevron с воздухом справа.
+   Идёт после базовых правил, поэтому padding-right и background-image
+   побеждают; background-color выше заменён с shorthand, чтобы не сбрасывать image. */
+.a-select,
+.a-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%2392a2d4' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+}
+.a-select::-ms-expand,
+.a-field select::-ms-expand { display: none; }
 
 .a-field input:focus,
 .a-field select:focus,
