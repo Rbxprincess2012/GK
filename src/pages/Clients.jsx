@@ -65,6 +65,7 @@ export default function Clients() {
 
   const [editing, setEditing] = useState(null) // client modal
   const [form, setForm] = useState(emptyClient)
+  const [pullingInn, setPullingInn] = useState(false)
   const [objModal, setObjModal] = useState(null) // { clientId, object }
   const [objForm, setObjForm] = useState(emptyObject)
   const [objSaving, setObjSaving] = useState(false)
@@ -233,6 +234,32 @@ export default function Clients() {
   const delObject = async (clientId, o) => {
     if (!(await toast.confirm(`Удалить объект «${objLabel(o)}»?`))) return
     try { await removeObject(o.id, clientId); toast.success('Удалено') } catch { toast.error('Нельзя удалить (есть заявки?)') }
+  }
+  // Автозаполнение реквизитов клиента по ИНН через DaData.
+  const pullClientByInn = async () => {
+    const query = (form.inn || '').trim()
+    if (!query) { toast.error('Сначала укажите ИНН'); return }
+    setPullingInn(true)
+    try {
+      const { data } = await api.post('/settings/dadata/party', { query })
+      setForm((f) => ({
+        ...f,
+        legal_name: data.legal_name || f.legal_name,
+        nickname: f.nickname || data.company_name || '',
+        inn: data.inn || f.inn,
+        kpp: data.kpp || f.kpp,
+        ogrn: data.ogrn || f.ogrn,
+        legal_address: data.legal_address || f.legal_address,
+      }))
+      toast.success('Реквизиты подтянуты из DaData — проверьте и сохраните')
+    } catch (e) {
+      const err = e?.response?.data?.error
+      toast.error(
+        err === 'dadata_token_missing' ? 'Токен DaData не задан в Настройках'
+          : err === 'not_found' ? 'Организация по ИНН не найдена'
+            : 'Не удалось получить данные DaData',
+      )
+    } finally { setPullingInn(false) }
   }
   // Принудительный автогеокодинг существующего объекта (по адресу).
   const geocodeObj = async () => {
@@ -437,7 +464,7 @@ export default function Clients() {
           <label className="a-field"><span>Неофициальное имя (ник)</span>
             <input className="a-input" value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="Как называют в обиходе" />
           </label>
-          <div className="a-field-row">
+          <div className="a-field-row" style={{ alignItems: 'flex-end' }}>
             <label className="a-field"><span>ИНН <b style={{ color: '#ff4655' }}>*</b></span>
               <input className="a-input" value={form.inn} onChange={(e) => setForm({ ...form, inn: e.target.value })} />
             </label>
@@ -447,6 +474,10 @@ export default function Clients() {
             <label className="a-field"><span>ОГРН</span>
               <input className="a-input" value={form.ogrn} onChange={(e) => setForm({ ...form, ogrn: e.target.value })} />
             </label>
+            <button type="button" className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}
+              onClick={pullClientByInn} disabled={pullingInn} title="Заполнить реквизиты по ИНН через DaData">
+              {pullingInn ? '…' : '↧ По ИНН'}
+            </button>
           </div>
           <label className="a-field"><span>Юр. адрес</span>
             <input className="a-input" value={form.legal_address} onChange={(e) => setForm({ ...form, legal_address: e.target.value })} />
