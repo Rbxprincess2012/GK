@@ -252,6 +252,24 @@
   text-align: center;
   margin-bottom: 14px;
 }
+.pub-info {
+  background: rgba(134, 95, 255, 0.1);
+  border: 1px solid rgba(134, 95, 255, 0.22);
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: #b9c4ec;
+  font-size: 0.83rem;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.pub-code-input {
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.4em;
+  font-weight: 700;
+  padding-left: 0;
+  padding-right: 0;
+}
 .pub-submit {
   width: 100%;
   padding: 11px 18px;

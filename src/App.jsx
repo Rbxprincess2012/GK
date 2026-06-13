@@ -23,6 +23,7 @@ import Schedule from '@/pages/Schedule'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
 import Templates from '@/pages/Templates'
+import Companies from '@/pages/Companies'
 import Users from '@/pages/Users'
 
 function RequireAuth({ roles }) {
@@ -88,6 +89,9 @@ function AppRoutes() {
           <Route path="/schedule"  element={<Schedule />} />
           <Route path="/reports"   element={<Reports />} />
 
+          <Route element={<RequireAuth roles={['superuser']} />}>
+            <Route path="/companies" element={<Companies />} />
+          </Route>
           <Route element={<RequireAuth roles={['director', 'superuser']} />}>
             <Route path="/users" element={<Users />} />
           </Route>

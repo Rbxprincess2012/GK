@@ -37,6 +37,43 @@ export function accountInvite({ email, token }) {
   }
 }
 
+// Код подтверждения почты: при саморегистрации директора и при сбросе пароля.
+export function verifyCodeEmail({ code, purpose }) {
+  const isReset = purpose === 'reset'
+  return {
+    template: isReset ? 'password_reset_code' : 'register_code',
+    subject: `${APP_NAME}: код ${isReset ? 'для смены пароля' : 'подтверждения'}`,
+    body: compose([
+      'Здравствуйте!',
+      '',
+      isReset
+        ? `Запрошена смена пароля для входа в ${APP_NAME}.`
+        : `Подтвердите регистрацию в системе ${APP_NAME}.`,
+      '',
+      `Ваш код: ${code}`,
+      '',
+      'Код действует 15 минут. Если вы его не запрашивали — проигнорируйте письмо.',
+    ]),
+  }
+}
+
+// Суперпользователь предоставил доступ директору компании.
+export function companyAccessGranted({ company, email }) {
+  return {
+    template: 'company_access_granted',
+    subject: `${APP_NAME}: доступ к системе открыт`,
+    body: compose([
+      'Здравствуйте!',
+      '',
+      `Вам открыт доступ к системе ${APP_NAME}${company ? ` для компании «${company}»` : ''}.`,
+      `Логин (email): ${email}`,
+      '',
+      `Чтобы начать работу, откройте ${adminBase()} и нажмите «Личный кабинет» → «Сотрудник» → «Регистрация».`,
+      'Задайте пароль и подтвердите почту кодом из письма.',
+    ]),
+  }
+}
+
 // Сброс пароля — ссылка для установки нового.
 export function passwordResetLink({ email, token }) {
   return {

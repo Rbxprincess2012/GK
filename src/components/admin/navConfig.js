@@ -7,7 +7,7 @@
 import {
   LayoutDashboard, Inbox, Shuffle, ClipboardList, ClipboardCheck, PackageCheck, Archive,
   Building2, MapPin, Container, User, Truck, CalendarDays, BarChart3, UserCog, Settings,
-  Map, Camera, Layers, Library, ShieldCheck, Star, MessageSquareText,
+  Map, Camera, Layers, Library, ShieldCheck, Star, MessageSquareText, Building,
 } from 'lucide-react'
 
 // Каталог пунктов: ключ = маршрут. roles ограничивает видимость по роли.
@@ -22,12 +22,13 @@ export const ITEMS = {
   '/inwork':       { label: 'В работе', Icon: PackageCheck },
   '/proof-review': { label: 'Проверка пруфов', Icon: Camera, roles: ['manager', 'director', 'superuser'] },
   '/journal':      { label: 'Журнал', Icon: Archive },
-  '/clients':      { label: 'Клиенты', Icon: Building2 },
+  '/clients':      { label: 'Клиенты', Icon: Building2, roles: ['manager', 'director'] },
   '/objects':      { label: 'Объекты', Icon: MapPin },
   '/containers':   { label: 'Контейнеры', Icon: Container },
   '/drivers':      { label: 'Водители', Icon: User },
   '/vehicles':     { label: 'Машины', Icon: Truck },
   '/schedule':     { label: 'График', Icon: CalendarDays },
+  '/companies':    { label: 'Клиенты', Icon: Building, roles: ['superuser'] },
   '/users':        { label: 'Пользователи', Icon: UserCog, roles: ['director', 'superuser'] },
   '/templates':    { label: 'Шаблоны', Icon: MessageSquareText, roles: ['manager', 'director', 'superuser'] },
   '/settings':     { label: 'Настройки', Icon: Settings, roles: ['manager', 'director', 'superuser'] },
@@ -52,7 +53,7 @@ export const DEFAULT_LAYOUT = {
   orders:  ['/incoming', '/orders', '/distribution', '/map', '/review', '/inwork', '/proof-review', '/journal'],
   refs:    ['/clients', '/objects', '/containers', '/drivers', '/vehicles', '/schedule'],
   reports: ['/', '/reports'],
-  system:  ['/users', '/templates', '/settings'],
+  system:  ['/companies', '/users', '/templates', '/settings'],
 }
 
 export const isValidKey = (k) => Object.prototype.hasOwnProperty.call(ITEMS, k)

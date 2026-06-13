@@ -38,13 +38,36 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
-  // Включить сессию по готовому JWT (после установки пароля по приглашению).
+  // Включить сессию по готовому JWT (после установки пароля по приглашению / сброса).
   const activateSession = async (token) => {
     localStorage.setItem('token', token)
     const { data } = await api.get('/auth/me')
     setRealUser(data.user)
     setAssignableRoles(data.assignable_roles || [])
     return data.user
+  }
+
+  // ─── Саморегистрация по коду (эпик #3) ───
+  // Директор задаёт пароль → бэк шлёт код на почту. Сессию НЕ открываем.
+  const register = async (email, password) => {
+    const { data } = await api.post('/auth/register', { email, password })
+    return data // { ok, email }
+  }
+  // Подтверждение кода регистрации. Сессию здесь НЕ открываем — показываем welcome,
+  // вход директор выполняет сам (как просили в сценарии).
+  const confirmCode = async (email, code) => {
+    const { data } = await api.post('/auth/verify-code', { email, code })
+    return data
+  }
+  // «Забыл пароль»: код на почту (ответ всегда ok).
+  const forgotPassword = async (email) => {
+    const { data } = await api.post('/auth/forgot-password', { email })
+    return data
+  }
+  // Сброс пароля по коду → сразу открываем сессию.
+  const resetWithCode = async (email, code, password) => {
+    const { data } = await api.post('/auth/reset-code', { email, code, password })
+    return activateSession(data.token)
   }
 
   const logout = () => {
@@ -67,6 +90,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, assignableRoles, login, logout, activateSession, loading,
+      register, confirmCode, forgotPassword, resetWithCode,
       realRole: realUser?.role, isSuperuser, viewRole, setViewRole,
     }}>
       {children}

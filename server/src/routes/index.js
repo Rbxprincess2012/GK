@@ -11,6 +11,7 @@ import inbound from './inbound.js'
 import outbox from './outbox.js'
 import auth from './auth.js'
 import usersRoutes from './users.js'
+import companiesRoutes from './companies.js'
 import emailOutbox from './emailOutbox.js'
 import settings from './settings.js'
 import distribution from './distribution.js'
@@ -41,6 +42,8 @@ api.use(requireUserOrService) // всё ниже — только под вхо�
 
 // Управление пользователями и токенами — директор/суперюзер
 api.use('/users', requireRole('director', 'superuser'), usersRoutes)
+// Компании-клиенты SaaS — только суперпользователь
+api.use('/companies', requireRole('superuser'), companiesRoutes)
 api.use('/email-outbox', requireRole('director', 'superuser'), emailOutbox)
 api.use('/settings', requireRole('manager', 'director', 'superuser'), settings)
 api.use('/distribution', requireRole('manager', 'director', 'superuser'), distribution)

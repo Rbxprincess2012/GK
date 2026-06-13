@@ -1,12 +1,19 @@
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomInt } from 'node:crypto'
 import { db } from '../db.js'
 import { hashPassword, verifyPassword } from '../lib/password.js'
 import { sendMail } from './mail.js'
 import * as tpl from '../lib/emailTemplates.js'
 
-const PUBLIC_COLS = ['id', 'email', 'last_name', 'first_name', 'phone', 'messengers', 'position', 'avatar', 'role', 'is_active', 'created_at']
+const PUBLIC_COLS = ['id', 'email', 'last_name', 'first_name', 'phone', 'messengers', 'position', 'avatar', 'role', 'is_active', 'company_id', 'created_at']
 
 const INVITE_TTL_DAYS = 7
+const CODE_TTL_MIN = 15       // срок жизни кода подтверждения/сброса
+const MAX_CODE_ATTEMPTS = 5   // защита от перебора кода
+
+// 6-значный код подтверждения (ведущие нули допустимы).
+function newCode() {
+  return String(randomInt(0, 1_000_000)).padStart(6, '0')
+}
 
 // Одноразовый токен приглашения + срок действия.
 function newInvite() {
@@ -35,6 +42,7 @@ export function publicUser(u) {
   const base = Object.fromEntries(PUBLIC_COLS.map((c) => [c, u[c]]))
   base.activated = !!u.password_hash         // сотрудник уже задал пароль
   base.invite_pending = !!u.invite_token     // ждёт активации по ссылке
+  base.email_verified = !!u.email_verified   // подтвердил почту кодом
   return base
 }
 
@@ -140,4 +148,87 @@ export async function remove(id, actorRole, actorId) {
   const target = await assertManageable(id, actorRole)
   if (target.id === actorId) throw Object.assign(new Error('cannot_delete_self'), { status: 400 })
   await db('users').where({ id }).del()
+}
+
+// ───────────────────────── Саморегистрация по коду (эпик #3) ─────────────────────────
+
+// Проверка кода + завершение действия (finish получает id, возвращает обновлённую строку).
+// При неверном коде инкрементит счётчик попыток; истечение/перебор — отдельные ошибки.
+async function checkCodeAndFinish(u, code, finish) {
+  if (u.verify_expires && new Date(u.verify_expires) < new Date()) {
+    throw Object.assign(new Error('code_expired'), { status: 400 })
+  }
+  if ((u.verify_attempts || 0) >= MAX_CODE_ATTEMPTS) {
+    throw Object.assign(new Error('too_many_attempts'), { status: 429 })
+  }
+  if (String(code) !== String(u.verify_code)) {
+    await db('users').where({ id: u.id }).increment('verify_attempts', 1)
+    throw Object.assign(new Error('invalid_code'), { status: 400 })
+  }
+  return publicUser(await finish(u.id))
+}
+
+// Директор регистрируется сам: email должен быть предварительно разрешён супером
+// («Предоставить доступ» создаёт запись role=director без пароля, не подтверждённую).
+// Задаём пароль и шлём код на почту. Повторный вызов до подтверждения — переотправка.
+export async function registerDirector({ email, password }) {
+  const u = await db('users').where({ email }).first()
+  if (!u || u.role !== 'director' || u.email_verified) {
+    throw Object.assign(new Error('not_granted'), { status: 403 })
+  }
+  const code = newCode()
+  await db('users').where({ id: u.id }).update({
+    password_hash: hashPassword(password),
+    verify_code: code,
+    verify_expires: new Date(Date.now() + CODE_TTL_MIN * 60_000),
+    verify_attempts: 0,
+    verify_purpose: 'register',
+  })
+  await sendMail({ to: email, user_id: u.id, ...tpl.verifyCodeEmail({ code, purpose: 'register' }) })
+  return { ok: true, email }
+}
+
+// Подтверждение кода регистрации → активация (email_verified) + публичный профиль.
+export async function verifyRegistration({ email, code }) {
+  const u = await db('users').where({ email }).first()
+  if (!u || u.verify_purpose !== 'register' || !u.verify_code) {
+    throw Object.assign(new Error('no_pending_code'), { status: 400 })
+  }
+  return checkCodeAndFinish(u, code, async (id) => {
+    const [row] = await db('users').where({ id })
+      .update({ email_verified: true, verify_code: null, verify_expires: null, verify_attempts: 0, verify_purpose: null })
+      .returning('*')
+    return row
+  })
+}
+
+// «Забыл пароль»: шлём код только активному подтверждённому аккаунту. Ответ всегда
+// одинаков ({ ok: true }) — не раскрываем, существует ли email.
+export async function forgotPassword({ email }) {
+  const u = await db('users').where({ email }).first()
+  if (u && u.is_active && u.password_hash && u.email_verified) {
+    const code = newCode()
+    await db('users').where({ id: u.id }).update({
+      verify_code: code,
+      verify_expires: new Date(Date.now() + CODE_TTL_MIN * 60_000),
+      verify_attempts: 0,
+      verify_purpose: 'reset',
+    })
+    await sendMail({ to: email, user_id: u.id, ...tpl.verifyCodeEmail({ code, purpose: 'reset' }) })
+  }
+  return { ok: true }
+}
+
+// Сброс пароля по коду → новый пароль + сессия.
+export async function resetPasswordWithCode({ email, code, password }) {
+  const u = await db('users').where({ email }).first()
+  if (!u || u.verify_purpose !== 'reset' || !u.verify_code) {
+    throw Object.assign(new Error('no_pending_code'), { status: 400 })
+  }
+  return checkCodeAndFinish(u, code, async (id) => {
+    const [row] = await db('users').where({ id })
+      .update({ password_hash: hashPassword(password), email_verified: true, verify_code: null, verify_expires: null, verify_attempts: 0, verify_purpose: null })
+      .returning('*')
+    return row
+  })
 }

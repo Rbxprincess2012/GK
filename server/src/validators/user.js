@@ -30,3 +30,25 @@ export const updateUserInput = z.object({
 export const setPasswordInput = z.object({
   password: z.string().min(8),
 }).strict()
+
+// ───── Саморегистрация по коду (эпик #3) ─────
+
+export const registerInput = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+}).strict()
+
+export const verifyCodeInput = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{6}$/),
+}).strict()
+
+export const forgotInput = z.object({
+  email: z.string().email(),
+}).strict()
+
+export const resetCodeInput = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{6}$/),
+  password: z.string().min(8),
+}).strict()
