@@ -7,14 +7,23 @@ import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 
 const ACTIONS = [['place', 'Поставить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
 const clientLabel = (c) => c.nickname || c.legal_name || `Клиент #${c.id}`
-const norm = (s) => (s || '').trim().toLowerCase()
-// Лейбл объекта: неформальное имя, но если оно совпадает с названием заказчика —
-// не дублируем (заказчик уже выбран рядом), показываем адрес.
+// Лейбл объекта: неформальное имя без дубля заказчика. Объекты часто названы
+// «<Заказчик> · <Объект>» — заказчик уже выбран рядом, поэтому срезаем его префикс
+// (а если имя ровно = заказчику — показываем адрес).
 const objLabel = (o, clientNames = []) => {
-  const inf = (o.informal_name || '').trim()
-  const dupClient = inf && clientNames.some((n) => norm(n) === norm(inf))
+  let inf = (o.informal_name || '').trim()
+  for (const raw of clientNames) {
+    const name = (raw || '').trim()
+    if (!name) continue
+    const low = inf.toLowerCase()
+    if (low === name.toLowerCase()) { inf = ''; break }
+    if (low.startsWith(name.toLowerCase())) {
+      const rest = inf.slice(name.length).replace(/^[\s·•\-—,|/]+/, '').trim()
+      if (rest) { inf = rest; break }
+    }
+  }
   const addr = [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ')
-  return (inf && !dupClient ? inf : '') || addr || `Объект №${o.id}`
+  return inf || addr || `Объект №${o.id}`
 }
 
 const newItem = () => ({ action: 'replace', section_id: '', quantity: 1 })
