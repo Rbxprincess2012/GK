@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, pointerWithin, MeasuringStrategy } from '@dnd-kit/core'
-import { Lock, Shuffle, Pencil, Ban, RotateCcw } from 'lucide-react'
+import { Lock, Shuffle, Pencil, Ban, RotateCcw, Copy } from 'lucide-react'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useShiftsStore } from '@/store/shiftsStore'
 import { useContainersStore } from '@/store/containersStore'
@@ -34,7 +34,7 @@ function preferSlots(args) {
   return slot ? [slot] : hits
 }
 
-function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn }) {
+function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn, onClone }) {
   return (
     <div className={'a-reviewcard a-reviewcard--locked' + (overlay ? ' a-reviewcard--overlay' : '')}>
       <div className="a-reviewcard-top">
@@ -52,6 +52,7 @@ function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn })
         <div className="a-workcard-actions" onPointerDown={(e) => e.stopPropagation()}>
           <button className="a-iconbtn" title="Вернуть на распределение (снять водителя)" onClick={() => onReturn(o)}><RotateCcw size={15} /></button>
           <button className="a-iconbtn" title="Перенести на другую дату / другого водителя" onClick={() => onReassign(o)}><Shuffle size={15} /></button>
+          <button className="a-iconbtn" title="Клонировать заявку (новая копия со следующим номером)" onClick={() => onClone(o)}><Copy size={15} /></button>
           <button className="a-iconbtn" title="Изменить заявку" onClick={() => onEdit(o)}><Pencil size={15} /></button>
           <button className="a-iconbtn a-iconbtn--danger" title="Отменить заявку" onClick={() => onCancel(o)}><Ban size={15} /></button>
         </div>
@@ -61,7 +62,7 @@ function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn })
 }
 
 export default function InWork() {
-  const { orders, fetchOrders, moveDriver, reorder, cancelOrder, getOrder, unassign } = useOrdersStore()
+  const { orders, fetchOrders, moveDriver, reorder, cancelOrder, getOrder, unassign, addOrder } = useOrdersStore()
   const { available, fetchAvailable } = useShiftsStore()
   const { types, fetchTypes } = useContainersStore()
   const toast = useToast()
@@ -112,6 +113,30 @@ export default function InWork() {
     if (!(await toast.confirm(`Отменить заявку #${o.number}? Водитель уже получил задание — отмена уберёт её из работы (останется в Журнале).`))) return
     try { await cancelOrder(o.id); toast.success(`#${o.number} отменена`); refresh() }
     catch { toast.error('Не удалось отменить') }
+  }
+
+  // Клонировать заявку: новая копия в пул (status new) со следующим номером.
+  // Копируем объект, оплату, лицо, дату/время, комментарий и позиции (включая № контейнеров).
+  const doClone = async (o) => {
+    try {
+      const created = await addOrder({
+        object_id: o.object_id,
+        payment_method: o.payment_method,
+        amount: o.amount != null ? Number(o.amount) : null,
+        trusted_person_id: o.trusted_person_id ?? null,
+        desired_date: o.desired_date ? o.desired_date.slice(0, 10) : undefined,
+        desired_time: o.desired_time ? String(o.desired_time).slice(0, 5) : undefined,
+        note: o.note || undefined,
+        items: (o.items || []).map((it) => ({
+          action: it.action,
+          section_id: it.section_id ?? null,
+          quantity: it.quantity,
+          container_numbers: it.container_numbers ?? null,
+        })),
+      })
+      toast.success(`Создана копия — заявка #${created.number} (в пуле распределения)`)
+      refresh()
+    } catch { toast.error('Не удалось клонировать заявку') }
   }
 
   // Вернуть заявку на распределение: снять водителя/смену → статус new.
@@ -201,7 +226,7 @@ export default function InWork() {
                     {list.map((o, i) => (
                       <Droppable key={o.id} id={`slot:${o.id}`} className="a-slot" overClassName="is-over">
                         <Draggable id={`order:${o.id}`} data={{ kind: 'order', order: o }} className="a-drag">
-                          <WorkCard o={o} seqNo={i + 1} onReassign={(x) => openDetail(x, 'assign')} onEdit={openDetail} onCancel={doCancel} onReturn={doReturn} />
+                          <WorkCard o={o} seqNo={i + 1} onReassign={(x) => openDetail(x, 'assign')} onEdit={openDetail} onCancel={doCancel} onReturn={doReturn} onClone={doClone} />
                         </Draggable>
                       </Droppable>
                     ))}

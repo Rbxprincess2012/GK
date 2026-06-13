@@ -9,7 +9,7 @@ export const STATUS = {
   closed: ['Закрыта', 'purple'],
   cancelled: ['Отменена', 'red'],
 }
-export const ACTION = { place: 'Поставить', replace: 'Заменить', haul: 'Забрать' }
+export const ACTION = { place: 'Установить', replace: 'Заменить', haul: 'Забрать' }
 export const ACTIONS = ['place', 'replace', 'haul']
 
 // Что водитель должен сделать с контейнерами на объекте — по правилам машины:

@@ -5,7 +5,7 @@ import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 
-const ACTIONS = [['place', 'Поставить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
+const ACTIONS = [['place', 'Установить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
 const clientLabel = (c) => c.nickname || c.legal_name || `Клиент #${c.id}`
 // Лейбл объекта: неформальное имя без дубля заказчика. Объекты часто названы
 // «<Заказчик> · <Объект>» — заказчик уже выбран рядом, поэтому срезаем его префикс
@@ -71,6 +71,16 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const currentObject = objects.find((o) => o.id === Number(objectId))
   const sections = currentObject?.sections || []
 
+  // Выбор объекта → по умолчанию подставляем доверенное лицо «на весь объект»
+  // (section_id=null), иначе первое привязанное лицо. Оплата наследуется от клиента.
+  const changeObject = (id) => {
+    setObjectId(id)
+    const obj = objects.find((o) => o.id === Number(id))
+    const tps = obj?.trusted_persons || []
+    const def = tps.find((p) => p.section_id == null) || tps[0]
+    setTrustedId(def ? String(def.id) : '')
+  }
+
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   const addRow = () => setItems((arr) => [...arr, newItem()])
   const delRow = (i) => setItems((arr) => arr.filter((_, idx) => idx !== i))
@@ -111,7 +121,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
     <Modal
       title="Новая заявка"
       onClose={onClose}
-      width={560}
+      width={720}
       footer={<>
         <button className="a-btn a-btn--ghost" onClick={onClose}>Отмена</button>
         <button className="a-btn a-btn--primary" onClick={save} disabled={!canSave}>Создать</button>
@@ -125,7 +135,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
           </select>
         </label>
         <label className="a-field"><span>Объект *</span>
-          <select className="a-select" value={objectId} onChange={(e) => setObjectId(e.target.value)} disabled={!clientId}>
+          <select className="a-select" value={objectId} onChange={(e) => changeObject(e.target.value)} disabled={!clientId}>
             <option value="">{clientId ? '— выберите —' : 'сначала заказчик'}</option>
             {objects.map((o) => <option key={o.id} value={o.id}>{objLabel(o, clientNames)}</option>)}
           </select>
@@ -134,14 +144,14 @@ export function CreateOrderModal({ onClose, onCreated }) {
 
       <div className="a-section-title">Позиции</div>
       {items.map((it, i) => (
-        <div key={i} className="a-field-row" style={{ alignItems: 'flex-end' }}>
-          <label className="a-field"><span>Действие</span>
+        <div key={i} className="a-field-row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label className="a-field" style={{ minWidth: 140 }}><span>Действие</span>
             <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
               {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
           {sections.length > 0 && (
-            <label className="a-field"><span>Участок</span>
+            <label className="a-field" style={{ minWidth: 140 }}><span>Участок</span>
               <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -149,13 +159,13 @@ export function CreateOrderModal({ onClose, onCreated }) {
             </label>
           )}
           {needsContainerNo(it.action) && (
-            <label className="a-field"><span>№ контейнера</span>
+            <label className="a-field" style={{ minWidth: 150 }}><span>№ контейнера</span>
               <input className="a-input" value={it.container_numbers}
                 onChange={(e) => setItem(i, { container_numbers: e.target.value })}
                 placeholder="напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
             </label>
           )}
-          <label className="a-field" style={{ maxWidth: 96 }}><span>Кол-во</span>
+          <label className="a-field" style={{ flex: '0 0 auto', width: 90 }}><span>Кол-во</span>
             <input className="a-input" type="number" min={1} value={it.quantity}
               onChange={(e) => setItem(i, { quantity: e.target.value })} />
           </label>
