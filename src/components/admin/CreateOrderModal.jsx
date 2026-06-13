@@ -7,9 +7,15 @@ import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 
 const ACTIONS = [['place', 'Поставить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
 const clientLabel = (c) => c.nickname || c.legal_name || `Клиент #${c.id}`
-const objLabel = (o) => o.informal_name
-  || [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ')
-  || `Объект №${o.id}`
+const norm = (s) => (s || '').trim().toLowerCase()
+// Лейбл объекта: неформальное имя, но если оно совпадает с названием заказчика —
+// не дублируем (заказчик уже выбран рядом), показываем адрес.
+const objLabel = (o, clientNames = []) => {
+  const inf = (o.informal_name || '').trim()
+  const dupClient = inf && clientNames.some((n) => norm(n) === norm(inf))
+  const addr = [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ')
+  return (inf && !dupClient ? inf : '') || addr || `Объект №${o.id}`
+}
 
 const newItem = () => ({ action: 'replace', section_id: '', quantity: 1 })
 
@@ -42,8 +48,15 @@ export function CreateOrderModal({ onClose, onCreated }) {
     if (c?.default_payment_method) setPayment(c.default_payment_method)
   }
 
+  // Заказчики в дропдауне — по алфавиту (как видит менеджер: ник/название).
+  const sortedClients = useMemo(
+    () => [...clients].sort((a, b) => clientLabel(a).localeCompare(clientLabel(b), 'ru')),
+    [clients],
+  )
   const objects = objectsByClient[Number(clientId)] || []
   const persons = trustedByClient[Number(clientId)] || []
+  const selectedClient = clients.find((x) => x.id === Number(clientId))
+  const clientNames = [selectedClient?.legal_name, selectedClient?.nickname]
   const currentObject = objects.find((o) => o.id === Number(objectId))
   const sections = currentObject?.sections || []
 
@@ -96,13 +109,13 @@ export function CreateOrderModal({ onClose, onCreated }) {
         <label className="a-field"><span>Заказчик *</span>
           <select className="a-select" value={clientId} onChange={(e) => changeClient(e.target.value)}>
             <option value="">— выберите —</option>
-            {clients.map((c) => <option key={c.id} value={c.id}>{clientLabel(c)}</option>)}
+            {sortedClients.map((c) => <option key={c.id} value={c.id}>{clientLabel(c)}</option>)}
           </select>
         </label>
         <label className="a-field"><span>Объект *</span>
           <select className="a-select" value={objectId} onChange={(e) => setObjectId(e.target.value)} disabled={!clientId}>
             <option value="">{clientId ? '— выберите —' : 'сначала заказчик'}</option>
-            {objects.map((o) => <option key={o.id} value={o.id}>{objLabel(o)}</option>)}
+            {objects.map((o) => <option key={o.id} value={o.id}>{objLabel(o, clientNames)}</option>)}
           </select>
         </label>
       </div>
