@@ -18,11 +18,11 @@ import ShiftMap from '@/pages/ShiftMap'
 import Review from '@/pages/Review'
 import InWork from '@/pages/InWork'
 import ProofReview from '@/pages/ProofReview'
-import Reconcile from '@/pages/Reconcile'
 import Journal from '@/pages/Journal'
 import Schedule from '@/pages/Schedule'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
+import Templates from '@/pages/Templates'
 import Users from '@/pages/Users'
 
 function RequireAuth({ roles }) {
@@ -73,7 +73,6 @@ function AppRoutes() {
           <Route element={<RequireAuth roles={['manager', 'director', 'superuser']} />}>
             <Route path="/proof-review" element={<ProofReview />} />
           </Route>
-          <Route path="/reconcile" element={<Reconcile />} />
           <Route path="/journal"   element={<Journal />} />
           <Route path="/drivers"   element={<Drivers />} />
           <Route path="/vehicles"  element={<Vehicles />} />
@@ -87,6 +86,7 @@ function AppRoutes() {
             <Route path="/users" element={<Users />} />
           </Route>
           <Route element={<RequireAuth roles={['manager', 'director', 'superuser']} />}>
+            <Route path="/templates" element={<Templates />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>

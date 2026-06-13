@@ -5,9 +5,9 @@
 // раскладывает существующие по разделам и меняет порядок (см. lib/navLayout.js —
 // слой хранилища раскладки; сейчас localStorage, позже — per-tenant через API).
 import {
-  LayoutDashboard, Inbox, Shuffle, ClipboardList, ClipboardCheck, PackageCheck, FileCheck2, Archive,
+  LayoutDashboard, Inbox, Shuffle, ClipboardList, ClipboardCheck, PackageCheck, Archive,
   Building2, MapPin, Container, User, Truck, CalendarDays, BarChart3, UserCog, Settings,
-  Map, Camera, Layers, Library, ShieldCheck, Star,
+  Map, Camera, Layers, Library, ShieldCheck, Star, MessageSquareText,
 } from 'lucide-react'
 
 // Каталог пунктов: ключ = маршрут. roles ограничивает видимость по роли.
@@ -21,7 +21,6 @@ export const ITEMS = {
   '/review':       { label: 'На проверке', Icon: ClipboardCheck },
   '/inwork':       { label: 'В работе', Icon: PackageCheck },
   '/proof-review': { label: 'Проверка пруфов', Icon: Camera, roles: ['manager', 'director', 'superuser'] },
-  '/reconcile':    { label: 'Сверка с водителем', Icon: FileCheck2 },
   '/journal':      { label: 'Журнал', Icon: Archive },
   '/clients':      { label: 'Клиенты', Icon: Building2 },
   '/objects':      { label: 'Объекты', Icon: MapPin },
@@ -30,6 +29,7 @@ export const ITEMS = {
   '/vehicles':     { label: 'Машины', Icon: Truck },
   '/schedule':     { label: 'График', Icon: CalendarDays },
   '/users':        { label: 'Пользователи', Icon: UserCog, roles: ['director', 'superuser'] },
+  '/templates':    { label: 'Шаблоны', Icon: MessageSquareText, roles: ['manager', 'director', 'superuser'] },
   '/settings':     { label: 'Настройки', Icon: Settings, roles: ['manager', 'director', 'superuser'] },
 }
 
@@ -49,10 +49,10 @@ export const CONTAINER_ORDER = ['main', 'orders', 'refs', 'reports', 'system']
 // Раскладка по умолчанию: какой пункт в каком контейнере и в каком порядке.
 export const DEFAULT_LAYOUT = {
   main:    [],
-  orders:  ['/incoming', '/orders', '/distribution', '/map', '/review', '/inwork', '/proof-review', '/reconcile', '/journal'],
+  orders:  ['/incoming', '/orders', '/distribution', '/map', '/review', '/inwork', '/proof-review', '/journal'],
   refs:    ['/clients', '/objects', '/containers', '/drivers', '/vehicles', '/schedule'],
   reports: ['/', '/reports'],
-  system:  ['/users', '/settings'],
+  system:  ['/users', '/templates', '/settings'],
 }
 
 export const isValidKey = (k) => Object.prototype.hasOwnProperty.call(ITEMS, k)
