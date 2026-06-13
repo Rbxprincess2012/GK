@@ -246,6 +246,17 @@ export default function Clients() {
       else toast.error('Геокодер не нашёл адрес (проверьте ключ в Настройках)')
     } catch { toast.error('Ошибка геокодинга') }
   }
+  // Копируем «lat, lng» в буфер — удобно вставить в поисковик/карты.
+  const copyCoords = async () => {
+    if (objForm.lat == null || objForm.lat === '' || objForm.lng == null || objForm.lng === '') {
+      toast.error('Координаты не заданы'); return
+    }
+    const text = `${objForm.lat}, ${objForm.lng}`
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(`Скопировано: ${text}`)
+    } catch { toast.error('Не удалось скопировать') }
+  }
 
   const q = search.trim().toLowerCase()
   const filtered = clients.filter((c) =>
@@ -527,8 +538,16 @@ export default function Clients() {
               <input className="a-input" inputMode="decimal" value={objForm.lng ?? ''} placeholder="38.9753"
                 onChange={(e) => setObjForm({ ...objForm, lng: e.target.value, geo_source: 'manual' })} />
             </label>
-            <button type="button" className="a-btn a-btn--ghost" style={{ marginBottom: 2 }} onClick={geocodeObj}
-              title="Определить координаты по адресу через Яндекс">🔍 По адресу</button>
+            <div className="a-field" style={{ flex: '0 0 auto' }}>
+              <span aria-hidden="true">&nbsp;</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="a-btn a-btn--ghost" onClick={geocodeObj}
+                  title="Определить координаты по адресу через Яндекс">🔍 По адресу</button>
+                <button type="button" className="a-btn a-btn--ghost" onClick={copyCoords}
+                  disabled={objForm.lat == null || objForm.lat === '' || objForm.lng == null || objForm.lng === ''}
+                  title="Скопировать координаты в буфер обмена">📋 Координаты</button>
+              </div>
+            </div>
           </div>
           <div className="a-muted" style={{ fontSize: '0.76rem', marginTop: -4, marginBottom: 6 }}>
             {objForm.geo_source === 'manual'
