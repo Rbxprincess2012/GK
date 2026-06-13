@@ -303,7 +303,12 @@ export default function Clients() {
                           : [{ section: null, person: persons.find((p) => !p.section_id) || null }]
                         return (
                           <div key={o.id} className="a-objrow">
-                            <span className="a-obj-title">🏢 {objName(o)}</span>
+                            <span className="a-obj-title">
+                              🏢 {objName(o)}
+                              {(o.requires_photo ?? c.requires_photo)
+                                ? <span className="a-obj-photo" title="Требуется фотоотчёт"> · 📷</span>
+                                : <span className="a-obj-photo a-muted" title="Фотоотчёт не требуется"> · без фото</span>}
+                            </span>
                             <span className="a-obj-cell a-muted">{objAddr(o)}</span>
                             <span className="a-objgrid2-col">
                               {rows.length
