@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useClientsStore } from '@/store/clientsStore'
 import { useOrdersStore } from '@/store/ordersStore'
 import { Modal } from '@/components/admin/Modal'
@@ -64,22 +64,30 @@ export function CreateOrderModal({ onClose, onCreated }) {
     () => [...clients].sort((a, b) => clientLabel(a).localeCompare(clientLabel(b), 'ru')),
     [clients],
   )
-  const objects = objectsByClient[Number(clientId)] || []
+  const objects = useMemo(() => objectsByClient[Number(clientId)] || [], [objectsByClient, clientId])
   const persons = trustedByClient[Number(clientId)] || []
   const selectedClient = clients.find((x) => x.id === Number(clientId))
   const clientNames = [selectedClient?.legal_name, selectedClient?.nickname]
   const currentObject = objects.find((o) => o.id === Number(objectId))
   const sections = currentObject?.sections || []
 
-  // Выбор объекта → по умолчанию подставляем доверенное лицо «на весь объект»
-  // (section_id=null), иначе первое привязанное лицо. Оплата наследуется от клиента.
-  const changeObject = (id) => {
-    setObjectId(id)
-    const obj = objects.find((o) => o.id === Number(id))
-    const tps = obj?.trusted_persons || []
+  const changeObject = (id) => setObjectId(id)
+
+  // Дефолтное доверенное лицо при выборе объекта — реактивно, а не в onChange:
+  // объекты с trusted_persons и пул лиц грузятся асинхронно, и императивная
+  // установка в момент клика срабатывала до прихода данных (отсюда прочерк).
+  // Берём лицо «на весь объект» (section_id=null), иначе первое привязанное.
+  const prevObjRef = useRef('')
+  useEffect(() => {
+    if (!objectId) { prevObjRef.current = ''; return }
+    const obj = objects.find((o) => o.id === Number(objectId))
+    if (!obj) return // объекты ещё не догрузились — дождёмся следующего прогона
+    if (prevObjRef.current === objectId) return // объект не менялся — не трогаем выбор
+    prevObjRef.current = objectId
+    const tps = obj.trusted_persons || []
     const def = tps.find((p) => p.section_id == null) || tps[0]
     setTrustedId(def ? String(def.id) : '')
-  }
+  }, [objectId, objects])
 
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   const addRow = () => setItems((arr) => [...arr, newItem()])
