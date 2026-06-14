@@ -12,10 +12,13 @@ import { ProofGallery } from '@/components/admin/ProofGallery'
 import { SectionReview } from '@/components/admin/SectionReview'
 import { ReassignModal } from '@/components/admin/ReassignModal'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
+import { DateField } from '@/components/admin/DateField'
 import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, cashLabel, fmtDesiredTime, yandexMapsUrl } from '@/lib/orderUi'
 
 // Цвет текста статуса в шапке (тон бейджа, но без плашки — меньше визуального шума).
-const STATUS_TEXT = { purple: '#a87fff', orange: '#f4a840', green: '#2ecc71', red: '#ff4655' }
+// Категориальные тона статусов. Ключ 'purple' исторический — значение уведено
+// в бирюзу (вторичный акцент бренда), чтобы не выпадать из оранжевой палитры.
+const STATUS_TEXT = { purple: '#2ea3b0', orange: '#f4a840', green: '#2ecc71', red: '#ff4655' }
 
 // Модалка управления заявкой: просмотр + правка (дата/объект/работы/комментарий) +
 // «Отправить в Заявки» (для входящих) + назначение / перенос / завершение / архив +
@@ -326,7 +329,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
           </div>
           <div className="a-field-row">
             <label className="a-field"><span>Дата заезда</span>
-              <input className="a-input" type="date" value={assignForm.shift_date} onChange={(e) => setAssignForm({ ...assignForm, shift_date: e.target.value })} />
+              <DateField value={assignForm.shift_date} onChange={(v) => setAssignForm({ ...assignForm, shift_date: v })} style={{ width: '100%' }} />
             </label>
             <label className="a-field"><span>Водитель</span>
               <select className="a-select" value={assignForm.driver_id} onChange={(e) => setAssignForm({ ...assignForm, driver_id: e.target.value })}>
@@ -370,7 +373,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         <>
           <div className="a-field-row">
             <label className="a-field"><span>Дата заезда *</span>
-              <input className="a-input" type="date" value={editForm.desired_date} onChange={(e) => setEditForm({ ...editForm, desired_date: e.target.value })} />
+              <DateField value={editForm.desired_date} onChange={(v) => setEditForm({ ...editForm, desired_date: v })} style={{ width: '100%' }} />
             </label>
             <label className="a-field"><span>Желаемое время</span>
               <TimeSlotSelect value={editForm.desired_time} onChange={(v) => setEditForm({ ...editForm, desired_time: v })} />

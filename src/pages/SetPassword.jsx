@@ -63,7 +63,7 @@ export default function SetPassword() {
       <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} style={card}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, margin: '0 auto 14px', background: 'linear-gradient(135deg, #865fff, #f48f1b)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, margin: '0 auto 14px', background: 'linear-gradient(135deg, #f7a233, #d97a0e)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Truck size={24} color="#fff" />
           </div>
           <div style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '0.08em', color: '#e8ecff' }}>
@@ -128,7 +128,7 @@ export default function SetPassword() {
       )}
 
       <motion.button type="submit" disabled={submitting} whileTap={{ scale: submitting ? 1 : 0.98 }}
-        style={{ width: '100%', padding: '11px 18px', background: 'linear-gradient(135deg, #865fff, #5b3fd4)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: '0.9rem', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        style={{ width: '100%', padding: '11px 18px', background: 'linear-gradient(135deg, #f7a233, #d97a0e)', border: 'none', borderRadius: 10, color: '#1c1100', fontWeight: 600, fontSize: '0.9rem', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         {submitting
           ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Сохраняем…</>
           : <><CheckCircle2 size={16} /> Задать пароль и войти</>}

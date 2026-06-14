@@ -4,6 +4,7 @@ import { useOrdersStore } from '@/store/ordersStore'
 import { useDriversStore } from '@/store/driversStore'
 import { useToast } from '@/components/admin/Toast'
 import { clientLegal, streetLine, objectLine, isCash, fmtMoney } from '@/lib/orderUi'
+import { DateField } from '@/components/admin/DateField'
 
 const MON_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
@@ -66,10 +67,10 @@ export default function Reconcile({ embedded = false }) {
             </select>
           </label>
           <label className="a-field"><span>Период с *</span>
-            <input className="a-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 160 }} />
+            <DateField value={from} onChange={setFrom} style={{ width: 160 }} />
           </label>
           <label className="a-field"><span>по *</span>
-            <input className="a-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ width: 160 }} />
+            <DateField value={to} onChange={setTo} style={{ width: 160 }} />
           </label>
           <button className="a-btn a-btn--primary" onClick={build} disabled={!driverId || loading}>
             <FileCheck2 size={16} /> {loading ? 'Формирую…' : 'Сформировать'}

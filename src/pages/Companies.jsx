@@ -9,7 +9,7 @@ import { useToast } from '@/components/admin/Toast'
 const STATUS = {
   none: { label: 'Доступ не выдан', color: '#92a2d4' },
   granted: { label: 'Доступ выдан · ждёт регистрации', color: '#f4b41b' },
-  registered: { label: 'Регистрируется · ждёт код', color: '#865fff' },
+  registered: { label: 'Регистрируется · ждёт код', color: '#2ea3b0' },
   active: { label: 'Активен', color: '#4ade80' },
 }
 
@@ -154,7 +154,7 @@ export default function Companies() {
           <label className="a-field"><span>Email директора (для доступа в систему)</span>
             <input className="a-input" type="email" value={editing.director_email} onChange={setField('director_email')} placeholder="director@company.ru" />
           </label>
-          <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 6 }}>
+          <div className="a-note">
             После сохранения нажмите «Предоставить доступ» в карточке — директор сможет зарегистрироваться по этому email.
           </div>
         </Modal>

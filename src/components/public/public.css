@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(900px 500px at 15% -10%, rgba(134, 95, 255, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 15% -10%, rgba(244, 143, 27, 0.18), transparent 60%),
     radial-gradient(800px 480px at 100% 0%, rgba(244, 143, 27, 0.12), transparent 55%),
     #050f1d;
   color: #e8ecff;
@@ -27,8 +27,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
   font-size: 1.05rem;
 }
 .pub-brand-logo {
@@ -36,7 +37,7 @@
   height: 36px;
   border-radius: 10px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #865fff, #f48f1b);
+  background: linear-gradient(135deg, #f7a233, #d97a0e);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -49,8 +50,8 @@
   gap: 8px;
   padding: 10px 18px;
   border-radius: 11px;
-  border: 1px solid rgba(134, 95, 255, 0.45);
-  background: rgba(134, 95, 255, 0.12);
+  border: 1px solid rgba(244, 143, 27, 0.45);
+  background: rgba(244, 143, 27, 0.12);
   color: #e8ecff;
   font-weight: 600;
   font-size: 0.9rem;
@@ -58,8 +59,8 @@
   transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 .pub-account-btn:hover {
-  background: rgba(134, 95, 255, 0.22);
-  border-color: rgba(134, 95, 255, 0.7);
+  background: rgba(244, 143, 27, 0.22);
+  border-color: rgba(244, 143, 27, 0.7);
 }
 .pub-account-btn:active { transform: scale(0.98); }
 
@@ -95,8 +96,8 @@
   padding: 13px 26px;
   border-radius: 13px;
   border: none;
-  background: linear-gradient(135deg, #865fff, #5b3fd4);
-  color: #fff;
+  background: linear-gradient(135deg, #f7a233, #d97a0e);
+  color: #1c1100;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
@@ -136,7 +137,9 @@
 }
 .pub-modal-title {
   text-align: center;
+  font-family: var(--font-display);
   font-weight: 700;
+  letter-spacing: 0.02em;
   font-size: 1.15rem;
   margin: 0 0 6px;
 }
@@ -179,8 +182,8 @@
   transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
 .pub-choice:hover:not(:disabled) {
-  border-color: rgba(134, 95, 255, 0.6);
-  background: rgba(134, 95, 255, 0.12);
+  border-color: rgba(244, 143, 27, 0.6);
+  background: rgba(244, 143, 27, 0.12);
 }
 .pub-choice:active:not(:disabled) { transform: scale(0.98); }
 .pub-choice:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -191,7 +194,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #865fff, #5b3fd4);
+  background: linear-gradient(135deg, #f48f1b, #d97a0e);
 }
 .pub-choice--soon .pub-choice-ico { background: rgba(255, 255, 255, 0.08); }
 .pub-choice-soon {
@@ -211,7 +214,7 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #92a2d4;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .pub-input {
   width: 100%;
@@ -225,7 +228,7 @@
   outline: none;
   transition: border-color 0.2s;
 }
-.pub-input:focus { border-color: rgba(134, 95, 255, 0.5); }
+.pub-input:focus { border-color: rgba(244, 143, 27, 0.5); }
 .pub-input--pass { padding-right: 40px; }
 .pub-pass-wrap { position: relative; }
 .pub-pass-toggle {
@@ -253,8 +256,8 @@
   margin-bottom: 14px;
 }
 .pub-info {
-  background: rgba(134, 95, 255, 0.1);
-  border: 1px solid rgba(134, 95, 255, 0.22);
+  background: rgba(244, 143, 27, 0.1);
+  border: 1px solid rgba(244, 143, 27, 0.22);
   border-radius: 10px;
   padding: 8px 14px;
   color: #b9c4ec;
@@ -273,10 +276,10 @@
 .pub-submit {
   width: 100%;
   padding: 11px 18px;
-  background: linear-gradient(135deg, #865fff, #5b3fd4);
+  background: linear-gradient(135deg, #f7a233, #d97a0e);
   border: none;
   border-radius: 10px;
-  color: #fff;
+  color: #1c1100;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;

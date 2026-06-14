@@ -50,7 +50,7 @@ export default function Templates() {
 
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Шаблоны сообщений клиенту</div>
-        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: -6, marginBottom: 12 }}>
+        <div className="a-note">
           Текст для отправки клиенту в личку (диплинк) и в бот. Плейсхолдеры подставляются автоматически:{' '}
           <code>{'{client}'}</code> <code>{'{number}'}</code> <code>{'{date}'}</code> <code>{'{address}'}</code>{' '}
           <code>{'{driver}'}</code> <code>{'{sections}'}</code> <code>{'{amount}'}</code> <code>{'{report_url}'}</code>.
@@ -64,7 +64,7 @@ export default function Templates() {
                 <label className="a-field" style={{ flex: 1 }}><span>Название</span>
                   <input className="a-input" value={t.title} onChange={(e) => setTpl(i, { title: e.target.value })} />
                 </label>
-                <button className="a-btn a-btn--danger a-btn--sm" onClick={() => delTpl(i)} title="Удалить шаблон">✕</button>
+                <button className="a-x" onClick={() => delTpl(i)} title="Удалить шаблон">✕</button>
               </div>
               <div className="a-tpl-hint">
                 {hint || 'Произвольный шаблон — выбирается вручную при отправке клиенту.'}

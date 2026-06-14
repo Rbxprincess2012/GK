@@ -220,7 +220,7 @@ export default function Users() {
           {form.role === 'manager' && (
             <div className="a-field">
               <span>Доступ к разделам</span>
-              <div className="a-muted" style={{ fontSize: '0.78rem', margin: '2px 0 8px' }}>
+              <div className="a-note">
                 Отметьте разделы и подразделы, доступные этому менеджеру. По умолчанию — все.
               </div>
               <div className="a-navperm">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, pointerWithin, MeasuringStrategy } from '@dnd-kit/core'
-import { Lock, Shuffle, Pencil, Ban, RotateCcw, Copy } from 'lucide-react'
+import { Lock, Shuffle, Pencil, Ban, RotateCcw } from 'lucide-react'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useShiftsStore } from '@/store/shiftsStore'
 import { useContainersStore } from '@/store/containersStore'
@@ -10,7 +10,8 @@ import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
 import { DesiredTime } from '@/components/admin/DesiredTime'
-import { isCash, cashLabel } from '@/lib/orderUi'
+import { DateField } from '@/components/admin/DateField'
+import { isCash, cashLabel, fmtDate } from '@/lib/orderUi'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -34,25 +35,25 @@ function preferSlots(args) {
   return slot ? [slot] : hits
 }
 
-function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn, onClone }) {
+function WorkCard({ o, overlay, onReassign, onEdit, onCancel, onReturn }) {
   return (
     <div className={'a-reviewcard a-reviewcard--locked' + (overlay ? ' a-reviewcard--overlay' : '')}>
       <div className="a-reviewcard-top">
-        {seqNo != null && <span className="a-reviewcard-seq" title="Очередность исполнения">{seqNo}</span>}
         <span className="a-reviewcard-num">#{o.number}</span>
-        {isCash(o) && <span className="a-cash" title="Оплата наличными">{cashLabel(o)}</span>}
+        <DesiredTime time={o.desired_time} compact />
         <Lock size={13} className="a-lock" style={{ marginLeft: 'auto' }} />
       </div>
       <div className="a-reviewcard-line a-reviewcard-street">{addressLine(o)}</div>
-      <div style={{ margin: '2px 0 4px' }}><DesiredTime time={o.desired_time} compact /></div>
+      {o.city && <div className="a-reviewcard-line a-reviewcard-city">{o.city}</div>}
+      <div className="a-reviewcard-line">{clientLegal(o)}</div>
+      <div className="a-reviewcard-div" />
       <div className="a-reviewcard-line">{objectName(o)}</div>
       <ContainerJob o={o} />
-      <div className="a-reviewcard-line a-muted">{clientLegal(o)}</div>
+      {isCash(o) && <div className="a-reviewcard-cash"><span className="a-cash" title="Оплата наличными">{cashLabel(o)}</span></div>}
       {!overlay && (
         <div className="a-workcard-actions" onPointerDown={(e) => e.stopPropagation()}>
           <button className="a-iconbtn" title="Вернуть на распределение (снять водителя)" onClick={() => onReturn(o)}><RotateCcw size={15} /></button>
           <button className="a-iconbtn" title="Перенести на другую дату / другого водителя" onClick={() => onReassign(o)}><Shuffle size={15} /></button>
-          <button className="a-iconbtn" title="Клонировать заявку (новая копия со следующим номером)" onClick={() => onClone(o)}><Copy size={15} /></button>
           <button className="a-iconbtn" title="Изменить заявку" onClick={() => onEdit(o)}><Pencil size={15} /></button>
           <button className="a-iconbtn a-iconbtn--danger" title="Отменить заявку" onClick={() => onCancel(o)}><Ban size={15} /></button>
         </div>
@@ -62,7 +63,7 @@ function WorkCard({ o, seqNo, overlay, onReassign, onEdit, onCancel, onReturn, o
 }
 
 export default function InWork() {
-  const { orders, fetchOrders, moveDriver, reorder, cancelOrder, getOrder, unassign, addOrder } = useOrdersStore()
+  const { orders, fetchOrders, moveDriver, reorder, cancelOrder, getOrder, unassign } = useOrdersStore()
   const { available, fetchAvailable } = useShiftsStore()
   const { types, fetchTypes } = useContainersStore()
   const toast = useToast()
@@ -113,30 +114,6 @@ export default function InWork() {
     if (!(await toast.confirm(`Отменить заявку #${o.number}? Водитель уже получил задание — отмена уберёт её из работы (останется в Журнале).`))) return
     try { await cancelOrder(o.id); toast.success(`#${o.number} отменена`); refresh() }
     catch { toast.error('Не удалось отменить') }
-  }
-
-  // Клонировать заявку: новая копия в пул (status new) со следующим номером.
-  // Копируем объект, оплату, лицо, дату/время, комментарий и позиции (включая № контейнеров).
-  const doClone = async (o) => {
-    try {
-      const created = await addOrder({
-        object_id: o.object_id,
-        payment_method: o.payment_method,
-        amount: o.amount != null ? Number(o.amount) : null,
-        trusted_person_id: o.trusted_person_id ?? null,
-        desired_date: o.desired_date ? o.desired_date.slice(0, 10) : undefined,
-        desired_time: o.desired_time ? String(o.desired_time).slice(0, 5) : undefined,
-        note: o.note || undefined,
-        items: (o.items || []).map((it) => ({
-          action: it.action,
-          section_id: it.section_id ?? null,
-          quantity: it.quantity,
-          container_numbers: it.container_numbers ?? null,
-        })),
-      })
-      toast.success(`Создана копия — заявка #${created.number} (в пуле распределения)`)
-      refresh()
-    } catch { toast.error('Не удалось клонировать заявку') }
   }
 
   // Вернуть заявку на распределение: снять водителя/смену → статус new.
@@ -195,7 +172,7 @@ export default function InWork() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, -1))} title="День назад">‹</button>
-              <input className="a-input a-input--accent" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
+              <DateField value={date} onChange={setDate} className="a-input a-input--accent" style={{ width: 150 }} />
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, 1))} title="День вперёд">›</button>
             </div>
           </div>
@@ -208,7 +185,7 @@ export default function InWork() {
         </div>
 
         {driverCols.length === 0 ? (
-          <div className="a-card"><div className="a-empty">На {date} нет заявок в работе. Отправьте распределение из раздела «На проверке».</div></div>
+          <div className="a-card"><div className="a-empty">На {fmtDate(date)} нет заявок в работе. Отправьте распределение из раздела «На проверке».</div></div>
         ) : (
           <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', overflowX: 'auto', paddingBottom: 8 }}>
             {driverCols.map((d) => {
@@ -223,10 +200,10 @@ export default function InWork() {
                   </div>
                   <div className="a-reviewcol-body">
                     {list.length === 0 && <div className="a-muted" style={{ fontSize: '0.78rem', padding: '8px 4px' }}>перетащите сюда</div>}
-                    {list.map((o, i) => (
+                    {list.map((o) => (
                       <Droppable key={o.id} id={`slot:${o.id}`} className="a-slot" overClassName="is-over">
                         <Draggable id={`order:${o.id}`} data={{ kind: 'order', order: o }} className="a-drag">
-                          <WorkCard o={o} seqNo={i + 1} onReassign={(x) => openDetail(x, 'assign')} onEdit={openDetail} onCancel={doCancel} onReturn={doReturn} onClone={doClone} />
+                          <WorkCard o={o} onReassign={(x) => openDetail(x, 'assign')} onEdit={openDetail} onCancel={doCancel} onReturn={doReturn} />
                         </Draggable>
                       </Droppable>
                     ))}

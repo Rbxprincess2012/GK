@@ -10,7 +10,8 @@ import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
 import { DesiredTime } from '@/components/admin/DesiredTime'
-import { isCash, cashLabel, autoRouteOrder } from '@/lib/orderUi'
+import { DateField } from '@/components/admin/DateField'
+import { isCash, cashLabel, autoRouteOrder, fmtDate } from '@/lib/orderUi'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -34,24 +35,28 @@ function preferSlots(args) {
   return slot ? [slot] : hits
 }
 
-// Карточка: Улица / Объект / Заказчик — для водителя главное улица, она сверху.
+// Карточка «На проверке» — та же строгая шкала и порядок, что и в «В работе»:
+// Шапка (№ · время · ✎) / Адрес / Город / Заказчик / —разделитель— / Объект / Задача / Нал.
+// Порядок исполнения виден позицией карточки в колонке (сверху вниз), поэтому
+// отдельной нумерации нет — как и в «В работе» (убрали «пестроту»).
 // Если строка шире колонки — колонка скроллится по горизонтали (см. .a-reviewcol-body).
-function ReviewCard({ o, overlay, seqNo, onOpen }) {
+function ReviewCard({ o, overlay, onOpen }) {
   return (
     <div className={'a-reviewcard' + (overlay ? ' a-reviewcard--overlay' : '')}>
       <div className="a-reviewcard-top">
-        {seqNo != null && <span className="a-reviewcard-seq" title="Приоритет (порядок исполнения)">{seqNo}</span>}
         <span className="a-reviewcard-num">#{o.number}</span>
-        {isCash(o) && <span className="a-cash" title="Оплата наличными">{cashLabel(o)}</span>}
+        <DesiredTime time={o.desired_time} compact />
         {!overlay && (
-          <button className="a-orderrow-open" title="Открыть заявку" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onOpen?.(o) }}>✎</button>
+          <button className="a-orderrow-open" title="Открыть заявку" style={{ marginLeft: 'auto' }} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onOpen?.(o) }}>✎</button>
         )}
       </div>
       <div className="a-reviewcard-line a-reviewcard-street">{addressLine(o)}</div>
-      <div style={{ margin: '2px 0 4px' }}><DesiredTime time={o.desired_time} compact /></div>
+      {o.city && <div className="a-reviewcard-line a-reviewcard-city">{o.city}</div>}
+      <div className="a-reviewcard-line">{clientLegal(o)}</div>
+      <div className="a-reviewcard-div" />
       <div className="a-reviewcard-line">{objectName(o)}</div>
       <ContainerJob o={o} />
-      <div className="a-reviewcard-line a-muted">{clientLegal(o)}</div>
+      {isCash(o) && <div className="a-reviewcard-cash"><span className="a-cash" title="Оплата наличными">{cashLabel(o)}</span></div>}
     </div>
   )
 }
@@ -118,7 +123,7 @@ export default function Review() {
 
   const doSendToWork = async () => {
     if (reviewOrders.length === 0) return
-    if (!(await toast.confirm(`Отправить в работу ${reviewOrders.length} заявк(и) на ${date}? Водители получат задания, клиенты — уведомления. Заявки переедут в раздел «В работе».`))) return
+    if (!(await toast.confirm(`Отправить в работу ${reviewOrders.length} заявк(и) на ${fmtDate(date)}? Водители получат задания, клиенты — уведомления. Заявки переедут в раздел «В работе».`))) return
     try {
       const r = await sendToWork({ shift_date: date, shift_type: shiftType })
       toast.success(`Отправлено в работу: ${r.moved}`)
@@ -177,7 +182,7 @@ export default function Review() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, -1))} title="День назад">‹</button>
-              <input className="a-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
+              <DateField value={date} onChange={setDate} style={{ width: 150 }} />
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, 1))} title="День вперёд">›</button>
             </div>
             <button className="a-btn a-btn--ghost" onClick={doAutoRoute} disabled={reviewOrders.length === 0}
@@ -192,7 +197,7 @@ export default function Review() {
         </div>
 
         {driverCols.length === 0 ? (
-          <div className="a-card"><div className="a-empty">На {date} нет распределённых заявок. Назначьте водителей в «Распределении» — заявки появятся здесь сразу.</div></div>
+          <div className="a-card"><div className="a-empty">На {fmtDate(date)} нет распределённых заявок. Назначьте водителей в «Распределении» — заявки появятся здесь сразу.</div></div>
         ) : (
           <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', overflowX: 'auto', paddingBottom: 8 }}>
             {driverCols.map((d) => {
@@ -208,10 +213,10 @@ export default function Review() {
                   </div>
                   <div className="a-reviewcol-body">
                     {list.length === 0 && <div className="a-muted" style={{ fontSize: '0.78rem', padding: '8px 4px' }}>перетащите сюда</div>}
-                    {list.map((o, i) => (
+                    {list.map((o) => (
                       <Droppable key={o.id} id={`slot:${o.id}`} className="a-slot" overClassName="is-over">
                         <Draggable id={`order:${o.id}`} data={{ kind: 'order', order: o }} className="a-drag">
-                          <ReviewCard o={o} seqNo={i + 1} onOpen={openDetail} />
+                          <ReviewCard o={o} onOpen={openDetail} />
                         </Draggable>
                       </Droppable>
                     ))}

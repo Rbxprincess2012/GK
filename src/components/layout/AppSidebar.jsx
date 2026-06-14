@@ -36,7 +36,7 @@ export default function AppSidebar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #865fff, #f48f1b)',
+            background: 'linear-gradient(135deg, #f7a233, #d97a0e)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <Truck size={18} color="#fff" />
@@ -68,8 +68,8 @@ export default function AppSidebar() {
                   borderRadius: 10,
                   fontSize: '0.875rem',
                   fontWeight: isActive ? 600 : 400,
-                  color: isActive ? '#c4acff' : '#92a2d4',
-                  background: isActive ? 'rgba(134,95,255,0.15)' : 'transparent',
+                  color: isActive ? '#f9b35a' : '#92a2d4',
+                  background: isActive ? 'rgba(244,143,27,0.15)' : 'transparent',
                   transition: 'background 0.15s, color 0.15s',
                   textDecoration: 'none',
                 })}
@@ -82,8 +82,8 @@ export default function AppSidebar() {
                 onMouseLeave={(e) => {
                   if (!e.currentTarget.classList.contains('active')) {
                     const isAct = e.currentTarget.getAttribute('aria-current') === 'page'
-                    e.currentTarget.style.background = isAct ? 'rgba(134,95,255,0.15)' : 'transparent'
-                    e.currentTarget.style.color = isAct ? '#c4acff' : '#92a2d4'
+                    e.currentTarget.style.background = isAct ? 'rgba(244,143,27,0.15)' : 'transparent'
+                    e.currentTarget.style.color = isAct ? '#f9b35a' : '#92a2d4'
                   }
                 }}
               >
@@ -105,8 +105,8 @@ export default function AppSidebar() {
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 12px', borderRadius: 10,
                 fontSize: '0.875rem', fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#c4acff' : '#92a2d4',
-                background: isActive ? 'rgba(134,95,255,0.15)' : 'transparent',
+                color: isActive ? '#f9b35a' : '#92a2d4',
+                background: isActive ? 'rgba(244,143,27,0.15)' : 'transparent',
                 transition: 'background 0.15s, color 0.15s',
                 textDecoration: 'none',
               })}
@@ -123,9 +123,9 @@ export default function AppSidebar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-            background: 'rgba(134,95,255,0.2)',
+            background: 'rgba(244,143,27,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.75rem', fontWeight: 700, color: '#c4acff',
+            fontSize: '0.75rem', fontWeight: 700, color: '#f9b35a',
           }}>
             {initials}
           </div>

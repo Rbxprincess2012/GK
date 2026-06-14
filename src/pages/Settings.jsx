@@ -138,7 +138,7 @@ export default function Settings() {
       {isSuper && (
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Токены интеграций</div>
-        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: -6, marginBottom: 14 }}>
+        <div className="a-note">
           Платформенные ключи (общий бот, Яндекс, DaData, n8n) — доступны только суперпользователю.
         </div>
         {TOKEN_GROUPS.map((group) => (
@@ -166,7 +166,7 @@ export default function Settings() {
           <input className="a-input" value={org.company_name || ''} placeholder="напр. Чистый город"
             onChange={setOrgField('company_name')} />
         </label>
-        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 6, marginBottom: 10 }}>
+        <div className="a-note">
           Короткое название — подставляется в текст приглашения доверенного лица («Копировать сообщение»).
         </div>
         <div className="a-field-row">
@@ -216,7 +216,7 @@ export default function Settings() {
         <label className="a-field"><span>Корр. счёт</span>
           <input className="a-input" value={org.corr_account || ''} onChange={setOrgField('corr_account')} />
         </label>
-        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 8, marginBottom: 10 }}>
+        <div className="a-note">
           Понадобятся для выставления счетов и документов. Заполнять необязательно.
         </div>
         <button className="a-btn a-btn--primary" onClick={saveOrg}>Сохранить</button>
@@ -268,7 +268,7 @@ export default function Settings() {
             <option value="yandex">Яндекс (точнее, нужен активный ключ)</option>
           </select>
         </label>
-        <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 8, marginTop: 8 }}>
+        <div className="a-note">
           0.1 ⇒ 10 км ≈ один заезд. «Город» обязателен для геокодинга (адреса объектов хранятся без города).
           OpenStreetMap находит ~¾ адресов бесплатно; промахи правьте координатами вручную в карточке объекта.
         </div>
@@ -292,7 +292,7 @@ export default function Settings() {
         <button className="a-btn a-btn--ghost" onClick={() => setConfirmReset(true)}>Сбросить</button>
       </div>
 
-      <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 14 }}>
+      <div className="a-note">
         Токены, база и параметры распределения хранятся в БД. Часы смен и топливо — пока локально в браузере.
       </div>
 

@@ -98,6 +98,12 @@ export function orderTitle(o) {
 export function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+// ISO-дата 'yyyy-mm-dd' → 'дд.мм.гггг' для показа в тексте (заголовки, подтверждения, пустые состояния).
+export function fmtDate(d10) {
+  if (!d10) return ''
+  const [y, m, d] = String(d10).slice(0, 10).split('-')
+  return d && m && y ? `${d}.${m}.${y}` : String(d10)
+}
 
 // Желаемое время заезда. Пусто (null/'') → «как можно быстрее»; иначе конкретный часовой слот.
 // Слоты — 24 часа (00:00…23:00); формат хранения 'HH:00'.

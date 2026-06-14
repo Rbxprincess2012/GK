@@ -4,6 +4,7 @@ import { useOrdersStore } from '@/store/ordersStore'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
+import { DateField } from '@/components/admin/DateField'
 
 const ACTIONS = [['place', 'Установить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
 const clientLabel = (c) => c.nickname || c.legal_name || `Клиент #${c.id}`
@@ -152,7 +153,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
 
       <div className="a-section-title">Позиции</div>
       {items.map((it, i) => (
-        <div key={i} className="a-field-row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div key={i} className="a-field-row a-posrow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <label className="a-field" style={{ minWidth: 140 }}><span>Действие</span>
             <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
               {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -186,7 +187,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
       <div className="a-section-title">Детали</div>
       <div className="a-field-row">
         <label className="a-field"><span>Дата заезда</span>
-          <input className="a-input" type="date" value={desiredDate} onChange={(e) => setDesiredDate(e.target.value)} />
+          <DateField value={desiredDate} onChange={setDesiredDate} style={{ width: '100%' }} />
         </label>
         <label className="a-field"><span>Желаемое время</span>
           <TimeSlotSelect value={desiredTime} onChange={setDesiredTime} />

@@ -4,15 +4,16 @@ import { fmtDesiredTime, TIME_SLOTS } from '@/lib/orderUi'
 // compact — только иконка ⚡ без подписи (для тесных мест в карточках).
 export function DesiredTime({ time, compact = false }) {
   const s = fmtDesiredTime(time)
+  // Мета-уровень единой шкалы карточки: 0.74 / 400 / приглушённый. Без пилюли.
   const base = {
-    display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 8px',
-    borderRadius: 999, fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap',
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    fontSize: '0.74rem', fontWeight: 400, color: '#92a2d4', whiteSpace: 'nowrap',
   }
   if (s) {
-    return <span style={{ ...base, background: 'rgba(96,165,250,.16)', color: '#93c5fd' }} title="Желаемое время заезда">🕐 {s}</span>
+    return <span style={base} title="Желаемое время заезда">🕐 {s}</span>
   }
   return (
-    <span style={{ ...base, background: 'rgba(244,143,27,.16)', color: '#f8b36b' }} title="Как можно быстрее">
+    <span style={base} title="Как можно быстрее">
       ⚡{compact ? '' : ' Как можно быстрее'}
     </span>
   )

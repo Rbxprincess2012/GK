@@ -4,6 +4,7 @@ import { useDraftsStore } from '@/store/draftsStore'
 import { useObjectsStore } from '@/store/objectsStore'
 import { Modal } from '@/components/admin/Modal'
 import { ItemsEditor } from '@/components/admin/ItemsEditor'
+import { DateField } from '@/components/admin/DateField'
 import { useToast } from '@/components/admin/Toast'
 
 const emptyItem = { action: 'haul', quantity: 1 }
@@ -127,8 +128,8 @@ function ReviewDraft({ draft, objects, onClose, onDone }) {
       </>}
     >
       {/* Контекст от клиента */}
-      <div className="a-callout" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: 'rgba(134,95,255,0.08)', border: '1px solid rgba(134,95,255,0.18)' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#c4acff', marginBottom: 4 }}>
+      <div className="a-callout" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: 'rgba(244,143,27,0.08)', border: '1px solid rgba(244,143,27,0.18)' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f9b35a', marginBottom: 4 }}>
           Задание (от клиента){isUrgent(draft.task_text) && <span className="a-badge a-badge--red" style={{ marginLeft: 8 }}>срочно</span>}
         </div>
         <div style={{ fontSize: '0.9rem' }}>{draft.task_text}</div>
@@ -167,7 +168,7 @@ function ReviewDraft({ draft, objects, onClose, onDone }) {
           <div className="a-section-title">Детали</div>
           <div className="a-field-row">
             <label className="a-field"><span>Желаемая дата</span>
-              <input className="a-input" type="date" value={form.desired_date} onChange={(e) => setForm({ ...form, desired_date: e.target.value })} />
+              <DateField value={form.desired_date} onChange={(v) => setForm({ ...form, desired_date: v })} style={{ width: '100%' }} />
             </label>
             <label className="a-field"><span>Время</span>
               <input className="a-input" type="time" value={form.desired_time} onChange={(e) => setForm({ ...form, desired_time: e.target.value })} />

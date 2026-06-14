@@ -147,7 +147,7 @@ export default function Schedule() {
               {activeDrivers.map((d) => (
                 <Draggable key={d.id} id={`pool:${d.id}`} data={{ kind: 'pool', driverId: d.id }}
                   className="a-drag a-namechip" title={d.name}>
-                  <span className="a-namechip-dot" style={{ background: '#865fff' }} />
+                  <span className="a-namechip-dot" style={{ background: '#f48f1b' }} />
                   {d.name}
                 </Draggable>
               ))}

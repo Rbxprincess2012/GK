@@ -4,6 +4,7 @@ import { useToast } from '@/components/admin/Toast'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useShiftsStore } from '@/store/shiftsStore'
 import { loadYmaps, DRIVER_COLORS } from '@/lib/yandexMaps'
+import { DateField } from '@/components/admin/DateField'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -142,7 +143,7 @@ export default function ShiftMap() {
         <h2>Карта смены {data && <span className="a-count">{data.orders.length}</span>}</h2>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setDate(shiftYmd(date, -1))} title="День назад">‹</button>
-          <input className="a-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
+          <DateField value={date} onChange={setDate} style={{ width: 150 }} />
           <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setDate(shiftYmd(date, 1))} title="День вперёд">›</button>
           <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => setDate(tomorrow())}>Завтра</button>
           <span className="a-muted" style={{ fontSize: '0.8rem' }}>дальние ≥</span>
@@ -167,7 +168,7 @@ export default function ShiftMap() {
             <div ref={mapRef} style={{ width: '100%', height: 'calc(100vh - 220px)', minHeight: 420 }} />
           </div>
           {picked && (
-            <div className="a-card" style={{ marginBottom: 12, border: '1px solid rgba(134,95,255,0.4)' }}>
+            <div className="a-card" style={{ marginBottom: 12, border: '1px solid rgba(244,143,27,0.4)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <div className="a-section-title" style={{ margin: 0 }}>Заявка #{picked.number}</div>
                 <button className="a-btn a-btn--ghost a-btn--sm" style={{ marginLeft: 'auto' }} onClick={() => setPicked(null)}>✕</button>
@@ -206,7 +207,7 @@ export default function ShiftMap() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', margin: '0 -8px',
                     borderRadius: 8, cursor: 'pointer', opacity: dim ? 0.45 : 1,
-                    background: active ? 'rgba(134,95,255,0.15)' : 'transparent',
+                    background: active ? 'rgba(244,143,27,0.15)' : 'transparent',
                   }}>
                   <span style={{ width: 12, height: 12, borderRadius: '50%', background: l.color, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: '0.86rem', fontWeight: active ? 700 : 400 }}>{l.name}</span>

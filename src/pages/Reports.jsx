@@ -3,6 +3,7 @@ import { useOrdersStore } from '@/store/ordersStore'
 import { useAuth } from '@/context/AuthContext'
 import api from '@/lib/api'
 import Reconcile from '@/pages/Reconcile'
+import { DateField } from '@/components/admin/DateField'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return ymd(d) }
@@ -42,7 +43,7 @@ export default function Reports() {
   }, [orders, today])
 
   const cards = [
-    ['Всего заявок', stats.total, '#865fff'],
+    ['Всего заявок', stats.total, '#f48f1b'],
     ['Новые', stats.byStatus.new || 0, '#f48f1b'],
     ['Выполнено сегодня', stats.doneToday, '#2ecc71'],
     ['Закрыто', stats.byStatus.closed || 0, '#92a2d4'],
@@ -74,9 +75,9 @@ export default function Reports() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
           <div className="a-section-title" style={{ margin: 0 }}>Нагрузка по водителям за период</div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input className="a-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 150 }} />
+            <DateField value={from} onChange={setFrom} style={{ width: 150 }} />
             <span className="a-muted">—</span>
-            <input className="a-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ width: 150 }} />
+            <DateField value={to} onChange={setTo} style={{ width: 150 }} />
           </div>
         </div>
         {loadBusy ? <div className="a-loading">Загрузка…</div> : load.length === 0 ? (

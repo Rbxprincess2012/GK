@@ -5,6 +5,7 @@ import { useOrdersStore } from '@/store/ordersStore'
 import { useShiftsStore } from '@/store/shiftsStore'
 import { useDriversStore } from '@/store/driversStore'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
+import { DateField } from '@/components/admin/DateField'
 import { ymd } from '@/lib/orderUi'
 
 // Вложенная модалка переназначения невыполненного участка (поверх модалки приёмки).
@@ -73,7 +74,7 @@ export function ReassignModal({ subtask, onClose, onDone }) {
       </div>
       <div className="a-field-row">
         <label className="a-field"><span>Дата исполнения</span>
-          <input className="a-input" type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} />
+          <DateField value={shiftDate} onChange={setShiftDate} style={{ width: '100%' }} />
         </label>
         <label className="a-field"><span>Время заезда</span>
           <TimeSlotSelect value={desiredTime} onChange={setDesiredTime} />

@@ -4,7 +4,7 @@
   min-height: 100vh;
   background: #04111f;
   color: #e8ecff;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
@@ -27,9 +27,10 @@
 .a-brand {
   display: flex;
   align-items: center;
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   color: #e8ecff;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   margin-bottom: 10px;
@@ -132,8 +133,8 @@
 }
 
 .a-nav-item.active {
-  background: rgba(134,95,255,0.15);
-  color: #c4acff;
+  background: rgba(244,143,27,0.15);
+  color: #f9b35a;
 }
 
 .a-nav-item--logout {
@@ -177,8 +178,8 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .a-nav-zone-body.is-over {
-  border-color: rgba(134,95,255,0.6);
-  background: rgba(134,95,255,0.08);
+  border-color: rgba(244,143,27,0.6);
+  background: rgba(244,143,27,0.08);
 }
 .a-nav-zone-empty {
   font-size: 0.78rem;
@@ -200,7 +201,7 @@
   cursor: grabbing;
   background: #143052;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-  border: 1px solid rgba(134,95,255,0.5);
+  border: 1px solid rgba(244,143,27,0.5);
 }
 .a-grip {
   flex-shrink: 0;
@@ -240,12 +241,12 @@
   margin-top: 0;
 }
 .a-editbtn--done {
-  border-color: rgba(134,95,255,0.45);
-  background: rgba(134,95,255,0.18);
-  color: #c4acff;
+  border-color: rgba(244,143,27,0.45);
+  background: rgba(244,143,27,0.18);
+  color: #f9b35a;
 }
 .a-editbtn--done:hover {
-  background: rgba(134,95,255,0.28);
+  background: rgba(244,143,27,0.28);
   color: #e3d8ff;
 }
 
@@ -279,7 +280,7 @@
 }
 .a-roleswitch-btn:hover { color: #e8ecff; border-color: rgba(255,255,255,0.25); }
 .a-roleswitch-btn.is-active {
-  background: rgba(134,95,255,0.2); color: #c4acff; border-color: rgba(134,95,255,0.5);
+  background: rgba(244,143,27,0.2); color: #f9b35a; border-color: rgba(244,143,27,0.5);
 }
 
 .a-main {
@@ -316,7 +317,7 @@
   transition: color .12s, border-color .12s;
 }
 .a-tab:hover { color: #e8ecff; }
-.a-tab.is-active { color: #c4acff; border-bottom-color: #865fff; font-weight: 600; }
+.a-tab.is-active { color: #f9b35a; border-bottom-color: #f48f1b; font-weight: 600; }
 
 .a-count {
   display: inline-block;
@@ -350,8 +351,8 @@
 .a-btn svg { flex-shrink: 0; }
 
 .a-btn--primary {
-  background: linear-gradient(135deg, #865fff, #5b3fd4);
-  color: #fff;
+  background: linear-gradient(135deg, #f7a233, #d97a0e);
+  color: #1c1100;
 }
 
 .a-btn--primary:hover { opacity: 0.9; }
@@ -420,6 +421,15 @@
 .a-x:hover { background: rgba(255,70,85,0.22); }
 .a-x:disabled { opacity: 0.45; cursor: default; }
 
+/* Строка позиции заявки: поля, селект и кнопка-крестик строго одной высоты (40px),
+   чтобы нижний край совпадал независимо от метрик шрифта (IBM Plex чуть выше Inter). */
+.a-posrow .a-input,
+.a-posrow .a-select,
+.a-posrow .a-x {
+  height: 40px;
+  box-sizing: border-box;
+}
+
 /* ── Приёмка по участкам (SectionReview) ──────────────────────────────────── */
 .a-secrev {
   border: 1px solid rgba(255,255,255,0.08);
@@ -442,7 +452,7 @@
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   color: #e8ecff;
   font-size: 0.9rem;
   font-family: inherit;
@@ -464,19 +474,19 @@
   transition: background-color 9999s ease-in-out 0s;
 }
 
-.a-input:focus { border-color: rgba(134,95,255,0.5); }
+.a-input:focus { border-color: rgba(244,143,27,0.5); }
 .a-input--sm { padding: 6px 10px; font-size: 0.85rem; width: 90px; }
 /* Насыщенная заливка поля даты (акцент на выбранном дне, напр. «В работе») */
 .a-input--accent {
-  background: rgba(134,95,255,0.22);
-  border-color: rgba(134,95,255,0.55);
+  background: rgba(244,143,27,0.22);
+  border-color: rgba(244,143,27,0.55);
   color: #e8ddff; font-weight: 600;
 }
-.a-input--accent:focus { border-color: rgba(134,95,255,0.85); }
+.a-input--accent:focus { border-color: rgba(244,143,27,0.85); }
 
 .a-price-input { width: 100%; min-width: 110px; box-sizing: border-box; }
 .a-price-input--auto { color: rgba(232,236,255,0.4); border-color: rgba(255,255,255,0.08); }
-.a-price-input--auto:focus { color: #e8ecff; border-color: rgba(134,95,255,0.5); }
+.a-price-input--auto:focus { color: #e8ecff; border-color: rgba(244,143,27,0.5); }
 
 .a-entrepreneur-toggle {
   display: flex;
@@ -504,7 +514,7 @@
   white-space: nowrap;
 }
 .a-entrepreneur-btn:hover { color: #e8ecff; background: rgba(255,255,255,0.06); }
-.a-entrepreneur-btn.active { background: rgba(134,95,255,0.2); color: #e8ecff; }
+.a-entrepreneur-btn.active { background: rgba(244,143,27,0.2); color: #e8ecff; }
 
 .a-entrepreneur-badge {
   font-size: 0.7rem;
@@ -537,9 +547,9 @@
 }
 .a-chip:hover { color: #e8ecff; border-color: rgba(255,255,255,0.2); }
 .a-chip.active {
-  background: rgba(134,95,255,0.15);
-  border-color: rgba(134,95,255,0.5);
-  color: #c4b5fd;
+  background: rgba(244,143,27,0.15);
+  border-color: rgba(244,143,27,0.5);
+  color: #f9b35a;
 }
 
 .a-sort-btn {
@@ -555,9 +565,9 @@
 }
 .a-sort-btn:hover { color: #e8ecff; border-color: rgba(255,255,255,0.25); }
 .a-sort-btn.active {
-  color: #a78bff;
-  border-color: rgba(134,95,255,0.5);
-  background: rgba(134,95,255,0.1);
+  color: #f9b35a;
+  border-color: rgba(244,143,27,0.5);
+  background: rgba(244,143,27,0.1);
 }
 
 .a-id-btn {
@@ -570,19 +580,19 @@
   white-space: nowrap;
   display: block;
   cursor: pointer;
-  color: rgba(134,95,255,0.8);
+  color: rgba(244,143,27,0.8);
   font-size: inherit;
   font-family: inherit;
-  text-decoration: underline dotted rgba(134,95,255,0.4);
+  text-decoration: underline dotted rgba(244,143,27,0.4);
   transition: color 0.15s;
 }
-.a-id-btn:hover { color: #a78bff; text-decoration-color: #a78bff; }
+.a-id-btn:hover { color: #f9b35a; text-decoration-color: #f9b35a; }
 
 .a-select {
   background-color: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   color: #e8ecff;
   font-size: 0.9rem;
   font-family: inherit;
@@ -596,7 +606,7 @@
 .a-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px; /* воздух между подписью поля и самим полем — единый по проекту */
   flex: 1;
   min-width: 0; /* чтобы поля в .a-field-row сжимались, а не выезжали вправо (напр. «Оплата») */
 }
@@ -614,7 +624,7 @@
   background-color: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   color: #e8ecff;
   font-size: 0.9rem;
   font-family: inherit;
@@ -646,9 +656,28 @@
 
 .a-field input:focus,
 .a-field select:focus,
-.a-field textarea:focus { border-color: rgba(134,95,255,0.5); }
+.a-field textarea:focus { border-color: rgba(244,143,27,0.5); }
 
 .a-field select option { background: #07192e; }
+
+/* ── Единая высота контролов (40px) ────────────────────────────────────────
+   Поля, селекты и «полные» кнопки строго одной высоты, чтобы нижний край
+   совпадал в строках. Раньше высота поля не была зафиксирована и зависела от
+   метрик шрифта (IBM Plex выше прежнего Inter) — поля «подросли» до ~44px, а
+   кнопки остались ~40px, отсюда «коротыши». Исключения ниже: textarea (по
+   rows), компактные --sm (32px), чекбоксы (18px, своё правило). */
+.a-input,
+.a-select,
+.a-field input:not([type="checkbox"]):not([type="radio"]),
+.a-field select,
+.a-btn {
+  height: 40px;
+  box-sizing: border-box;
+}
+textarea.a-input,
+.a-field textarea { height: auto; }
+.a-input.a-input--sm { height: 32px; }
+.a-btn.a-btn--sm { height: 32px; }
 
 .a-field--check { flex-direction: row; align-items: center; gap: 12px; }
 .a-field--check input { width: 18px; height: 18px; cursor: pointer; }
@@ -661,44 +690,49 @@
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 5px; margin-right: 2px;
   border-radius: 999px; font-size: 0.72rem; font-weight: 800; color: #fff;
-  background: linear-gradient(135deg, #865fff, #5b3fd4);
+  background: linear-gradient(135deg, #f48f1b, #d97a0e);
 }
 .a-slot { border-radius: 10px; }
-.a-slot.is-over { box-shadow: inset 0 2px 0 0 #865fff; } /* линия вставки сверху карточки */
+.a-slot.is-over { box-shadow: inset 0 2px 0 0 #f48f1b; } /* линия вставки сверху карточки */
 
 /* ── Индикатор загрузки водителя ─────────────────────────────────────────── */
 .a-driverload { display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 0.74rem; }
 .a-driverload-km { color: #8fa0c8; }
 .a-driverload-score {
-  color: #a87fff; font-weight: 700;
-  background: rgba(134,95,255,0.12); border: 1px solid rgba(134,95,255,0.25);
+  color: #f9b35a; font-weight: 700;
+  background: rgba(244,143,27,0.12); border: 1px solid rgba(244,143,27,0.25);
   border-radius: 999px; padding: 1px 8px; white-space: nowrap;
 }
 .a-driverload-warn { color: #e0a14b; }
 
-/* ── Задание водителю: 2 уровня (участки текстом + команда на базу с эмодзи) ── */
+/* ── Задание водителю: 2 уровня (участки + логистика) ──────────────────────
+   Один общий грид [стрелка | действие | детали]; строки задач — display:contents,
+   поэтому стрелки и пины 📍 выровнены в колонки друг под другом по всем строкам. */
 .a-cjob {
-  display: flex; flex-direction: column; gap: 2px;
-  margin: 3px 0; font-size: 0.78rem; line-height: 1.3;
+  display: grid;
+  grid-template-columns: 20px max-content 1fr;
+  column-gap: 7px; row-gap: 2px;
+  align-items: center;
+  margin: 3px 0; font-size: 0.82rem; line-height: 1.3; /* тело */
 }
-.a-cjob-task { color: #cdd6f4; }
-.a-cjob-sec-label {
-  font-size: 0.74rem; font-weight: 700; color: #c4acff;
-  background: rgba(134,95,255,0.1); border: 1px solid rgba(134,95,255,0.22);
-  border-radius: 999px; padding: 0 7px; margin-right: 2px;
+.a-cjob-task { display: contents; }
+.a-cjob-ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.92rem; line-height: 1;
 }
-.a-cjob-base { font-weight: 700; color: #57c98a; margin-top: 8px; }
+.a-cjob-act { color: #c4d0ee; white-space: nowrap; }
+/* Детали (📍 участок · № контейнера) — приглушённые, начинаются ровно в одной
+   колонке во всех строках, поэтому пины выстроены друг под другом. */
+.a-cjob-detail {
+  color: #92a2d4; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.a-cjob-cno { color: #92a2d4; font-variant-numeric: tabular-nums; }
+/* Логистика — отдельная строка во всю ширину под задачами. */
+.a-cjob-logi { grid-column: 1 / -1; margin-top: 6px; }
 .a-cjob-emo { font-size: 0.95rem; }
-.a-cjob-trips { color: #8fa0c8; font-size: 0.72rem; }
-/* «Действие» в фикс. колонке — выровнено по левому краю независимо от длины участка. */
-.a-cjob-task--grid { display: grid; grid-template-columns: 116px 1fr; gap: 8px; align-items: baseline; }
-.a-cjob-task--grid .a-cjob-sec-label {
-  display: inline-block; max-width: 100%; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
-}
-.a-cjob-act { color: #cdd6f4; }
-/* Номер(а) контейнера для «Заменить»/«Забрать» — приглушённо, моноширинные цифры */
-.a-cjob-cno { color: #9fb0d8; font-variant-numeric: tabular-nums; }
+.a-cjob-base { color: #6fae86; } /* «взять с базы» — зелёным */
+.a-cjob-trips { color: #92a2d4; } /* «N рейсов» — приглушённым */
 
 /* Кликабельный адрес → точка в Яндекс.Картах */
 .a-maplink { color: #e8ecff; text-decoration: none; border-bottom: 1px dashed rgba(132,160,255,0.5); }
@@ -710,9 +744,17 @@
 .a-item-row .a-select { flex: 1 1 auto; min-width: 0; }
 
 /* ── Страница настроек ───────────────────────────────────────────────────── */
-/* вертикальный ритм между полями, чтобы подпись не «прилипала» к полю сверху */
-.a-settings .a-field + .a-field { margin-top: 14px; }
-.a-settings .a-card .a-section-title + .a-field { margin-top: 4px; }
+/* Единый вертикальный ритм формы: одинаковый отступ между ЛЮБЫМИ соседними
+   полями/строками, независимо от обёртки. Раньше отступ был только между
+   .a-field + .a-field, поэтому голое поле после .a-field-row (напр.
+   «Юридический адрес» после строки ИНН) слипалось, а между двумя .a-field-row
+   отступа не было вовсе. */
+.a-settings .a-field + .a-field,
+.a-settings .a-field + .a-field-row,
+.a-settings .a-field-row + .a-field,
+.a-settings .a-field-row + .a-field-row { margin-top: 14px; }
+.a-settings .a-card .a-section-title + .a-field,
+.a-settings .a-card .a-section-title + .a-field-row { margin-top: 10px; }
 /* парные поля выравниваем по нижнему краю — инпуты в линию даже при разной высоте подписи */
 .a-settings .a-field-row { align-items: flex-end; }
 /* токены раскладываем по ширине страницы (2–3 колонки) */
@@ -735,11 +777,11 @@
   padding: 11px 13px;
 }
 .a-token-item > label {
-  display: block; margin-bottom: 6px;
+  display: block; margin-bottom: 8px;
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: #92a2d4;
 }
 .a-token-item .a-input { width: 100%; box-sizing: border-box; }
-.a-token-item:focus-within { border-color: rgba(134,95,255,0.4); }
+.a-token-item:focus-within { border-color: rgba(244,143,27,0.4); }
 .a-token-hint { margin-top: 6px; font-size: 0.72rem; color: #6f7fa6; line-height: 1.4; }
 
 /* ── Шаблоны сообщений клиенту ────────────────────────────────────────────── */
@@ -755,8 +797,8 @@
   font-size: 0.74rem;
   line-height: 1.45;
   color: #8fa0cf;
-  background: rgba(134,95,255,0.07);
-  border-left: 2px solid rgba(134,95,255,0.5);
+  background: rgba(244,143,27,0.07);
+  border-left: 2px solid rgba(244,143,27,0.5);
   border-radius: 4px;
   padding: 6px 9px;
   margin-bottom: 8px;
@@ -845,12 +887,20 @@
 .a-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
 
 .a-ss-opt:hover {
-  background: rgba(134,95,255,0.12) !important;
-  color: #c4acff !important;
+  background: rgba(244,143,27,0.12) !important;
+  color: #f9b35a !important;
 }
 
 .a-loading { text-align: center; padding: 32px; color: #92a2d4; }
 .a-muted { color: #92a2d4; }
+/* Блочная подпись-пояснение под заголовком секции или полем формы.
+   Единый отступ/стиль вместо разнобоя инлайн-margin на .a-muted. */
+.a-note {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #92a2d4;
+  margin: 4px 0 12px;
+}
 /* Текст в одном ряду с плашкой/бейджем — тот же размерный слой, что плашка. */
 .a-inline-meta { font-size: 0.78rem; font-weight: 600; color: #92a2d4; line-height: 1; }
 /* Второстепенный текст внутри модалки (коммент, движения) — тише «значений». */
@@ -871,18 +921,18 @@
   letter-spacing: 0.06em;
 }
 
-.a-badge--purple { background: rgba(134,95,255,0.15); color: #a87fff; }
+.a-badge--purple { background: rgba(244,143,27,0.15); color: #f9b35a; }
 .a-badge--orange { background: rgba(244,143,27,0.15); color: #f4a840; }
 .a-badge--green  { background: rgba(46,204,113,0.15); color: #2ecc71; }
 .a-badge--red    { background: rgba(255,70,85,0.15);  color: #ff4655; }
 
-/* ── Наличные: ярко на всех этапах ────────────────────────────────────────── */
+/* ── Наличные: единственный цветной бейдж на карточке — спокойное золото,
+   без неонового свечения. Деньги важны, поэтому остаётся заметным. ──────────── */
 .a-cash {
   display: inline-flex; align-items: center; gap: 4px;
-  background: #ffd22e; color: #1a1400;
-  font-weight: 800; font-size: 0.72rem;
-  border-radius: 6px; padding: 2px 7px;
-  box-shadow: 0 0 0 2px rgba(255,210,46,0.28);
+  background: #e0b62c; color: #1a1400;
+  font-weight: 700; font-size: 0.72rem;
+  border-radius: 6px; padding: 2px 8px;
   white-space: nowrap;
 }
 .a-cash--lg { font-size: 0.78rem; padding: 4px 10px; border-radius: 8px; }
@@ -1027,7 +1077,7 @@
   transition: border-color .14s, background .14s;
 }
 .a-client-card:hover { border-color: rgba(255,255,255,0.16); }
-.a-client-card.is-open { border-color: rgba(134,95,255,0.4); background: rgba(134,95,255,0.04); }
+.a-client-card.is-open { border-color: rgba(244,143,27,0.4); background: rgba(244,143,27,0.04); }
 
 .a-client-head { display: flex; align-items: center; gap: 12px; padding: 0 14px; height: 42px; box-sizing: border-box; cursor: pointer; }
 .a-client-head:hover { background: rgba(255,255,255,0.015); }
@@ -1037,17 +1087,17 @@
   border-radius: 9px;
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 0.85rem; color: #fff;
-  background: linear-gradient(135deg, #8b6cff, #5b3fd4);
-  box-shadow: 0 3px 10px rgba(134,95,255,0.32);
+  background: linear-gradient(135deg, #f9a83e, #d97a0e);
+  box-shadow: 0 3px 10px rgba(244,143,27,0.32);
 }
-.a-client-avatar--ip { background: linear-gradient(135deg, #ffb259, #f48f1b); box-shadow: 0 3px 10px rgba(244,143,27,0.3); }
+.a-client-avatar--ip { background: linear-gradient(135deg, #3bc0cf, #1f8290); box-shadow: 0 3px 10px rgba(46,163,176,0.3); color: #04181c; }
 .a-client-id { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1; }
 .a-client-legal { font-weight: 700; font-size: 0.95rem; color: #e8ecff; white-space: nowrap; flex-shrink: 0; }
 .a-client-nick { font-size: 0.8rem; color: #8fa0c8; white-space: nowrap; flex-shrink: 0; }
 .a-client-sub { font-size: 0.74rem; color: #7c8db5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .a-client-objcount {
-  font-size: 0.74rem; color: #a87fff; font-weight: 600;
-  background: rgba(134,95,255,0.12); border: 1px solid rgba(134,95,255,0.25);
+  font-size: 0.74rem; color: #f9b35a; font-weight: 600;
+  background: rgba(244,143,27,0.12); border: 1px solid rgba(244,143,27,0.25);
   border-radius: 999px; padding: 2px 10px; white-space: nowrap;
 }
 .a-client-head .a-actions { margin-left: 4px; }
@@ -1059,7 +1109,7 @@
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 0.85rem; color: #fff;
 }
-.a-user-avatar--ph { background: linear-gradient(135deg, #8b6cff, #5b3fd4); box-shadow: 0 3px 10px rgba(134,95,255,0.32); }
+.a-user-avatar--ph { background: linear-gradient(135deg, #f9a83e, #d97a0e); box-shadow: 0 3px 10px rgba(244,143,27,0.32); }
 .a-user-cell-text { display: inline-flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .a-user-pos { font-weight: 400; font-size: 0.72rem; color: #7c8db5; }
 .a-user-msgr { margin-left: 8px; display: inline-flex; gap: 4px; vertical-align: middle; }
@@ -1072,14 +1122,14 @@
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 1.5rem; color: #fff;
 }
-.a-avatar-edit-img--ph { background: linear-gradient(135deg, #8b6cff, #5b3fd4); box-shadow: 0 4px 14px rgba(134,95,255,0.32); }
+.a-avatar-edit-img--ph { background: linear-gradient(135deg, #f9a83e, #d97a0e); box-shadow: 0 4px 14px rgba(244,143,27,0.32); }
 .a-avatar-edit-btn { position: relative; }
 
 /* Тело клиента — объекты с тонкой направляющей слева (вложенность) */
 .a-client-body {
   margin: 0 16px 14px 27px;
   padding: 8px 0 4px 16px;
-  border-left: 2px solid rgba(134,95,255,0.22);
+  border-left: 2px solid rgba(244,143,27,0.22);
 }
 
 /* ── Объекты клиента: выровненная сетка-таблица ───────────────────────────── */
@@ -1113,11 +1163,11 @@
 .a-objmodal .a-select,
 .a-objmodal .a-btn,
 .a-objmodal .a-trusted-x {
-  height: 38px;
-  min-height: 38px;
+  height: 40px;
+  min-height: 40px;
   box-sizing: border-box;
 }
-.a-objmodal .a-trusted-x { width: 38px; }
+.a-objmodal .a-trusted-x { width: 40px; }
 /* воздух между полями модалки объекта (поля больше не слеплены) */
 .a-objmodal .a-field { margin-bottom: 10px; }
 .a-objmodal .a-field-row { margin-bottom: 10px; }
@@ -1141,7 +1191,7 @@
 .a-sub {
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
   margin-top: 4px; padding-left: 12px;
-  border-left: 2px solid rgba(134,95,255,0.35);
+  border-left: 2px solid rgba(244,143,27,0.35);
 }
 .a-sub-head { font-weight: 600; font-size: 0.82rem; color: #c4d0ff; }
 .a-chips-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -1149,17 +1199,17 @@
 .a-obj-sec {
   display: inline-flex; align-items: center; gap: 6px;
   padding-left: 10px; margin-left: 2px;
-  border-left: 2px solid rgba(134,95,255,0.4);
+  border-left: 2px solid rgba(244,143,27,0.4);
 }
 
 /* ── Доверенные лица (чипы) ───────────────────────────────────────────────── */
 .a-trusted-chip {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 0.76rem; color: #c4d0ff;
-  background: rgba(134,95,255,0.12); border: 1px solid rgba(134,95,255,0.3);
+  background: rgba(244,143,27,0.12); border: 1px solid rgba(244,143,27,0.3);
   border-radius: 999px; padding: 2px 9px; white-space: nowrap;
 }
-.a-trusted-chip--sel { background: rgba(134,95,255,0.18); }
+.a-trusted-chip--sel { background: rgba(244,143,27,0.18); }
 .a-trusted-x {
   background: none; border: none; color: #92a2d4; cursor: pointer;
   font-size: 0.8rem; line-height: 1; padding: 0 0 0 2px;
@@ -1297,7 +1347,7 @@
   align-items: center;
   justify-content: center;
   background: #04111f;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .a-login-card {
@@ -1398,7 +1448,7 @@
   transition: border-color 0.15s;
 }
 
-.a-col-filter:focus { border-color: rgba(134,95,255,0.5); }
+.a-col-filter:focus { border-color: rgba(244,143,27,0.5); }
 .a-col-filter option { background: #07192e; }
 
 /* ── Bulk action bar ─────────────────────────────────────────────────────── */
@@ -1410,8 +1460,8 @@
   flex-wrap: wrap;
   padding: 12px 16px;
   border-radius: 12px;
-  background: rgba(134,95,255,0.1);
-  border: 1px solid rgba(134,95,255,0.25);
+  background: rgba(244,143,27,0.1);
+  border: 1px solid rgba(244,143,27,0.25);
   margin-bottom: 16px;
 }
 
@@ -1657,7 +1707,7 @@
   text-align: left;
   cursor: pointer;
 }
-.a-autocomplete-item.active { background: rgba(134,95,255,0.18); }
+.a-autocomplete-item.active { background: rgba(244,143,27,0.18); }
 
 /* ── Секции / вложенные блоки ── */
 .a-section-title {
@@ -1701,12 +1751,12 @@
 .a-frv-sub { display: block; margin-top: 2px; font-size: 0.78rem; color: #92a2d4; }
 .a-frv-sub .a-maplink { color: #92a2d4; }
 .a-frv-phone { margin-left: 8px; color: #92a2d4; text-decoration: none; }
-.a-empty { color: #92a2d4; font-size: 0.86rem; padding: 14px 0; }
+.a-empty { color: #92a2d4; font-size: 0.82rem; padding: 14px 0; }
 .a-linklike {
   background: none; border: none; padding: 0; cursor: pointer;
   color: inherit; font: inherit; font-weight: 600; text-align: left;
 }
-.a-linklike:hover { color: #c4acff; }
+.a-linklike:hover { color: #f9b35a; }
 
 /* инвентарные чипы */
 .a-inv {
@@ -1754,7 +1804,7 @@
 .a-drag:active { cursor: grabbing; }
 .a-drag.is-dragging {
   opacity: 0.4;
-  outline: 1px dashed rgba(134,95,255,0.5);
+  outline: 1px dashed rgba(244,143,27,0.5);
   outline-offset: -1px;
   border-radius: 8px;
 }
@@ -1769,11 +1819,11 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: #e8ecff;
-  background: rgba(134,95,255,0.16);
-  border: 1px solid rgba(134,95,255,0.32);
+  background: rgba(244,143,27,0.16);
+  border: 1px solid rgba(244,143,27,0.32);
   transition: background .12s, border-color .12s, transform .08s;
 }
-.a-namechip:hover { background: rgba(134,95,255,0.26); }
+.a-namechip:hover { background: rgba(244,143,27,0.26); }
 .a-namechip .a-namechip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
 /* компактный чип внутри дня — чтобы влезало ~10 водителей */
@@ -1855,9 +1905,9 @@
   transition: background .12s, border-color .12s, box-shadow .12s;
 }
 .a-daycell.is-over {
-  background: rgba(134,95,255,0.12);
-  border-color: rgba(134,95,255,0.6);
-  box-shadow: 0 0 0 2px rgba(134,95,255,0.35) inset;
+  background: rgba(244,143,27,0.12);
+  border-color: rgba(244,143,27,0.6);
+  box-shadow: 0 0 0 2px rgba(244,143,27,0.35) inset;
 }
 .a-daycell--out { opacity: 0.45; }
 .a-daycell--archive { background: rgba(255,255,255,0.012); border-style: dashed; }
@@ -1872,8 +1922,8 @@
   margin-left: 4px; font-size: 0.66rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.05em; color: #7c8db5;
 }
-.a-daycell--today .a-daycell-head { color: #c4acff; }
-.a-daycell--today .a-daycell-date b { color: #c4acff; }
+.a-daycell--today .a-daycell-head { color: #f9b35a; }
+.a-daycell--today .a-daycell-date b { color: #f9b35a; }
 .a-daycell-body { display: flex; flex-direction: column; gap: 3px; }
 .a-daycell-empty {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -1905,7 +1955,7 @@
   margin-bottom: 8px;
   transition: border-color .12s, transform .08s;
 }
-.a-ordercard:hover { border-color: rgba(134,95,255,0.45); }
+.a-ordercard:hover { border-color: rgba(244,143,27,0.45); }
 .a-ordercard--overlay { box-shadow: 0 14px 34px rgba(0,0,0,0.6); transform: rotate(-1.5deg); width: 280px; }
 
 /* однострочная заявка с выровненными колонками */
@@ -1922,8 +1972,8 @@
   margin-bottom: 6px;
   transition: border-color .12s, background .12s;
 }
-.a-orderrow:hover { border-color: rgba(134,95,255,0.5); background: rgba(134,95,255,0.06); }
-.a-orderrow-num { font-weight: 700; color: #c4acff; }
+.a-orderrow:hover { border-color: rgba(244,143,27,0.5); background: rgba(244,143,27,0.06); }
+.a-orderrow-num { font-weight: 700; color: #f9b35a; }
 .a-orderrow-street { font-weight: 600; color: #e8ecff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* улица — главное */
 .a-orderrow-client { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .a-orderrow-obj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1939,7 +1989,16 @@
   justify-self: center;
   transition: color .12s, background .12s;
 }
-.a-orderrow-open:hover { color: #c4acff; background: rgba(134,95,255,0.12); }
+.a-orderrow-open:hover { color: #f9b35a; background: rgba(244,143,27,0.12); }
+
+/* Поле даты дд.мм.гггг (см. DateField.jsx): виден текстовый слой, нативный date скрыт
+   1px-точкой внизу слева (остаётся в DOM, чтобы showPicker() открывал календарь у поля). */
+.a-datefield { position: relative; display: inline-block; }
+.a-datefield-text { width: 100%; cursor: pointer; }
+.a-datefield-native {
+  position: absolute; left: 8px; bottom: 0; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none; border: 0; padding: 0; margin: 0;
+}
 
 /* Блок заявок одной даты заезда (страница «Заявки в работе») */
 .a-orders-group-head {
@@ -2027,7 +2086,7 @@
   padding: 8px;
   transition: border-color .12s, background .12s;
 }
-.a-reviewcol.is-over { border-color: rgba(134,95,255,0.6); background: rgba(134,95,255,0.08); }
+.a-reviewcol.is-over { border-color: rgba(244,143,27,0.6); background: rgba(244,143,27,0.08); }
 .a-reviewcol-head {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 2px 4px 8px; margin-bottom: 8px;
@@ -2049,12 +2108,23 @@
   border: 1px solid rgba(255,255,255,0.08);
   transition: border-color .12s, background .12s;
 }
-.a-reviewcard:hover { border-color: rgba(134,95,255,0.5); background: rgba(134,95,255,0.06); }
-.a-reviewcard-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
-.a-reviewcard-num { font-weight: 700; color: #c4acff; }
-.a-reviewcard-line { white-space: nowrap; }
-.a-reviewcard-street { font-weight: 700; color: #e8ecff; } /* улица — главное для водителя */
+.a-reviewcard:hover { border-color: rgba(244,143,27,0.5); background: rgba(244,143,27,0.06); }
+.a-reviewcard-top { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+/* Строгая шкала: 3 размера (0.92 адрес / 0.82 тело / 0.74 мета), 2 веса (700/400),
+   4 цвета (#e8ecff основной, #c4d0ee вторичный, #92a2d4 приглушённый, зелёный база). */
+/* МЕТА (0.74 / 400 / #92a2d4): номер, время, город, рейсы. */
+.a-reviewcard-num { font-weight: 400; font-size: 0.74rem; color: #92a2d4; }
+.a-reviewcard-city { font-size: 0.74rem; color: #92a2d4; }
+/* ТЕЛО (0.82 / 400 / #c4d0ee): клиент, объект, задача. */
+.a-reviewcard-line { white-space: nowrap; font-size: 0.82rem; color: #c4d0ee; }
+.a-reviewcard-line.a-muted { color: #92a2d4; }
+/* ЗАГОЛОВОК (0.92 / 700 / #e8ecff): адрес — главное для водителя. */
+.a-reviewcard-street { font-size: 0.92rem; font-weight: 700; color: #e8ecff; }
 .a-reviewcard-client { font-weight: 600; color: #e8ecff; }
+/* Нал — отдельной строкой внизу карточки (бейдж .a-cash) */
+.a-reviewcard-cash { margin-top: 6px; }
+/* Тонкий воздушный разделитель «заказчик ↓ объект». */
+.a-reviewcard-div { height: 1px; background: rgba(255,255,255,0.08); margin: 5px 0; }
 .a-reviewcard--overlay { background: #0d2035; box-shadow: 0 14px 34px rgba(0,0,0,0.6); }
 
 /* «В работе»: заблокированная карточка — заштрихована, с замком */
@@ -2078,7 +2148,7 @@
   color: #c4d0ff; cursor: pointer;
   transition: background .12s, color .12s, border-color .12s;
 }
-.a-iconbtn:hover { background: rgba(134,95,255,0.22); border-color: rgba(134,95,255,0.5); color: #e8ecff; }
+.a-iconbtn:hover { background: rgba(244,143,27,0.22); border-color: rgba(244,143,27,0.5); color: #e8ecff; }
 .a-iconbtn--danger { color: #ff8a93; }
 .a-iconbtn--danger:hover { background: rgba(255,70,85,0.16); border-color: rgba(255,70,85,0.5); color: #ff4655; }
 
@@ -2103,15 +2173,15 @@
   padding: 9px 13px;
   border-radius: 11px;
   background: linear-gradient(135deg, #1b2c49, #121d31);
-  border: 1px solid rgba(134,95,255,0.65);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.55), 0 0 0 3px rgba(134,95,255,0.22);
+  border: 1px solid rgba(244,143,27,0.65);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.55), 0 0 0 3px rgba(244,143,27,0.22);
   color: #e8ecff;
   cursor: grabbing;
   pointer-events: none;
 }
 .a-dragchip-num {
-  font-weight: 800; font-size: 0.82rem; color: #c4acff;
-  background: rgba(134,95,255,0.18); border-radius: 7px; padding: 3px 7px; flex-shrink: 0;
+  font-weight: 800; font-size: 0.82rem; color: #f9b35a;
+  background: rgba(244,143,27,0.18); border-radius: 7px; padding: 3px 7px; flex-shrink: 0;
 }
 .a-dragchip-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .a-dragchip-street { font-weight: 700; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2170,4 +2240,4 @@
   color: #b9c4ec;
   cursor: pointer;
 }
-.a-navperm input[type="checkbox"] { cursor: pointer; accent-color: #865fff; }
+.a-navperm input[type="checkbox"] { cursor: pointer; accent-color: #f48f1b; }

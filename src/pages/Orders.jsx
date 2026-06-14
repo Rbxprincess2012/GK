@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Copy } from 'lucide-react'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useContainersStore } from '@/store/containersStore'
 import { OrderModal } from '@/components/admin/OrderModal'
@@ -23,7 +24,7 @@ function dateLabel(d10) {
 // Сгруппированы блоками по дате заезда: ближайшие сверху → будущие ниже,
 // в шапке блока видно, сколько на эту дату ещё не распределено.
 export default function Orders() {
-  const { orders, fetchOrders, getOrder, cancelOrder } = useOrdersStore()
+  const { orders, fetchOrders, getOrder, cancelOrder, addOrder } = useOrdersStore()
   const { types, fetchTypes } = useContainersStore()
   const toast = useToast()
   // По умолчанию показываем только актуальную работу: новые + на проверке.
@@ -69,6 +70,32 @@ export default function Orders() {
     if (!(await toast.confirm(`Убрать заявку ${o.number ? '#' + o.number : ''} в архив? Останется в Журнале.`))) return
     try { await cancelOrder(o.id); toast.success('Заявка в архиве') }
     catch { toast.error('Не удалось убрать в архив') }
+  }
+
+  // Клонировать заявку: новая копия в пул (status new) со следующим номером.
+  // Копируем объект, оплату, лицо, дату/время, комментарий и позиции (включая № контейнеров).
+  const onClone = async (e, o) => {
+    e.stopPropagation()
+    try {
+      const full = await getOrder(o.id) // нужны items с участками/номерами контейнеров
+      const created = await addOrder({
+        object_id: full.object_id,
+        payment_method: full.payment_method,
+        amount: full.amount != null ? Number(full.amount) : null,
+        trusted_person_id: full.trusted_person_id ?? null,
+        desired_date: full.desired_date ? full.desired_date.slice(0, 10) : undefined,
+        desired_time: full.desired_time ? String(full.desired_time).slice(0, 5) : undefined,
+        note: full.note || undefined,
+        items: (full.items || []).map((it) => ({
+          action: it.action,
+          section_id: it.section_id ?? null,
+          quantity: it.quantity,
+          container_numbers: it.container_numbers ?? null,
+        })),
+      })
+      toast.success(`Создана копия — заявка #${created.number} (в пуле распределения)`)
+      refresh()
+    } catch { toast.error('Не удалось клонировать заявку') }
   }
 
   return (
@@ -131,8 +158,9 @@ export default function Orders() {
                         <td className="a-muted" title={o.driver_name || ''}>{o.driver_name || '—'}</td>
                         <td><span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span></td>
                         <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => onClone(e, o)} title="Клонировать заявку (новая копия со следующим номером)" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Copy size={15} /></button>
                           {o.status !== 'done' && o.status !== 'closed' && (
-                            <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => onArchive(e, o)} title="Убрать в архив (останется в Журнале)">В архив</button>
+                            <button className="a-btn a-btn--ghost a-btn--sm" style={{ marginLeft: 6 }} onClick={(e) => onArchive(e, o)} title="Убрать в архив (останется в Журнале)">В архив</button>
                           )}
                         </td>
                       </tr>

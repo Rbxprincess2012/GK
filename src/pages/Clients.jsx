@@ -491,7 +491,7 @@ export default function Clients() {
             </label>
           </div>
           <div className="a-section-title">Чаты в мессенджерах</div>
-          <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 6 }}>
+          <div className="a-note">
             Адрес общего чата клиента/ГК (ссылка на группу или личку) — куда слать отчёты по заявкам.
           </div>
           <MessengerChatInputs
@@ -739,7 +739,7 @@ function ObjectExtras({ clientId, objectId, sections, onSectionsChange, links, o
       )}
 
       <div className="a-section-title">Доверенные лица</div>
-      <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 6 }}>
+      <div className="a-note">
         Напротив каждого {sections?.length ? 'участка' : 'объекта'} — лицо из списка клиента/ГК. Создаются и редактируются кнопкой «👤 Лица» у клиента или группы.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>

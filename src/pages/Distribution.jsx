@@ -10,7 +10,8 @@ import { Modal } from '@/components/admin/Modal'
 import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
-import { isCash, cashLabel } from '@/lib/orderUi'
+import { DateField } from '@/components/admin/DateField'
+import { isCash, cashLabel, fmtDate } from '@/lib/orderUi'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -144,7 +145,7 @@ export default function Distribution() {
   const onUnassignAll = async () => {
     const all = Object.values(ordersByDriver).flat()
     if (!all.length) return
-    if (!(await toast.confirm(`Расформировать ВСЕ заявки (${all.length}) у всех водителей на ${date}?`))) return
+    if (!(await toast.confirm(`Расформировать ВСЕ заявки (${all.length}) у всех водителей на ${fmtDate(date)}?`))) return
     try {
       for (const o of all) await unassign(o.id)
       toast.success('Все заявки расформированы'); refresh()
@@ -189,7 +190,7 @@ export default function Distribution() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, -1))} title="День назад">‹</button>
-              <input className="a-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
+              <DateField value={date} onChange={setDate} style={{ width: 150 }} />
               <button className="a-btn a-btn--ghost a-btn--sm" style={{ minWidth: 34, padding: '6px 10px', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setDate(shiftYmd(date, 1))} title="День вперёд">›</button>
             </div>
             <button className="a-btn a-btn--ghost" onClick={() => setDate(tomorrow())} title="К завтрашнему дню">Завтра</button>
@@ -205,7 +206,7 @@ export default function Distribution() {
         </div>
 
         {suggestion && (
-          <div className="a-card" style={{ marginBottom: 14, border: '1px solid rgba(134,95,255,0.4)' }}>
+          <div className="a-card" style={{ marginBottom: 14, border: '1px solid rgba(244,143,27,0.4)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div className="a-section-title" style={{ margin: 0 }}>Предложенная раскладка</div>
               <span className="a-muted" style={{ fontSize: '0.82rem' }}>
@@ -304,7 +305,7 @@ export default function Distribution() {
         const list = ordersByDriver[driverModal.id] || []
         return (
           <Modal
-            title={`${driverModal.name} · ${date}`}
+            title={`${driverModal.name} · ${fmtDate(date)}`}
             onClose={() => setDriverModal(null)} width={840}
           >
             <div className="a-muted" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 16px', marginBottom: 14, fontSize: '0.84rem' }}>

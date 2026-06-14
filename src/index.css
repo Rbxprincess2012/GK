@@ -1,17 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
-@import "@fontsource/inter/800.css";
+/* Шрифты (IBM Plex Sans + Tektur) грузятся JS-импортом в main.jsx — см. комментарий там. */
 
 @custom-variant dark (&:is(.dark *));
 
 /* ── CSS vars → Tailwind tokens ─────────────────────────── */
 @theme inline {
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Tektur', 'IBM Plex Sans', system-ui, sans-serif;
 
   --color-background:           var(--background);
   --color-foreground:           var(--foreground);
@@ -58,8 +55,9 @@
   --popover:              #0d1e35;
   --popover-foreground:   #e8ecff;
 
-  --primary:              #865fff;
-  --primary-foreground:   #ffffff;
+  --primary:              #f48f1b;        /* индустриальный оранжевый (hi-vis) */
+  --primary-deep:         #d97a0e;        /* нижняя точка градиента */
+  --primary-foreground:   #1c1100;        /* тёмный текст на оранжевом — высокий контраст, «сигнальный» */
 
   --secondary:            #07192e;
   --secondary-foreground: #e8ecff;
@@ -67,22 +65,23 @@
   --muted:                rgba(255,255,255,0.04);
   --muted-foreground:     #92a2d4;
 
-  --accent:               rgba(134,95,255,0.15);
-  --accent-foreground:    #c4acff;
+  --accent:               rgba(244,143,27,0.15);
+  --accent-foreground:    #f9b35a;        /* светлый оранжевый — текст активных/акцентных элементов */
+  --accent-cool:          #2ea3b0;        /* вторичный прохладный акцент (инфо/ИП/ссылки) */
 
   --destructive:          #ff4655;
   --border:               rgba(255,255,255,0.07);
   --input:                rgba(255,255,255,0.05);
-  --ring:                 #865fff;
+  --ring:                 #f48f1b;
 
   --sidebar:              #07192e;
   --sidebar-foreground:   #92a2d4;
-  --sidebar-primary:      #865fff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent:       rgba(134,95,255,0.15);
-  --sidebar-accent-foreground: #c4acff;
+  --sidebar-primary:      #f48f1b;
+  --sidebar-primary-foreground: #1c1100;
+  --sidebar-accent:       rgba(244,143,27,0.15);
+  --sidebar-accent-foreground: #f9b35a;
   --sidebar-border:       rgba(255,255,255,0.07);
-  --sidebar-ring:         #865fff;
+  --sidebar-ring:         #f48f1b;
 }
 
 /* ── Base ────────────────────────────────────────────────── */
@@ -92,17 +91,23 @@
   html { @apply font-sans; }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans);
     color: #e8ecff;
     background-color: #04111f;
     background-image:
-      radial-gradient(circle at top left,  rgba(96, 89, 255, 0.18), transparent 32%),
-      radial-gradient(circle at bottom right, rgba(244, 143, 27, 0.18), transparent 28%),
+      radial-gradient(circle at top left,  rgba(244, 143, 27, 0.20), transparent 34%),
+      radial-gradient(circle at bottom right, rgba(46, 163, 176, 0.14), transparent 30%),
       linear-gradient(180deg, #050e1a 0%, #08172c 100%);
     background-attachment: fixed;
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Заголовки и бренд — технический display-шрифт (Chakra Petch). */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
   }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -121,11 +126,11 @@
     border-radius: 16px !important;
   }
 
-  /* Button primary → purple gradient */
+  /* Button primary → industrial orange gradient, тёмный hi-vis текст */
   .btn-primary, [data-slot="button"][class*="bg-primary"] {
-    background: linear-gradient(135deg, #865fff, #5b3fd4) !important;
+    background: linear-gradient(135deg, #f7a233, #d97a0e) !important;
     border: none !important;
-    color: #fff !important;
+    color: #1c1100 !important;
   }
 
   /* Input */
@@ -138,9 +143,9 @@
   }
   input:focus, textarea:focus,
   [data-slot="input"]:focus, [data-slot="textarea"]:focus {
-    border-color: rgba(134,95,255,0.5) !important;
+    border-color: rgba(244,143,27,0.5) !important;
     outline: none !important;
-    box-shadow: 0 0 0 2px rgba(134,95,255,0.1) !important;
+    box-shadow: 0 0 0 2px rgba(244,143,27,0.1) !important;
   }
   input::placeholder, textarea::placeholder { color: #92a2d4 !important; opacity: 0.7; }
 
@@ -158,8 +163,8 @@
   }
   [data-slot="select-item"]:hover,
   [data-slot="select-item"][data-highlighted] {
-    background: rgba(134,95,255,0.15) !important;
-    color: #c4acff !important;
+    background: rgba(244,143,27,0.15) !important;
+    color: #f9b35a !important;
   }
 
   /* Dialog / Sheet */
@@ -206,8 +211,8 @@
     border-radius: 10px !important;
   }
   [data-slot="tabs-trigger"][data-state="active"] {
-    background: rgba(134,95,255,0.2) !important;
-    color: #c4acff !important;
+    background: rgba(244,143,27,0.2) !important;
+    color: #f9b35a !important;
     border-radius: 8px !important;
   }
   [data-slot="tabs-trigger"] {
@@ -250,8 +255,8 @@
 }
 
 .c2g-badge-purple {
-  background: rgba(134,95,255,0.15);
-  color: #a87fff;
+  background: rgba(244,143,27,0.15);
+  color: #f9b35a;
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 0.72rem;

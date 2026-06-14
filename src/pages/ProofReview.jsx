@@ -4,6 +4,7 @@ import { useDriversStore } from '@/store/driversStore'
 import { useOrdersStore } from '@/store/ordersStore'
 import { OrderModal } from '@/components/admin/OrderModal'
 import { DesiredTime } from '@/components/admin/DesiredTime'
+import { DateField } from '@/components/admin/DateField'
 import { clientLegal, objectLine, streetLine, fmtDesiredTime } from '@/lib/orderUi'
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
@@ -70,7 +71,7 @@ export default function ProofReview() {
       <div className="a-page-header">
         <h2>Проверка <span className="a-count">{activeCount}</span></h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <input className="a-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 160 }} />
+          <DateField value={date} onChange={setDate} style={{ width: 160 }} />
           <select className="a-select" value={driverId} onChange={(e) => setDriverId(e.target.value)} style={{ width: 200 }}>
             <option value="">Все водители</option>
             {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}

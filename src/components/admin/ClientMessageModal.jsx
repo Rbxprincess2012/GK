@@ -57,7 +57,7 @@ export function ClientMessageModal({ order, onClose }) {
           onChange={(e) => setData((d) => ({ ...d, body: e.target.value }))} />
       </label>
 
-      <div className="a-muted" style={{ fontSize: '0.78rem', margin: '6px 0 10px' }}>
+      <div className="a-note">
         Telegram по номеру не подставляет текст автоматически — поэтому текст копируется в буфер,
         а кнопка открывает чат с клиентом. Вставьте текст и отправьте.
       </div>
@@ -74,7 +74,7 @@ export function ClientMessageModal({ order, onClose }) {
       )}
 
       {data?.report_url && (
-        <div className="a-muted" style={{ fontSize: '0.78rem', marginTop: 10 }}>
+        <div className="a-note">
           Публичный фотоотчёт: <a className="a-maplink" href={data.report_url} target="_blank" rel="noreferrer">{data.report_url}</a>
         </div>
       )}

@@ -46,7 +46,7 @@ export default function AdminShell() {
         <div className="a-brand">
           <div style={{
             width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-            background: 'linear-gradient(135deg, #865fff, #f48f1b)',
+            background: 'linear-gradient(135deg, #f7a233, #d97a0e)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Truck size={16} color="#fff" />

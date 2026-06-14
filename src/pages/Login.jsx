@@ -49,7 +49,7 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14, margin: '0 auto 14px',
-            background: 'linear-gradient(135deg, #865fff, #f48f1b)',
+            background: 'linear-gradient(135deg, #f7a233, #d97a0e)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Truck size={24} color="#fff" />
@@ -82,7 +82,7 @@ export default function Login() {
                 color: '#e8ecff', fontSize: '0.9rem',
                 outline: 'none', transition: 'border-color 0.2s',
               }}
-              onFocus={(e) => e.target.style.borderColor = 'rgba(134,95,255,0.5)'}
+              onFocus={(e) => e.target.style.borderColor = 'rgba(244,143,27,0.5)'}
               onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
             />
           </div>
@@ -107,7 +107,7 @@ export default function Login() {
                   color: '#e8ecff', fontSize: '0.9rem',
                   outline: 'none', transition: 'border-color 0.2s',
                 }}
-                onFocus={(e) => e.target.style.borderColor = 'rgba(134,95,255,0.5)'}
+                onFocus={(e) => e.target.style.borderColor = 'rgba(244,143,27,0.5)'}
                 onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
               />
               <button
@@ -154,9 +154,9 @@ export default function Login() {
             whileTap={{ scale: loading ? 1 : 0.98 }}
             style={{
               width: '100%', padding: '11px 18px',
-              background: 'linear-gradient(135deg, #865fff, #5b3fd4)',
+              background: 'linear-gradient(135deg, #f7a233, #d97a0e)',
               border: 'none', borderRadius: 10,
-              color: '#fff', fontWeight: 600, fontSize: '0.9rem',
+              color: '#1c1100', fontWeight: 600, fontSize: '0.9rem',
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
               transition: 'opacity 0.15s',

@@ -56,9 +56,9 @@ export default function Dashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
         <Stat Icon={ClipboardList} label="Новые заявки" value={stats.nw} accent="#f48f1b" to="/distribution" />
-        <Stat Icon={Shuffle} label="В работе" value={stats.assigned} accent="#865fff" to="/orders" />
+        <Stat Icon={Shuffle} label="В работе" value={stats.assigned} accent="#2ea3b0" to="/orders" />
         <Stat Icon={CheckCircle2} label="Выполнено сегодня" value={stats.doneToday} accent="#2ecc71" to="/orders" />
-        <Stat Icon={Users} label="На смене (день)" value={available.length} accent="#c4acff" to="/schedule" />
+        <Stat Icon={Users} label="На смене (день)" value={available.length} accent="#5b8def" to="/schedule" />
       </div>
 
       <div className="a-card">
