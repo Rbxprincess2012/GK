@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
 import { useToast } from '@/components/admin/Toast'
+import { useAuth } from '@/context/AuthContext'
+import { affectionate } from '@/lib/affection'
 
 // Получатели отчётов клиента: личные чаты + группы, по каналам Telegram/MAX. Онбординг — через
 // deep-link ссылку (личка) или команду /bind (группа). Показывается только для сохранённого клиента.
@@ -10,6 +12,8 @@ const STATUS = { pending: ['⏳ ожидает', '#f4a840'], active: ['✅ ак�
 
 export function ClientRecipients({ clientId }) {
   const toast = useToast()
+  const { user } = useAuth()
+  const aff = affectionate(user?.first_name)
   const [list, setList] = useState([])
   const [channel, setChannel] = useState('telegram')
   const [invite, setInvite] = useState(null) // { kind, channel, link } | { kind:'group', command, bot }
@@ -30,8 +34,9 @@ export function ClientRecipients({ clientId }) {
   return (
     <>
       <div className="a-section-title">Получатели отчётов</div>
-      <div className="a-muted" style={{ fontSize: '0.76rem', marginBottom: 8 }}>
-        Кому уходит отчёт при подтверждении заявки. Личные чаты и группы заказчика в Telegram или MAX.
+      <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 8 }}>
+        {aff}, тут всё просто: сюда уходит отчёт, когда ты подтверждаешь заявку. Можно добавить
+        личный чат человека или общую группу заказчика — в Telegram или MAX. Выбери канал и жми «+».
       </div>
       {visible.length === 0 && (
         <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 8 }}>Пока никого — добавьте получателя ниже.</div>
@@ -69,7 +74,8 @@ export function ClientRecipients({ clientId }) {
 
       {invite?.kind === 'dm' && invite.link && (
         <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 10 }}>
-          Отправьте человеку ссылку — после «Старт» он станет активным:
+          {aff}, объясняю на пальцах: скопируй ссылку и отправь её человеку (СМС, почта, мессенджер).
+          Он откроет, нажмёт «Старт» — и строка станет ✅ активен. Это личка: отчёт видит только он.
           <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
             <input className="a-input" readOnly value={invite.link} style={{ fontSize: '0.78rem' }} />
             <button className="a-btn a-btn--primary a-btn--sm" onClick={() => copy(invite.link)}>Копировать</button>
@@ -84,10 +90,15 @@ export function ClientRecipients({ clientId }) {
       )}
       {invite?.kind === 'group' && (
         <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 10 }}>
-          Добавьте бота {invite.bot ? `@${invite.bot}` : '(клиентский бот)'} в группу заказчика и отправьте там команду:
+          {aff}, по группе так: добавь нашего бота {invite.bot ? `@${invite.bot}` : '(клиентский бот)'} в
+          группу заказчика и отправь там вот эту команду — бот ответит «✅ Привязано».
           <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
             <input className="a-input" readOnly value={invite.command} style={{ fontSize: '0.78rem' }} />
             <button className="a-btn a-btn--primary a-btn--sm" onClick={() => copy(invite.command)}>Копировать</button>
+          </div>
+          <div style={{ marginTop: 6, color: '#f4a840' }}>
+            ⚠️ Важно: в группе отчёт видят ВСЕ участники. Подключай группу, только если там сидит
+            закрытая команда заказчика. Есть посторонние — лучше личный чат.
           </div>
         </div>
       )}

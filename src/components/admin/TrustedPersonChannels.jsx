@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useClientsStore } from '@/store/clientsStore'
 import { useToast } from '@/components/admin/Toast'
+import { useAuth } from '@/context/AuthContext'
+import { affectionate } from '@/lib/affection'
 import api from '@/lib/api'
 import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 
@@ -31,6 +33,8 @@ ${link}
 // отчёты уходят автоматически. channel: 'telegram' | 'max'.
 function ChannelCard({ channel, label, Icon, status, personId, personName, company, onChanged }) {
   const { invitePerson, revokePerson } = useClientsStore()
+  const { user } = useAuth()
+  const aff = affectionate(user?.first_name)
   const toast = useToast()
   const [link, setLink] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -66,6 +70,13 @@ function ChannelCard({ channel, label, Icon, status, personId, personName, compa
           <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={revoke}>Отвязать</button>
         ) : (
           <>
+            {!link && (
+              <span className="a-muted" style={{ fontSize: '0.78rem', display: 'block', marginBottom: 6 }}>
+                {aff}, всё просто: жми «Пригласить» → «Копировать сообщение» → отправь его лицу любым способом
+                (СМС, почта, мессенджер). Человек откроет ссылку, нажмёт «Старт» — и тут загорится ✅ привязан.
+                С этого момента отчёты по его объектам летят ему в личку сами.
+              </span>
+            )}
             <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={invite} disabled={busy}>
               {busy ? '…' : 'Пригласить'}
             </button>
@@ -76,9 +87,9 @@ function ChannelCard({ channel, label, Icon, status, personId, personName, compa
                   <button type="button" className="a-btn a-btn--primary a-btn--sm" onClick={copyMessage}>Копировать сообщение</button>
                 </div>
                 <span className="a-muted" style={{ fontSize: '0.76rem' }}>
-                  Отправьте эту ссылку доверенному лицу личным сообщением — любым способом (СМС, почта, мессенджер).
-                  После перехода по ссылке лицо зарегистрируется в сервисе и начнёт получать отчёты о выполнении
-                  заявок в личные сообщения. Кнопка «Копировать сообщение» копирует готовый текст приглашения со ссылкой.
+                  {aff}, ссылка готова. Жми «Копировать сообщение» — в буфер ляжет тёплый текст со ссылкой,
+                  останется отправить лицу (СМС, почта, любой мессенджер). Как откроет и нажмёт «Старт» —
+                  статус сменится на ✅ привязан, и отчёты пойдут ему сами.
                 </span>
               </>
             )}
