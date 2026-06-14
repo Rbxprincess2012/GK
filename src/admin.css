@@ -430,6 +430,33 @@
   box-sizing: border-box;
 }
 
+/* ── ЕДИНОЕ ПРАВИЛО: строка «поле + кнопка» ────────────────────────────────────
+   Канонная высота контролов в формах — 40px. Любую строку, где рядом стоят
+   поле (.a-input/.a-select) и кнопка, оборачивай в .a-fieldrow — все дети строго
+   40px, нижний край совпадает независимо от метрик шрифта и паддингов варианта
+   кнопки. Не задавай высоту инлайн-стилями — используй этот класс. */
+.a-fieldrow { display: flex; align-items: stretch; gap: 6px; }
+.a-fieldrow > .a-input,
+.a-fieldrow > .a-select,
+.a-fieldrow > .a-btn,
+.a-fieldrow > .a-x,
+.a-fieldrow > .a-iconbtn { height: 40px; box-sizing: border-box; }
+.a-fieldrow > .a-input { flex: 1; }
+
+/* Нейтральная квадратная кнопка-иконка в строке с полем (👁 показать/скрыть и т.п.):
+   сосед .a-x, но без «опасного» красного. Высота совпадает с .a-input (40px). */
+.a-iconbtn {
+  flex: 0 0 auto; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; padding: 0;
+  border-radius: 10px; cursor: pointer; line-height: 1; font-size: 1rem;
+  background: rgba(255,255,255,0.06); color: #e8ecff;
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.15s;
+}
+.a-iconbtn:hover { background: rgba(255,255,255,0.1); }
+.a-iconbtn:disabled { opacity: 0.45; cursor: default; }
+
 /* ── Приёмка по участкам (SectionReview) ──────────────────────────────────── */
 .a-secrev {
   border: 1px solid rgba(255,255,255,0.08);

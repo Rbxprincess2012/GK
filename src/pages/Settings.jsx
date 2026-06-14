@@ -162,11 +162,11 @@ export default function Settings() {
               {group.items.map(([k, label, hint]) => (
                 <div key={k} className="a-token-item">
                   <label htmlFor={`tok-${k}`}>{label}</label>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
-                    <input id={`tok-${k}`} className="a-input" style={{ flex: 1 }}
+                  <div className="a-fieldrow">
+                    <input id={`tok-${k}`} className="a-input"
                       type={shownTokens[k] ? 'text' : 'password'} autoComplete="new-password"
                       value={tokens[k] || ''} onChange={setToken(k)} placeholder="не задан" />
-                    <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => toggleShown(k)}
+                    <button type="button" className="a-iconbtn" onClick={() => toggleShown(k)}
                       title={shownTokens[k] ? 'Скрыть' : 'Показать'} aria-label={shownTokens[k] ? 'Скрыть' : 'Показать'}>
                       {shownTokens[k] ? '🙈' : '👁'}
                     </button>
