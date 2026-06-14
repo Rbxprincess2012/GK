@@ -11,7 +11,9 @@ const r = Router()
 const tokensInput = z.object({
   telegram_client_bot_token: z.string().optional(),
   telegram_driver_bot_token: z.string().optional(),
-  max_bot_token: z.string().optional(),
+  max_driver_bot_token: z.string().optional(),
+  max_client_bot_token: z.string().optional(),
+  max_bot_token: z.string().optional(),   // легаси: ранее внесённый одиночный токен (= водительский)
   yandex_api_key: z.string().optional(),
   yandex_folder_id: z.string().optional(),
   yandex_geocoder_key: z.string().optional(),

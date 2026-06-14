@@ -14,7 +14,8 @@ const TOKEN_GROUPS = [
   },
   {
     title: 'MAX', icon: '🟦', items: [
-      ['max_bot_token', 'Токен бота', 'Для сообщений в мессенджере MAX'],
+      ['max_client_bot_token', 'Клиентский бот', 'Токен MAX-бота для заказчиков (отчёты)'],
+      ['max_driver_bot_token', 'Водительский бот', 'Токен MAX-бота для водителей'],
     ],
   },
   {

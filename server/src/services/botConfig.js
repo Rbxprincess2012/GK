@@ -1,5 +1,6 @@
 import { getTokens, getSetting } from './settings.js'
 import { config } from '../config.js'
+import { MaxApi } from '../lib/maxApi.js'
 
 // Токен водительского бота: ПРИОРИТЕТ — Настройки (БД, admin), затем .env как фолбэк.
 // Так токен конфигурится в админке (и под будущий SaaS — пер-тенант), без правки .env на сервере.
@@ -48,4 +49,48 @@ export async function getDriverBotUsername(token = null) {
     } catch { /* сеть недоступна — падаем на фолбэк ниже */ }
   }
   return config.DRIVER_BOT_USERNAME || null
+}
+
+// ── MAX-боты (зеркало Telegram). Два отдельных бота: водительский и клиентский. ──
+// Водительский токен: новый ключ Настроек `max_driver_bot_token`, фолбэк на ранее внесённый
+// одиночный `max_bot_token` (заказчик внёс именно водительский), затем .env.
+export async function getMaxDriverBotToken() {
+  const t = await getTokens()
+  return t?.max_driver_bot_token || t?.max_bot_token || config.MAX_DRIVER_BOT_TOKEN || null
+}
+export async function getMaxClientBotToken() {
+  const t = await getTokens()
+  return t?.max_client_bot_token || config.MAX_CLIENT_BOT_TOKEN || null
+}
+
+// username MAX-ботов для deep-link https://max.ru/<username>?start=<payload>. Приоритет:
+// Настройки (бот пишет при старте) → getMe(токен) → .env. Отдельные кеши на каждого бота.
+let cachedMaxDriverUsername = null
+export async function getMaxDriverBotUsername(token = null) {
+  if (cachedMaxDriverUsername) return cachedMaxDriverUsername
+  const stored = await getSetting('max_driver_bot_username')
+  if (stored?.username) { cachedMaxDriverUsername = stored.username; return stored.username }
+  const tk = token || (await getMaxDriverBotToken())
+  if (tk) {
+    try {
+      const me = await new MaxApi(tk).getMe()
+      if (me?.username) { cachedMaxDriverUsername = me.username; return me.username }
+    } catch { /* сеть недоступна — фолбэк ниже */ }
+  }
+  return config.MAX_DRIVER_BOT_USERNAME || null
+}
+
+let cachedMaxClientUsername = null
+export async function getMaxClientBotUsername(token = null) {
+  if (cachedMaxClientUsername) return cachedMaxClientUsername
+  const stored = await getSetting('max_client_bot_username')
+  if (stored?.username) { cachedMaxClientUsername = stored.username; return stored.username }
+  const tk = token || (await getMaxClientBotToken())
+  if (tk) {
+    try {
+      const me = await new MaxApi(tk).getMe()
+      if (me?.username) { cachedMaxClientUsername = me.username; return me.username }
+    } catch { /* сеть недоступна — фолбэк ниже */ }
+  }
+  return config.MAX_CLIENT_BOT_USERNAME || null
 }

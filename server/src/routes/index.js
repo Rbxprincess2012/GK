@@ -74,7 +74,8 @@ api.use('/company-groups', crudRouter('company_groups', {
 api.post('/drivers/:id/bot-link', requireRole('manager', 'director', 'superuser'), async (req, res, next) => {
   try {
     const { issueLink } = await import('../services/driverAuth.js')
-    res.json(await issueLink(Number(req.params.id)))
+    const channel = req.query.channel === 'max' ? 'max' : 'telegram'
+    res.json(await issueLink(Number(req.params.id), channel))
   } catch (e) { next(e) }
 })
 

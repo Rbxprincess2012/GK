@@ -1,0 +1,42 @@
+import { Bot } from '../lib/maxgram.js'
+import { bindByCode } from '../services/clientRecipients.js'
+import { bindPersonByCode } from '../services/trustedPersonChannels.js'
+
+// Клиентский MAX-бот: ТОЛЬКО онбординг получателей отчётов (зеркало bot/clientBot.js). Отправку
+// делает api. Канал — 'max'. Привязка по chat_id из апдейта (bot_started.chat_id / recipient).
+//  • deep-link payload <code>   (личка) → получатель клиента (kind 'dm')
+//  • deep-link payload p<code>  (личка) → доверенное лицо
+//  • /bind <code>               (группа) → получатель-группа (kind 'group')
+const personTitle = (from) => [from?.first_name, from?.username && `@${from.username}`].filter(Boolean).join(' ')
+
+export function createMaxClientBot(token) {
+  const bot = new Bot(token)
+
+  bot.command('start', async (ctx) => {
+    const code = (ctx.match || '').trim()
+    if (!code) return ctx.reply('Это бот уведомлений о выполнении заявок. Откройте персональную ссылку, которую дал менеджер.')
+    // Префикс 'p' → код доверенного лица; иначе — получатель клиента.
+    if (/^p\d+$/.test(code)) {
+      const r = await bindPersonByCode(code.slice(1), { chat_id: ctx.chat.id, channel: 'max' })
+      return ctx.reply(r ? `Готово, ${r.name}! Сюда будут приходить отчёты о выполнении заявок по вашим объектам.` : 'Ссылка недействительна или уже использована.')
+    }
+    const r = await bindByCode(code, { chat_id: ctx.chat.id, kind: 'dm', title: personTitle(ctx.from), channel: 'max' })
+    return ctx.reply(r ? 'Готово! Сюда будут приходить отчёты о выполнении ваших заявок.' : 'Ссылка недействительна или уже использована.')
+  })
+
+  bot.command('bind', async (ctx) => {
+    const code = (ctx.match || '').trim()
+    if (!code) return ctx.reply('Укажите код: /bind <код от менеджера>.')
+    // MAX: личный диалог — chat_type 'dialog'; всё иное (chat/channel) считаем группой.
+    const isGroup = ctx.chat?.type && ctx.chat.type !== 'dialog'
+    const r = await bindByCode(code, {
+      chat_id: ctx.chat.id,
+      kind: isGroup ? 'group' : 'dm',
+      title: isGroup ? (ctx.chat.title || 'Группа') : personTitle(ctx.from),
+      channel: 'max',
+    })
+    return ctx.reply(r ? '✅ Привязано — сюда будут приходить отчёты о выполнении.' : 'Код недействителен или уже использован.')
+  })
+
+  return bot
+}

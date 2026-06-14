@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { db } from '../db.js'
 import { createTrustedPerson, updateTrustedPerson } from '../validators/trustedPerson.js'
 import { issuePersonInvite, revokePersonChannel } from '../services/trustedPersonChannels.js'
-import { getClientBotUsername } from '../services/botConfig.js'
+import { getClientBotUsername, getMaxClientBotUsername } from '../services/botConfig.js'
 
 const r = Router()
 
@@ -76,20 +76,27 @@ r.patch('/:id', async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
-// Онбординг лица в Telegram: выдать персональную ссылку /start p<code>.
+// Онбординг лица: выдать персональную deep-link ссылку с payload p<code>.
+// Telegram: t.me/<bot>?start=p<code>; MAX: max.ru/<bot>?start=p<code> (?channel=max).
 r.post('/:id/invite', async (req, res, next) => {
   try {
-    const row = await issuePersonInvite(Number(req.params.id))
+    const channel = req.query.channel === 'max' ? 'max' : 'telegram'
+    const row = await issuePersonInvite(Number(req.params.id), channel)
     if (!row) return res.status(404).json({ error: 'not_found' })
-    const u = await getClientBotUsername()
-    res.status(201).json({ ...row, invite_link: u ? `https://t.me/${u}?start=p${row.tg_verify_code}` : null })
+    const code = channel === 'max' ? row.max_verify_code : row.tg_verify_code
+    const u = channel === 'max' ? await getMaxClientBotUsername() : await getClientBotUsername()
+    const invite_link = u ? (channel === 'max'
+      ? `https://max.ru/${u}?start=p${code}`
+      : `https://t.me/${u}?start=p${code}`) : null
+    res.status(201).json({ ...row, invite_link })
   } catch (e) { next(e) }
 })
 
-// Отвязать Telegram-канал лица (перестать слать).
+// Отвязать канал лица (перестать слать). ?channel=max — MAX-канал, иначе Telegram.
 r.post('/:id/revoke', async (req, res, next) => {
   try {
-    const row = await revokePersonChannel(Number(req.params.id))
+    const channel = req.query.channel === 'max' ? 'max' : 'telegram'
+    const row = await revokePersonChannel(Number(req.params.id), channel)
     if (!row) return res.status(404).json({ error: 'not_found' })
     res.json(row)
   } catch (e) { next(e) }

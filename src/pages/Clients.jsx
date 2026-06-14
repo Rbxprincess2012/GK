@@ -805,6 +805,7 @@ function ClientPersonsModal({ client, onClose }) {
   const [refreshing, setRefreshing] = useState(false)
   const refresh = async () => { setRefreshing(true); try { await reloadPersons() } finally { setRefreshing(false) } }
   const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
+  const pfMaxStatus = persons.find((x) => x.id === pf.id)?.max_status
 
   return (
     <Modal title={`Доверенные лица — ${client.nickname || client.legal_name}`} onClose={onClose} width={520}>
@@ -853,6 +854,7 @@ function ClientPersonsModal({ client, onClose }) {
             personId={pf.mode === 'edit' ? pf.id : null}
             personName={pf.first_name || pf.name}
             tgStatus={pfTgStatus}
+            maxStatus={pfMaxStatus}
             hasTg={(pf.messengers || []).includes('telegram')}
             hasMax={(pf.messengers || []).includes('max')}
             onChanged={reloadPersons}
@@ -897,6 +899,7 @@ function GroupPersonsModal({ group, onClose }) {
   const [refreshing, setRefreshing] = useState(false)
   const refresh = async () => { setRefreshing(true); try { await reloadPersons() } finally { setRefreshing(false) } }
   const pfTgStatus = persons.find((x) => x.id === pf.id)?.tg_status
+  const pfMaxStatus = persons.find((x) => x.id === pf.id)?.max_status
 
   return (
     <Modal title={`Доверенные лица — ${group.name}`} onClose={onClose} width={520}>
@@ -945,6 +948,7 @@ function GroupPersonsModal({ group, onClose }) {
             personId={pf.mode === 'edit' ? pf.id : null}
             personName={pf.first_name || pf.name}
             tgStatus={pfTgStatus}
+            maxStatus={pfMaxStatus}
             hasTg={(pf.messengers || []).includes('telegram')}
             hasMax={(pf.messengers || []).includes('max')}
             onChanged={reloadPersons}

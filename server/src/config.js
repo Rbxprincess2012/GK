@@ -38,7 +38,12 @@ const schema = z.object({
   // Клиентский Telegram-бот (отправка отчётов; отдельный токен от водительского!).
   CLIENT_BOT_TOKEN: z.string().optional(),
   CLIENT_BOT_USERNAME: z.string().optional(),
-  // Каталог хранения медиа-пруфа (скачиваем из Telegram). Volume на VPS.
+  // MAX-боты (зеркало Telegram). Токены приоритетно из Настроек (БД), .env — фолбэк.
+  MAX_DRIVER_BOT_TOKEN: z.string().optional(),
+  MAX_DRIVER_BOT_USERNAME: z.string().optional(),
+  MAX_CLIENT_BOT_TOKEN: z.string().optional(),
+  MAX_CLIENT_BOT_USERNAME: z.string().optional(),
+  // Каталог хранения медиа-пруфа (скачиваем из Telegram/MAX). Volume на VPS.
   MEDIA_DIR: z.string().default('./media'),
 })
 

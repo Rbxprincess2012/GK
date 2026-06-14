@@ -1,29 +1,38 @@
 import { Router } from 'express'
 import { requireRole } from '../middleware/authUser.js'
 import { issueInvite, listForClient, revoke } from '../services/clientRecipients.js'
-import { getClientBotUsername } from '../services/botConfig.js'
+import { getClientBotUsername, getMaxClientBotUsername } from '../services/botConfig.js'
 
 const r = Router()
 r.use(requireRole('manager', 'director', 'superuser'))
+
+const channelOf = (req) => (req.query.channel === 'max' ? 'max' : 'telegram')
+const usernameFor = (channel) => (channel === 'max' ? getMaxClientBotUsername() : getClientBotUsername())
+// deep-link с payload <code> (получатель-личка): Telegram t.me/<bot>?start=, MAX max.ru/<bot>?start=.
+const dmLink = (channel, username, code) => (username
+  ? (channel === 'max' ? `https://max.ru/${username}?start=${code}` : `https://t.me/${username}?start=${code}`)
+  : null)
 
 r.get('/clients/:id/recipients', async (req, res, next) => {
   try { res.json(await listForClient(Number(req.params.id))) } catch (e) { next(e) }
 })
 
-// Личный чат: выдаём ссылку t.me/<bot>?start=<code> — менеджер передаёт её человеку.
+// Личный чат: выдаём deep-link ссылку — менеджер передаёт её человеку.
 r.post('/clients/:id/recipients/dm', async (req, res, next) => {
   try {
-    const row = await issueInvite(Number(req.params.id), 'dm')
-    const u = await getClientBotUsername()
-    res.status(201).json({ ...row, invite_link: u ? `https://t.me/${u}?start=${row.verify_code}` : null })
+    const channel = channelOf(req)
+    const row = await issueInvite(Number(req.params.id), 'dm', channel)
+    const u = await usernameFor(channel)
+    res.status(201).json({ ...row, invite_link: dmLink(channel, u, row.verify_code) })
   } catch (e) { next(e) }
 })
 
 // Группа: выдаём код и команду — менеджер добавляет бота в группу и шлёт /bind <code>.
 r.post('/clients/:id/recipients/group', async (req, res, next) => {
   try {
-    const row = await issueInvite(Number(req.params.id), 'group')
-    const u = await getClientBotUsername()
+    const channel = channelOf(req)
+    const row = await issueInvite(Number(req.params.id), 'group', channel)
+    const u = await usernameFor(channel)
     res.status(201).json({ ...row, bot_username: u, bind_command: `/bind ${row.verify_code}` })
   } catch (e) { next(e) }
 })

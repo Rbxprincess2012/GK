@@ -57,6 +57,31 @@ services:
     depends_on:
       - api
 
+  # Водительский MAX-бот (зеркало Telegram). Токен из Настроек («Водительский MAX-бот»).
+  # MAX — РФ-хост (platform-api.max.ru), IPv4-пин Telegram не нужен. Медиа-пруф в общий volume.
+  maxbot:
+    build: ./server
+    image: dispatcher-api
+    container_name: dispatcher-maxbot
+    restart: unless-stopped
+    command: npm run max-bot
+    env_file: ./server/.env.production
+    depends_on:
+      - api
+    volumes:
+      - media_data:/app/media
+
+  # Клиентский MAX-бот: онбординг получателей отчётов. Отправку отчётов делает api.
+  maxclientbot:
+    build: ./server
+    image: dispatcher-api
+    container_name: dispatcher-maxclientbot
+    restart: unless-stopped
+    command: npm run max-client-bot
+    env_file: ./server/.env.production
+    depends_on:
+      - api
+
   web:
     build:
       context: .

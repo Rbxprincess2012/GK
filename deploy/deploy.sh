@@ -23,14 +23,14 @@ if ! docker image inspect dispatcher-caddy:local >/dev/null 2>&1; then
   docker build -t dispatcher-caddy:local -f deploy/Dockerfile.caddy .
 fi
 
-echo '== Сборка образов (api + web; bot использует образ api) =='
+echo '== Сборка образов (api + web; боты используют образ api) =='
 docker compose -f docker-compose.prod.yml build api web
 
 echo '== Миграции БД (идемпотентно) =='
 docker compose -f docker-compose.prod.yml run --rm api npm run migrate
 
 echo '== Перезапуск сервисов (без n8n) =='
-docker compose -f docker-compose.prod.yml up -d api bot clientbot web
+docker compose -f docker-compose.prod.yml up -d api bot clientbot maxbot maxclientbot web
 
 docker compose -f docker-compose.prod.yml ps
 echo '== Деплой завершён =='
