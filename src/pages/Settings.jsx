@@ -71,6 +71,8 @@ export default function Settings() {
 
   // токены интеграций (с бэкенда)
   const [tokens, setTokens] = useState({})
+  const [shownTokens, setShownTokens] = useState({}) // какие токены показаны открытым текстом
+  const toggleShown = (k) => setShownTokens((s) => ({ ...s, [k]: !s[k] }))
   // база (адрес + координаты) и параметры распределения — в БД
   const [base, setBase] = useState({ address: '', lat: null, lng: null })
   const [distribution, setDistribution] = useState({ km_weight: 0.1, region: '', geocoder: 'nominatim' })
@@ -160,8 +162,15 @@ export default function Settings() {
               {group.items.map(([k, label, hint]) => (
                 <div key={k} className="a-token-item">
                   <label htmlFor={`tok-${k}`}>{label}</label>
-                  <input id={`tok-${k}`} className="a-input" type="password" autoComplete="new-password"
-                    value={tokens[k] || ''} onChange={setToken(k)} placeholder="не задан" />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+                    <input id={`tok-${k}`} className="a-input" style={{ flex: 1 }}
+                      type={shownTokens[k] ? 'text' : 'password'} autoComplete="new-password"
+                      value={tokens[k] || ''} onChange={setToken(k)} placeholder="не задан" />
+                    <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => toggleShown(k)}
+                      title={shownTokens[k] ? 'Скрыть' : 'Показать'} aria-label={shownTokens[k] ? 'Скрыть' : 'Показать'}>
+                      {shownTokens[k] ? '🙈' : '👁'}
+                    </button>
+                  </div>
                   {hint && <div className="a-token-hint">{hint}</div>}
                 </div>
               ))}
