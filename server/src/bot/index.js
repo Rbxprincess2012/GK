@@ -8,7 +8,8 @@ import { ordersForDriver, orderCardForDriver } from '../services/driverScope.js'
 import { markSubtask, commitOrderByDriver } from '../services/subtasks.js'
 import { putFromTelegram } from '../services/mediaStore.js'
 
-const ACTION = { place: 'Поставить', replace: 'Заменить', haul: 'Забрать' }
+// Стрелки действий — зеркало иконок админки (ContainerJob.jsx): → установить, ⇄ заменить, ← забрать.
+const ACTION = { place: '➡️ Установить', replace: '🔄 Заменить', haul: '⬅️ Забрать' }
 const REASONS = [
   ['dig', '🚧 Перекопано/нет проезда'],
   ['mud', '🛻 Не подъехать (грязь)'],

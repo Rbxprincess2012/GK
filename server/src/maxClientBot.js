@@ -1,14 +1,12 @@
 import { createMaxClientBot } from './bot/maxClientBot.js'
 import { getMaxClientBotToken } from './services/botConfig.js'
 import { setSetting } from './services/settings.js'
+import { waitForToken } from './bot/waitToken.js'
 
 // Отдельный процесс клиентского MAX-бота (онбординг получателей; single-instance, long-polling).
-// Токен — из Настроек админки (БД), .env как фолбэк.
-const token = await getMaxClientBotToken()
-if (!token) {
-  console.error('[max-client-bot] Токен не задан. Внесите его в админке: Настройки → «Клиентский MAX-бот».')
-  process.exit(1)
-}
+// Токен — из Настроек админки (БД), .env как фолбэк. Если токена ещё нет — ждём (не падаем),
+// чтобы контейнер не рестарт-лупил и сам поднялся после внесения токена в админке.
+const token = await waitForToken(getMaxClientBotToken, 'max-client-bot')
 
 const bot = createMaxClientBot(token)
 bot.catch((err) => console.error('[max-client-bot] error:', err))

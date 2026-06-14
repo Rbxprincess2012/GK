@@ -12,7 +12,8 @@ import { putFromMax } from '../services/mediaStore.js'
 // beforeSend, presentation в format:'html'. Сессии — pgStorageFor('max').
 const CHANNEL = 'max'
 
-const ACTION = { place: 'Поставить', replace: 'Заменить', haul: 'Забрать' }
+// Стрелки действий — зеркало иконок админки (ContainerJob.jsx): → установить, ⇄ заменить, ← забрать.
+const ACTION = { place: '➡️ Установить', replace: '🔄 Заменить', haul: '⬅️ Забрать' }
 const REASONS = [
   ['dig', '🚧 Перекопано/нет проезда'],
   ['mud', '🛻 Не подъехать (грязь)'],
