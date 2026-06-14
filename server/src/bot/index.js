@@ -62,14 +62,21 @@ function orderText(order) {
     addrLine,
     timeLine,
   ].filter(Boolean).join('\n')
-  // Контакты по участку: своё лицо участка, иначе — лицо «на весь объект» (дублируем под каждым).
+  // Доверенное лицо (создаётся на уровне Клиента/ГК): 👤 ФИО + 📞 телефон в одну строку.
+  // Привязка: нет участков → лицо на объект (section_id=null), показываем один раз под объектом;
+  // есть участки → лицо привязано к участку и печатается под КАЖДЫМ участком. Одно и то же лицо
+  // на нескольких участках намеренно дублируем — так проще в коде и нагляднее водителю.
   const sc = order.section_contacts || []
-  const contactsFor = (sid) => {
-    const own = sc.filter((c) => c.section_id === sid)
-    return own.length ? own : sc.filter((c) => c.section_id == null)
+  const fmtContact = (c) => {
+    const name = c.name ? `👤 ${esc(c.name)}` : ''
+    const phone = c.phone ? `📞 <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''
+    return [name, phone].filter(Boolean).join(' · ')
   }
-  const contactSuffix = (it) => contactsFor(it.section_id).map((c) =>
-    `\n   👤 ${esc(c.name)}${c.phone ? ` · 📞 <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}`).join('')
+  const objLevel = sc.filter((c) => c.section_id == null)        // лицо «на весь объект» (объект без участков)
+  const ownFor = (sid) => sc.filter((c) => c.section_id === sid) // лица именно этого участка
+  // Под участком — его лицо(а); для позиции без участка ничего (объектное лицо идёт под объектом).
+  const contactSuffix = (it) => it.section_id == null ? ''
+    : ownFor(it.section_id).map(fmtContact).filter(Boolean).map((s) => `\n   ${s}`).join('')
   const lines = (order.items || []).map((it) =>
     `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`
     + (it.container_numbers ? ` · №${esc(it.container_numbers)}` : '')
@@ -82,11 +89,13 @@ function orderText(order) {
   const cash = order.payment_method === 'cash'
     ? `\n\n💵 Оплата НАЛИЧНЫМИ${order.amount != null ? `: ${Number(order.amount)} ₽` : ''}`
     : ''
-  // Лицо уровня заявки — только если у объекта нет привязок по участкам (иначе контакты уже под участками).
-  const contact = (!sc.length && order.trusted_person_name)
-    ? `\n\n👤 ${esc(order.trusted_person_name)}`
-      + (order.trusted_person_phone ? `\n📞 <a href="tel:${esc(order.trusted_person_phone)}">${esc(order.trusted_person_phone)}</a>` : '')
-    : ''
+  // Лицо под объектом (один раз): объект без участков → лицо на объект; если привязок нет вовсе —
+  // лицо уровня заявки. При участках контакты идут под участками, объектной строки нет.
+  let contact = ''
+  const objStr = objLevel.map(fmtContact).filter(Boolean).join('\n')
+  if (objStr) contact = `\n\n${objStr}`
+  else if (!sc.length && (order.trusted_person_name || order.trusted_person_phone))
+    contact = `\n\n${fmtContact({ name: order.trusted_person_name, phone: order.trusted_person_phone })}`
   // Возвращённые менеджером на переделку участки — что переснять.
   const rework = (order.subtasks || []).filter((s) => s.proof_status === 'rejected' && s.status === 'pending')
   const reworkBlock = rework.length
