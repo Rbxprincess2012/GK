@@ -19,7 +19,8 @@ import dailyRoutes from './dailyRoutes.js'
 import proofReview from './proofReview.js'
 import clientMessages from './clientMessages.js'
 import clientRecipients from './clientRecipients.js'
-import { authenticate, requireUserOrService, requireRole } from '../middleware/authUser.js'
+import assistant from './assistant.js'
+import { authenticate, requireUser, requireUserOrService, requireRole } from '../middleware/authUser.js'
 import { createInvoice, updateInvoice } from '../validators/invoice.js'
 import { crudRouter } from '../lib/crudRouter.js'
 import { createClient, updateClient } from '../validators/client.js'
@@ -39,6 +40,9 @@ api.use(authenticate)      // читает JWT/сервисный токен →
 api.use('/auth', auth)     // /auth/login публичен; /auth/me под входом внутри
 
 api.use(requireUserOrService) // всё ниже — только под входом (или сервисным токеном n8n)
+
+// ИИ-ассистент саппорта — любой залогиненный сотрудник (НЕ сервисный токен n8n).
+api.use('/assistant', requireUser, assistant)
 
 // Управление пользователями и токенами — директор/суперюзер
 api.use('/users', requireRole('director', 'superuser'), usersRoutes)

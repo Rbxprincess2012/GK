@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { DEFAULT_LAYOUT, isValidKey } from './navConfig'
 import { loadLayout, saveLayout } from '@/lib/navLayout'
 import { SidebarNav, SidebarNavEditor } from './SidebarNav'
+import { AssistantWidget } from './AssistantWidget'
 
 const COLLAPSED = 56
 const EXPANDED = 220
@@ -109,6 +110,7 @@ export default function AdminShell() {
           <Outlet />
         </main>
       </div>
+      <AssistantWidget />
     </div>
   )
 }
