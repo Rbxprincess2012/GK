@@ -948,6 +948,19 @@ textarea.a-input,
 .a-guide-steps li { font-size: 0.78rem; line-height: 1.5; color: #c5cdef; margin-bottom: 3px; }
 .a-guide-warn { font-size: 0.76rem; line-height: 1.45; color: #f4a840; margin-top: 8px; }
 
+/* Шкала-радио «важность дальности» в Распределении (Настройки). */
+.a-scale { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.a-scale-opt {
+  display: flex; gap: 10px; align-items: flex-start; padding: 8px 11px;
+  border: 1px solid #2a3556; border-radius: 10px; cursor: pointer; transition: border-color .12s, background .12s;
+}
+.a-scale-opt:hover { border-color: #3c4a78; }
+.a-scale-opt.is-active { border-color: #f48f1b; background: rgba(244, 143, 27, 0.08); }
+.a-scale-opt input[type="radio"] { margin-top: 3px; accent-color: #f48f1b; flex-shrink: 0; }
+.a-scale-opt-text { display: flex; flex-direction: column; gap: 1px; }
+.a-scale-opt-title { font-weight: 600; color: #e8ecff; font-size: 0.85rem; }
+.a-scale-opt-desc { color: #92a2d4; font-size: 0.76rem; line-height: 1.35; }
+
 /* Раздел суперпользователя «Вопросы без ответа» (UnansweredQuestions). */
 .a-badge-count {
   display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px;

@@ -51,6 +51,16 @@ const TOKEN_GROUPS = [
   },
 ]
 
+// Шкала «важности дальности» (km_weight) — пресеты с человеческими расшифровками.
+// Балл нагрузки = заезды + вес × километры до базы.
+const KM_PRESETS = [
+  { value: 0, title: 'Дальность не учитывается', desc: 'Делим только по числу заездов — подходит, если объекты рядом.' },
+  { value: 0.05, title: 'Дальность слабо важна', desc: 'Один заезд «весит» как 20 км. Город компактный, пробег вторичен.' },
+  { value: 0.1, title: 'Баланс (рекомендуется)', desc: 'Один заезд «весит» как 10 км. Учитываем и число заездов, и пробег.' },
+  { value: 0.2, title: 'Дальность важна', desc: 'Один заезд «весит» как 5 км. Объекты разбросаны — выравниваем пробег.' },
+  { value: 0.5, title: 'Дальность решает', desc: 'Один заезд «весит» как 2 км. Главное — не гонять одного водителя далеко.' },
+]
+
 const KEY = 'dispatcher_settings'
 const defaults = {
   day_start: '07:00', day_end: '19:00',
@@ -280,29 +290,39 @@ export default function Settings() {
 
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Распределение нагрузки</div>
-        <div className="a-field-row">
-          <label className="a-field"><span>Вес километра (важность дальности)</span>
-            <input className="a-input" type="number" step="0.01" min="0" value={distribution.km_weight}
-              onChange={(e) => setDistribution({ ...distribution, km_weight: e.target.value })} />
-          </label>
+        <div className="a-field"><span>Важность дальности объекта при делёжке заявок</span></div>
+        <div className="a-scale">
+          {KM_PRESETS.map((p) => {
+            const active = Number(distribution.km_weight) === p.value
+            return (
+              <label key={p.value} className={'a-scale-opt' + (active ? ' is-active' : '')}>
+                <input type="radio" name="km_weight" checked={active}
+                  onChange={() => setDistribution({ ...distribution, km_weight: p.value })} />
+                <span className="a-scale-opt-text">
+                  <span className="a-scale-opt-title">{p.title}</span>
+                  <span className="a-scale-opt-desc">{p.desc}</span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+        <div className="a-field-row" style={{ marginTop: 12 }}>
           <label className="a-field"><span>Город (для геокодинга)</span>
             <input className="a-input" value={distribution.region || ''} placeholder="Краснодар"
               onChange={(e) => setDistribution({ ...distribution, region: e.target.value })} />
           </label>
+          <label className="a-field"><span>Сервис геокодинга</span>
+            <select className="a-select" value={distribution.geocoder || 'nominatim'}
+              onChange={(e) => setDistribution({ ...distribution, geocoder: e.target.value })}>
+              <option value="nominatim">OpenStreetMap (бесплатно, без ключа)</option>
+              <option value="yandex">Яндекс (точнее, нужен активный ключ)</option>
+            </select>
+          </label>
         </div>
-        <label className="a-field"><span>Сервис геокодинга</span>
-          <select className="a-select" value={distribution.geocoder || 'nominatim'}
-            onChange={(e) => setDistribution({ ...distribution, geocoder: e.target.value })}>
-            <option value="nominatim">OpenStreetMap (бесплатно, без ключа)</option>
-            <option value="yandex">Яндекс (точнее, нужен активный ключ)</option>
-          </select>
-        </label>
         <div className="a-note">
-          <b>Вес километра</b> — насколько дальность объекта влияет на делёжку заявок между водителями.
-          Нагрузка водителя = заезды + вес × километры до базы. <b>Больше вес</b> → важнее ровный пробег
-          (дальние объекты делятся равномернее, кто-то может получить больше заездов). <b>Меньше вес</b> →
-          важнее ровное число заездов, на разницу в пробеге система смотрит мягче. Ориентиры: 0.1 ⇒ один
-          заезд «весит» как 10 км; 0.05 ⇒ как 20 км; 0 ⇒ дальность не учитывается совсем.
+          Эти настройки применяются, когда в разделе <b>«Распределение»</b> нажимаешь кнопку
+          <b> «⚖ Распределить»</b>: система сама предлагает справедливую раскладку заявок по водителям
+          (нагрузка = заезды + вес × километры до базы), а ты подтверждаешь её кнопкой <b>«Применить»</b>.
           <br />
           Без координат объект считается «у базы» (0 км) — поэтому «Город» обязателен для геокодинга
           (адреса объектов хранятся без города). Яндекс точнее, OpenStreetMap — бесплатный запасной.
