@@ -318,7 +318,7 @@ export default function Clients() {
                 </span>
                 <div className="a-actions">
                   {!c.group_id && (
-                    <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); setClientPersonsModal(c) }} title="Доверенные лица клиента">👤 Лица</button>
+                    <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); setClientPersonsModal(c) }} title="Доверенные лица — получают отчёты о выполнении заявок и служат контактами для водителей на конкретном объекте или участке">👤 Доверенные лица</button>
                   )}
                   <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); openClient(c) }}>✎</button>
                   <button className="a-btn a-btn--danger a-btn--sm" onClick={(e) => { e.stopPropagation(); delClient(c) }}>✕</button>
@@ -413,7 +413,7 @@ export default function Clients() {
                 <span className="a-group-badge">ГК</span>
                 <span className="a-group-name">{group.name}</span>
                 <div className="a-actions">
-                  <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); setPersonsModal(group) }} title="Доверенные лица группы">👤 Лица</button>
+                  <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); setPersonsModal(group) }} title="Доверенные лица — получают отчёты о выполнении заявок и служат контактами для водителей на конкретном объекте или участке">👤 Доверенные лица</button>
                   <button className="a-btn a-btn--ghost a-btn--sm" onClick={(e) => { e.stopPropagation(); openGroup(group) }}>✎</button>
                   <button className="a-btn a-btn--danger a-btn--sm" onClick={(e) => { e.stopPropagation(); delGroup(group) }}>✕</button>
                 </div>
