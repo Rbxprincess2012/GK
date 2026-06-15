@@ -260,17 +260,8 @@ export default function Settings() {
         <button className="a-btn a-btn--primary" onClick={saveOrg}>Сохранить</button>
       </div>
 
-      <div className="a-card" style={{ marginBottom: 16 }}>
-        <div className="a-section-title" style={{ marginTop: 0 }}>Смены</div>
-        <div className="a-field-row">
-          <label className="a-field"><span>Начало дневной смены</span>
-            <input className="a-input" type="time" value={form.day_start} onChange={set('day_start')} />
-          </label>
-          <label className="a-field"><span>Конец дневной смены</span>
-            <input className="a-input" type="time" value={form.day_end} onChange={set('day_end')} />
-          </label>
-        </div>
-      </div>
+      {/* Блок «Смены» (часы дневной смены) временно скрыт — заглушка, пока не используется.
+          form.day_start/day_end и defaults оставлены, чтобы вернуть блок без переделок. */}
 
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>База (точка отсчёта километража)</div>
