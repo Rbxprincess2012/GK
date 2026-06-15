@@ -281,7 +281,7 @@ export default function Settings() {
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Распределение нагрузки</div>
         <div className="a-field-row">
-          <label className="a-field"><span>Вес километра в балле тяжести</span>
+          <label className="a-field"><span>Вес километра (важность дальности)</span>
             <input className="a-input" type="number" step="0.01" min="0" value={distribution.km_weight}
               onChange={(e) => setDistribution({ ...distribution, km_weight: e.target.value })} />
           </label>
@@ -298,8 +298,14 @@ export default function Settings() {
           </select>
         </label>
         <div className="a-note">
-          0.1 ⇒ 10 км ≈ один заезд. «Город» обязателен для геокодинга (адреса объектов хранятся без города).
-          OpenStreetMap находит ~¾ адресов бесплатно; промахи правьте координатами вручную в карточке объекта.
+          <b>Вес километра</b> — насколько дальность объекта влияет на делёжку заявок между водителями.
+          Нагрузка водителя = заезды + вес × километры до базы. <b>Больше вес</b> → важнее ровный пробег
+          (дальние объекты делятся равномернее, кто-то может получить больше заездов). <b>Меньше вес</b> →
+          важнее ровное число заездов, на разницу в пробеге система смотрит мягче. Ориентиры: 0.1 ⇒ один
+          заезд «весит» как 10 км; 0.05 ⇒ как 20 км; 0 ⇒ дальность не учитывается совсем.
+          <br />
+          Без координат объект считается «у базы» (0 км) — поэтому «Город» обязателен для геокодинга
+          (адреса объектов хранятся без города). Яндекс точнее, OpenStreetMap — бесплатный запасной.
         </div>
         <button className="a-btn a-btn--primary" onClick={saveDistribution}>Сохранить параметры</button>
       </div>
