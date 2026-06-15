@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { suggestDistribution, applyDistribution, loadReport, mapData } from '../services/distribution.js'
+import { suggestDistribution, applyDistribution, loadReport, mapData, driverLoadHistory } from '../services/distribution.js'
 
 const r = Router()
 
@@ -49,6 +49,16 @@ r.get('/load', async (req, res, next) => {
     const { from, to } = req.query
     if (!from || !to) return res.status(400).json({ error: 'from/to required' })
     res.json(await loadReport(from, to))
+  } catch (e) { next(e) }
+})
+
+// Накопленная нагрузка водителей за скользящее окно (для показа в распределении: кого дозагрузить).
+r.get('/load-history', async (req, res, next) => {
+  try {
+    const { date } = req.query
+    if (!date) return res.status(400).json({ error: 'date required' })
+    const days = Math.min(31, Math.max(1, Number(req.query.days) || 7))
+    res.json(await driverLoadHistory(String(date), days))
   } catch (e) { next(e) }
 })
 

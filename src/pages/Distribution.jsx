@@ -22,6 +22,16 @@ function streetLine(o) {
 }
 function objectLine(o) { return o.object_name || `Объект #${o.object_id}` }
 
+// Бейдж накопленной нагрузки водителя за окно (балл на смену) относительно среднего по работавшим.
+// Помогает решить, кого дозагрузить (зелёный), а кому дать поменьше (янтарный).
+function loadTag(h, avg) {
+  if (!h || h.shift_days === 0) return { text: 'за 7 дн — рейсов не было', color: '#7d8bbf' }
+  const v = h.score_per_shift
+  if (avg > 0 && v < avg * 0.85) return { text: `↓ недогружен · ${v}/смену`, color: '#2ecc71' }
+  if (avg > 0 && v > avg * 1.15) return { text: `↑ перегружен · ${v}/смену`, color: '#f4a840' }
+  return { text: `≈ норма · ${v}/смену`, color: '#92a2d4' }
+}
+
 // Компактный «чип», который тащим за курсором (центрируется под ним).
 function DragChip({ o }) {
   return (
@@ -98,6 +108,21 @@ export default function Distribution() {
     }
     return m
   }, [orders, date, shiftType])
+
+  // Накопленная нагрузка водителей за скользящие 7 дней (read-only: кого дозагрузить).
+  // Перечитываем при смене даты и после изменения назначений (день date входит в окно).
+  const [loadHist, setLoadHist] = useState(null)
+  const fetchLoadHist = useCallback(() => {
+    api.get('/distribution/load-history', { params: { date, days: 7 } })
+      .then(({ data }) => setLoadHist(data)).catch(() => setLoadHist(null))
+  }, [date])
+  useEffect(() => { fetchLoadHist() }, [fetchLoadHist, ordersByDriver])
+  const histByDriver = useMemo(() => {
+    const m = {}
+    for (const h of (loadHist?.drivers || [])) m[h.driver_id] = h
+    return m
+  }, [loadHist])
+  const avgPerShift = loadHist?.avg_per_shift || 0
 
   const activeOrder = useMemo(() => newOrders.find((o) => `order:${o.id}` === activeId), [newOrders, activeId])
 
@@ -283,6 +308,15 @@ export default function Distribution() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600 }}>{d.name}</div>
                     <DriverLoad orders={ordersByDriver[d.id] || []} />
+                    {(() => {
+                      const t = loadTag(histByDriver[d.id], avgPerShift)
+                      return (
+                        <div style={{ fontSize: '0.72rem', color: t.color, marginTop: 1 }}
+                          title="Накопленная нагрузка за последние 7 дней — балл на отработанную смену. Зелёный «недогружен» — можно дозагрузить, янтарный «перегружен» — дать поменьше.">
+                          {t.text}
+                        </div>
+                      )
+                    })()}
                   </div>
                   {cnt > 0 && (
                     <button className="a-btn a-btn--ghost a-btn--sm" title="Расформировать заявки этого водителя обратно в распределение"

@@ -126,6 +126,60 @@ export async function loadReport(from, to) {
   return rows.map((r) => ({ ...r, km: Number(r.km), score: Number(r.score) }))
 }
 
+// Дата за N дней назад от строки YYYY-MM-DD (UTC-арифметика, формат сохраняем).
+function minusDays(dateStr, n) {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+// Накопленная нагрузка водителей за скользящее окно (по умолчанию 7 дней, включая дату).
+// Считается ПО НАЗНАЧЕННЫМ заявкам (план), окно [date-(days-1) .. date]. Нормировка —
+// на «отработанную смену» = число различных дней окна, когда водителю назначали заявки
+// (выходные по графику 3/3 не занижают балл). score_per_shift = сумма баллов / число таких дней.
+// Read-only: алгоритм не трогает; менеджер видит, кого можно дозагрузить, а кому дать меньше.
+export async function driverLoadHistory(date, days = 7) {
+  const from = minusDays(date, days - 1)
+  const agg = db('orders')
+    .select('assigned_driver_id')
+    .count('* as orders')
+    .sum({ trips: 'trips' })
+    .sum({ km: 'distance_km' })
+    .sum({ score: 'load_score' })
+    .countDistinct({ shift_days: 'shift_date' })
+    .whereBetween('shift_date', [from, date])
+    .whereNotIn('status', ['cancelled', 'new'])
+    .whereNotNull('assigned_driver_id')
+    .groupBy('assigned_driver_id')
+    .as('a')
+
+  const rows = await db('drivers as dr')
+    .where('dr.is_active', true)
+    .leftJoin(agg, 'a.assigned_driver_id', 'dr.id')
+    .select('dr.id as driver_id', 'dr.name',
+      db.raw('COALESCE(a.orders, 0)::int as orders'),
+      db.raw('COALESCE(a.trips, 0)::int as trips'),
+      db.raw('ROUND(COALESCE(a.km, 0)::numeric, 2) as km'),
+      db.raw('ROUND(COALESCE(a.score, 0)::numeric, 3) as score'),
+      db.raw('COALESCE(a.shift_days, 0)::int as shift_days'))
+    .orderBy('dr.name')
+
+  const drivers = rows.map((r) => {
+    const score = Number(r.score), shiftDays = Number(r.shift_days)
+    return {
+      driver_id: r.driver_id, name: r.name, orders: r.orders, trips: r.trips,
+      km: Number(r.km), score, shift_days: shiftDays,
+      score_per_shift: shiftDays > 0 ? Math.round((score / shiftDays) * 1000) / 1000 : 0,
+    }
+  })
+  // Среднее по тем, кто работал (для подсветки «недогружен/перегружен» на фронте).
+  const worked = drivers.filter((d) => d.shift_days > 0)
+  const avgPerShift = worked.length
+    ? Math.round((worked.reduce((s, d) => s + d.score_per_shift, 0) / worked.length) * 1000) / 1000
+    : 0
+  return { from, to: date, days, avg_per_shift: avgPerShift, drivers }
+}
+
 // Применить раскладку: назначить заявки водителям (метрики пишутся в assign()).
 export async function applyDistribution(date, shiftType, assignments) {
   let assigned = 0
