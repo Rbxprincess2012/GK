@@ -38,17 +38,17 @@ export function UnansweredQuestions() {
         придёт уведомление в личку Telegram (если задан chat_id ниже в реквизитах компании).
       </div>
       {!loaded ? (
-        <div className="a-muted" style={{ fontSize: '0.85rem' }}>Загрузка…</div>
+        <div className="a-muted a-unans-empty">Загрузка…</div>
       ) : items.length === 0 ? (
-        <div className="a-muted" style={{ fontSize: '0.85rem' }}>Пока нет — ИИ справляется сам 👍</div>
+        <div className="a-muted a-unans-empty">Пока нет — ИИ справляется сам 👍</div>
       ) : (
         <div className="a-unans-list">
           {items.map((q) => (
             <div key={q.id} className="a-unans-item">
               <div className="a-unans-head">
                 <span className="a-unans-tag">{q.ok === false ? '⚠️ ошибка' : '❓ не знает'}</span>
-                <span className="a-muted" style={{ fontSize: '0.74rem' }}>{fmtDate(q.created_at)}</span>
-                <button className="a-btn a-btn--ghost a-btn--sm" style={{ marginLeft: 'auto' }}
+                <span className="a-muted a-unans-date">{fmtDate(q.created_at)}</span>
+                <button className="a-btn a-btn--ghost a-btn--sm a-unans-resolve"
                   onClick={() => resolve(q.id)}>Разобрано</button>
               </div>
               <div className="a-unans-q">{q.question}</div>

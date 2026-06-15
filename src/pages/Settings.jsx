@@ -290,8 +290,8 @@ export default function Settings() {
 
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Распределение нагрузки</div>
-        <div className="a-field"><span>Важность дальности объекта при делёжке заявок</span></div>
-        <div className="a-scale">
+        <fieldset className="a-scale">
+          <legend>Важность дальности объекта при делёжке заявок</legend>
           {KM_PRESETS.map((p) => {
             const active = Number(distribution.km_weight) === p.value
             return (
@@ -305,7 +305,7 @@ export default function Settings() {
               </label>
             )
           })}
-        </div>
+        </fieldset>
         <div className="a-field-row" style={{ marginTop: 12 }}>
           <label className="a-field"><span>Город (для геокодинга)</span>
             <input className="a-input" value={distribution.region || ''} placeholder="Краснодар"

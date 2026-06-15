@@ -110,13 +110,25 @@ const orgInput = z.object({
   corr_account: z.string().optional(),
   support_chat_id: z.string().optional(), // TG chat_id суперпользователя для уведомлений ИИ
 }).strict()
-r.get('/org', async (_req, res, next) => {
-  try { res.json((await svc.getSetting('org')) || { company_name: '' }) } catch (e) { next(e) }
+// support_chat_id (куда уходят уведомления ИИ-эскалации) — только суперпользователь:
+// иначе менеджер/директор мог бы перенаправить или стереть канал оповещений супера.
+r.get('/org', async (req, res, next) => {
+  try {
+    const org = (await svc.getSetting('org')) || { company_name: '' }
+    if (req.auth?.user?.role !== 'superuser') delete org.support_chat_id
+    res.json(org)
+  } catch (e) { next(e) }
 })
 r.put('/org', async (req, res, next) => {
   try {
     const cur = (await svc.getSetting('org')) || {}
-    res.json(await svc.setSetting('org', { ...cur, ...orgInput.parse(req.body) }))
+    const input = orgInput.parse(req.body)
+    const isSuper = req.auth?.user?.role === 'superuser'
+    if (!isSuper) delete input.support_chat_id // не дать менеджеру/директору перезаписать
+    const saved = await svc.setSetting('org', { ...cur, ...input })
+    const out = { ...saved }
+    if (!isSuper) delete out.support_chat_id // и не отдавать его в ответе
+    res.json(out)
   } catch (e) { next(e) }
 })
 

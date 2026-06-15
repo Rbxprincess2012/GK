@@ -948,8 +948,9 @@ textarea.a-input,
 .a-guide-steps li { font-size: 0.78rem; line-height: 1.5; color: #c5cdef; margin-bottom: 3px; }
 .a-guide-warn { font-size: 0.76rem; line-height: 1.45; color: #f4a840; margin-top: 8px; }
 
-/* Шкала-радио «важность дальности» в Распределении (Настройки). */
-.a-scale { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+/* Шкала-радио «важность дальности» в Распределении (Настройки). fieldset/legend — для a11y. */
+.a-scale { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; border: 0; padding: 0; margin-inline: 0; min-inline-size: 0; }
+.a-scale > legend { padding: 0; margin-bottom: 4px; font-size: 0.82rem; color: #b9c4ee; }
 .a-scale-opt {
   display: flex; gap: 10px; align-items: flex-start; padding: 8px 11px;
   border: 1px solid #2a3556; border-radius: 10px; cursor: pointer; transition: border-color .12s, background .12s;
@@ -964,14 +965,19 @@ textarea.a-input,
 /* Раздел суперпользователя «Вопросы без ответа» (UnansweredQuestions). */
 .a-badge-count {
   display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px;
-  background: #d97a0e; color: #fff; font-size: 0.72rem; font-weight: 700; text-align: center; vertical-align: middle;
+  background: #f4a840; color: #1a1205; font-size: 0.72rem; font-weight: 700; text-align: center; vertical-align: middle;
 }
 .a-unans-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .a-unans-item { border: 1px solid #2a3556; border-radius: 10px; background: #11182b; padding: 8px 10px; }
 .a-unans-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .a-unans-tag { font-size: 0.72rem; font-weight: 700; color: #f4a840; }
+.a-unans-date { font-size: 0.74rem; }
+.a-unans-resolve { margin-left: auto; }
+.a-unans-empty { font-size: 0.85rem; }
 .a-unans-q { font-size: 0.84rem; color: #e8ecff; line-height: 1.4; }
 .a-unans-a { font-size: 0.76rem; color: #8290bd; line-height: 1.4; margin-top: 3px; white-space: pre-wrap; }
+/* Плашка накопленной нагрузки водителя в Распределении (цвет задаётся инлайн по состоянию). */
+.a-driver-loadtag { font-size: 0.72rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Второстепенный текст внутри модалки (коммент, движения) — тише «значений». */
 .a-modal-body .a-muted { font-size: 0.82rem; line-height: 1.5; }
 .a-nowrap { white-space: nowrap; }

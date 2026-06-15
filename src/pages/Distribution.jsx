@@ -311,7 +311,7 @@ export default function Distribution() {
                     {(() => {
                       const t = loadTag(histByDriver[d.id], avgPerShift)
                       return (
-                        <div style={{ fontSize: '0.72rem', color: t.color, marginTop: 1 }}
+                        <div className="a-driver-loadtag" style={{ color: t.color }}
                           title="Накопленная нагрузка за последние 7 дней — балл на отработанную смену. Зелёный «недогружен» — можно дозагрузить, янтарный «перегружен» — дать поменьше.">
                           {t.text}
                         </div>

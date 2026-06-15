@@ -23,5 +23,5 @@ const SHIFT_GREETINGS = [
 export function shiftGreeting(name) {
   const who = (name || '').trim() || 'коллега'
   const tpl = SHIFT_GREETINGS[Math.floor(Math.random() * SHIFT_GREETINGS.length)]
-  return `${tpl.replace('{name}', who)}\n\n🟢 Вы заступили на смену.`
+  return `${tpl.replaceAll('{name}', who)}\n\n🟢 Вы заступили на смену.`
 }

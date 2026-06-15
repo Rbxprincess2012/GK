@@ -56,8 +56,9 @@ export async function suggestDistribution(date, shiftType) {
   }))
   const noGeoCount = orders.filter((o) => o.km == null).length
 
-  // Накопленный балл за прошлые 7 дней (по вчерашний день включительно) — стартовая «фора»:
-  // кто возил меньше, начинает с меньшего балла → алгоритм даёт ему больше сегодня (баланс за период).
+  // Накопленный балл за окно [date-7 .. date-1] (7 дней по вчерашний включительно; сегодняшний
+  // день НЕ входит → нет двойного учёта). Стартовая «фора»: кто возил меньше, начинает с меньшего
+  // балла → алгоритм даёт ему больше сегодня (баланс за период).
   const prev = await driverLoadHistory(minusDays(date, 1), 7)
   const priorScores = {}
   for (const h of prev.drivers) priorScores[h.driver_id] = h.score_per_shift
