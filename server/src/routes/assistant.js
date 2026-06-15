@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { ask } from '../services/assistant.js'
+import { db } from '../db.js'
+import { requireRole } from '../middleware/authUser.js'
 
 const r = Router()
 
@@ -41,6 +43,29 @@ r.post('/ask', async (req, res, next) => {
     if (e?.issues) return res.status(400).json({ error: 'bad_request' })
     next(e)
   }
+})
+
+// ── Раздел суперпользователя: вопросы, на которые ИИ не нашёл ответа (или упал). ──
+// Ворклист: эскалации/ошибки, ещё не помеченные «разобрано». Источник для роста базы знаний.
+r.get('/unanswered', requireRole('superuser'), async (_req, res, next) => {
+  try {
+    const rows = await db('assistant_logs')
+      .where({ resolved: false })
+      .andWhere((b) => b.where('escalated', true).orWhere('ok', false))
+      .orderBy('created_at', 'desc')
+      .limit(100)
+      .select('id', 'question', 'answer', 'ok', 'escalated', 'created_at')
+    res.json({ count: rows.length, items: rows })
+  } catch (e) { next(e) }
+})
+
+// Пометить вопрос разобранным — уходит из списка (лог сохраняется для статистики).
+r.post('/unanswered/:id/resolve', requireRole('superuser'), async (req, res, next) => {
+  try {
+    const n = await db('assistant_logs').where({ id: Number(req.params.id) }).update({ resolved: true })
+    if (!n) return res.status(404).json({ error: 'not_found' })
+    res.json({ ok: true })
+  } catch (e) { next(e) }
 })
 
 export default r

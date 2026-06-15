@@ -3,6 +3,7 @@ import api from '@/lib/api'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { useAuth } from '@/context/AuthContext'
+import { UnansweredQuestions } from '@/components/admin/UnansweredQuestions'
 
 // Токены сгруппированы по интеграции; у каждого — своя подпись и подсказка.
 const TOKEN_GROUPS = [
@@ -181,6 +182,8 @@ export default function Settings() {
       </div>
       )}
 
+      {isSuper && <UnansweredQuestions />}
+
       <div className="a-card" style={{ marginBottom: 16 }}>
         <div className="a-section-title" style={{ marginTop: 0 }}>Наша компания — реквизиты</div>
         <label className="a-field"><span>Название компании (для приглашений)</span>
@@ -221,6 +224,20 @@ export default function Settings() {
             <input className="a-input" value={org.email || ''} onChange={setOrgField('email')} />
           </label>
         </div>
+
+        {isSuper && (
+          <>
+            <label className="a-field"><span>Telegram chat_id для уведомлений ИИ</span>
+              <input className="a-input" value={org.support_chat_id || ''} onChange={setOrgField('support_chat_id')}
+                placeholder="напр. 123456789" />
+            </label>
+            <div className="a-note">
+              Куда слать сигнал, когда ИИ-помощник не нашёл ответа. Как узнать свой ID: 1) откройте наш
+              <b> бот-водитель</b> в Telegram и нажмите «Старт» (иначе бот не сможет вам писать); 2) напишите
+              боту <b>@userinfobot</b> — он пришлёт ваш числовой chat_id; 3) вставьте его сюда и сохраните.
+            </div>
+          </>
+        )}
 
         <div className="a-section-title">Банковские реквизиты</div>
         <label className="a-field"><span>Банк</span>

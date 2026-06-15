@@ -3,6 +3,7 @@ import api from '@/lib/api'
 import { useToast } from '@/components/admin/Toast'
 import { useAuth } from '@/context/AuthContext'
 import { affectionate } from '@/lib/affection'
+import { MessengerGuide } from '@/components/admin/MessengerGuide'
 
 // Получатели отчётов клиента: личные чаты + группы, по каналам Telegram/MAX. Онбординг — через
 // deep-link ссылку (личка) или команду /bind (группа). Показывается только для сохранённого клиента.
@@ -38,6 +39,7 @@ export function ClientRecipients({ clientId }) {
         {aff}, тут всё просто: сюда уходит отчёт, когда ты подтверждаешь заявку. Можно добавить
         личный чат человека или общую группу заказчика — в Telegram или MAX. Выбери канал и жми «+».
       </div>
+      <MessengerGuide scenarios={['dm', 'group']} />
       {visible.length === 0 && (
         <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 8 }}>Пока никого — добавьте получателя ниже.</div>
       )}

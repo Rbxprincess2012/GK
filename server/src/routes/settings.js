@@ -107,6 +107,7 @@ const orgInput = z.object({
   bank_account: z.string().optional(),
   bik: z.string().optional(),
   corr_account: z.string().optional(),
+  support_chat_id: z.string().optional(), // TG chat_id суперпользователя для уведомлений ИИ
 }).strict()
 r.get('/org', async (_req, res, next) => {
   try { res.json((await svc.getSetting('org')) || { company_name: '' }) } catch (e) { next(e) }

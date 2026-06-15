@@ -2,6 +2,7 @@ import { db } from '../db.js'
 import { getTokens } from './settings.js'
 import { complete } from '../lib/yandexGpt.js'
 import { KNOWLEDGE } from '../assistant/knowledge.js'
+import { notifySupport } from './supportNotify.js'
 
 // ИИ-ассистент саппорта: отвечает на вопросы НАШИХ пользователей строго из базы знаний.
 // Заземление + честное «не знаю» + лог. System-промпт собирается ТОЛЬКО здесь (не из истории
@@ -33,7 +34,7 @@ function sanitizeHistory(history) {
     .map((m) => ({ role: m.role, text: m.text.slice(0, 2000) }))
 }
 
-export async function ask({ userId = null, question, history = [] }, { completeImpl = complete } = {}) {
+export async function ask({ userId = null, question, history = [] }, { completeImpl = complete, notifyImpl = notifySupport } = {}) {
   const { apiKey, folderId } = await getYandexCreds()
   const q = String(question || '').trim().slice(0, 2000)
   if (!apiKey || !folderId) {
@@ -57,5 +58,11 @@ export async function ask({ userId = null, question, history = [] }, { completeI
   }
   // Лог — для роста базы и контроля качества; ошибку записи глотаем, ответ не блокируем.
   await db('assistant_logs').insert({ user_id: userId, question: q, answer, ok, escalated: escalate, tokens }).catch(() => {})
+  // ИИ не нашёл ответа → пинаем суперпользователя в личку TG (fire-and-forget, не блокирует ответ).
+  if (escalate) {
+    notifyImpl(`🤖 ИИ-помощник не нашёл ответа на вопрос сотрудника:\n\n❓ ${q}\n\n` +
+      `Загляните в Настройки → «Вопросы без ответа», чтобы ответить человеку и дополнить базу знаний.`)
+      .catch(() => {})
+  }
   return { configured: true, ok, answer, escalate }
 }

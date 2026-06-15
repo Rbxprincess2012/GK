@@ -150,7 +150,15 @@ export default function Clients() {
       }
       toast.success('Сохранено'); closeClient()
     } catch (e) {
-      toast.error(e?.response?.data?.error === 'conflict' ? 'Дубликат (ИНН?)' : 'Ошибка сохранения')
+      const d = e?.response?.data
+      let msg = 'Ошибка сохранения'
+      if (d?.error === 'conflict') msg = 'Дубликат: клиент с таким ИНН уже есть'
+      else if (d?.error === 'fk_violation') msg = 'Неверная ссылка (группа компаний?)'
+      else if (d?.error === 'validation' && Array.isArray(d.issues)) {
+        const fields = d.issues.map((i) => (i.path || []).join('.')).filter(Boolean)
+        msg = `Проверьте поля: ${[...new Set(fields)].join(', ') || 'данные неверны'}`
+      } else if (d?.error) msg = `Ошибка сохранения: ${d.error}`
+      toast.error(msg)
     }
   }
   const delClient = async (c) => {

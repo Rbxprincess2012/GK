@@ -83,7 +83,7 @@ api.post('/drivers/:id/bot-link', requireRole('manager', 'director', 'superuser'
   } catch (e) { next(e) }
 })
 
-api.use('/clients', crudRouter('clients', { createSchema: createClient, updateSchema: updateClient }))
+api.use('/clients', crudRouter('clients', { createSchema: createClient, updateSchema: updateClient, jsonbFields: ['chats'] }))
 api.use('/vehicles', crudRouter('vehicles', { createSchema: createVehicle, updateSchema: updateVehicle }))
 api.use('/drivers', crudRouter('drivers', { createSchema: createDriver, updateSchema: updateDriver }))
 api.use('/trusted-persons', trustedPersons)

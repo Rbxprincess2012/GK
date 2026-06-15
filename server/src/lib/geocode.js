@@ -50,25 +50,36 @@ async function yandexGeocode(input, apikey) {
   return { lat, lng, source: 'yandex', precision }
 }
 
-// Nominatim (OpenStreetMap): бесплатно, без ключа. Для объектов используем
-// структурированный запрос (city+street) — он жёстко держит город и точнее.
-async function nominatimGeocode(input) {
-  const p = new URLSearchParams({ format: 'json', limit: '1', 'accept-language': 'ru' })
-  if (typeof input === 'string') {
-    p.set('q', input)
-  } else {
-    p.set('country', 'Россия')
-    if (input.city) p.set('city', input.city)
-    const street = [input.house, input.street].filter(Boolean).join(' ')
-    if (street) p.set('street', street)
-  }
-  const data = await getJson(`https://nominatim.openstreetmap.org/search?${p.toString()}`,
+// Nominatim (OpenStreetMap): бесплатно, без ключа. Для объектов сначала пробуем
+// структурированный запрос (city+street) — он жёстко держит город; если не нашёл —
+// фолбэк на свободный запрос q (вся строка адреса + Россия), он спасает нестандартные адреса.
+async function nominatimFetchOne(params) {
+  const data = await getJson(`https://nominatim.openstreetmap.org/search?${params.toString()}`,
     { 'User-Agent': 'Putevo/1.0 (dispatcher geocoding)' })
   const hit = Array.isArray(data) ? data[0] : null
   if (!hit) return null
   const lat = Number(hit.lat), lng = Number(hit.lon)
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   return { lat, lng, source: 'nominatim', precision: hit.type || null }
+}
+
+async function nominatimGeocode(input) {
+  if (typeof input !== 'string') {
+    const p = new URLSearchParams({ format: 'json', limit: '1', 'accept-language': 'ru', country: 'Россия' })
+    if (input.city) p.set('city', input.city)
+    const street = [input.house, input.street].filter(Boolean).join(' ')
+    if (street) p.set('street', street)
+    const structured = await nominatimFetchOne(p)
+    if (structured) return structured
+  }
+  // Фолбэк: свободный запрос всей строкой адреса (для объектов — город+улица+дом).
+  const q = (typeof input === 'string' ? input : toAddressString(input)).trim()
+  if (!q) return null
+  const fq = new URLSearchParams({
+    format: 'json', limit: '1', 'accept-language': 'ru',
+    q: /росси/i.test(q) ? q : `${q}, Россия`,
+  })
+  return nominatimFetchOne(fq)
 }
 
 async function resolveProvider() {
@@ -79,20 +90,29 @@ async function resolveProvider() {
 }
 
 // Главная точка входа. Возвращает {lat,lng,source,precision} | null.
+// Выбранный провайдер пробуется первым; если он вернул null или упал — фолбэк на второй,
+// чтобы существующий адрес не оставался без координат из-за капризов одного сервиса.
 export async function geocode(input) {
   if (!input || (typeof input === 'string' && !input.trim())) return null
   const provider = await resolveProvider()
-  try {
-    if (provider === 'yandex') {
-      const tokens = await getTokens().catch(() => ({}))
-      const key = tokens.yandex_geocoder_key || process.env.YANDEX_GEOCODER_KEY
-      if (key) return await yandexGeocode(input, key)
+  const tokens = await getTokens().catch(() => ({}))
+  const key = tokens.yandex_geocoder_key || process.env.YANDEX_GEOCODER_KEY
+  const order = provider === 'yandex' ? ['yandex', 'nominatim'] : ['nominatim', 'yandex']
+  for (const prov of order) {
+    try {
+      if (prov === 'yandex') {
+        if (!key) continue
+        const hit = await yandexGeocode(input, key)
+        if (hit) return hit
+      } else {
+        const hit = await nominatimGeocode(input)
+        if (hit) return hit
+      }
+    } catch (e) {
+      console.error(`[geocode:${prov}] ошибка:`, e.message)
     }
-    return await nominatimGeocode(input)
-  } catch (e) {
-    console.error(`[geocode:${provider}] ошибка:`, e.message)
-    return null
   }
+  return null
 }
 
 // Доп. регион-префикс для объектов (например «Краснодарский край») — из настроек.

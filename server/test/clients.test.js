@@ -31,4 +31,16 @@ describe('clients CRUD', () => {
     const res = await request(app).post('/api/clients').send({ type: 'ooo', legal_name: '' })
     expect(res.status).toBe(400)
   })
+
+  it('chats (jsonb) сериализуется при create/update — не падает на вставке', async () => {
+    const post = await request(app).post('/api/clients')
+      .send({ type: 'ooo', legal_name: 'ООО Чат', chats: { telegram: '@dispatch', max: null } })
+    expect(post.status).toBe(201)
+    expect(post.body.chats).toMatchObject({ telegram: '@dispatch' })
+    const id = post.body.id
+
+    const patch = await request(app).patch(`/api/clients/${id}`).send({ chats: { telegram: '@new' } })
+    expect(patch.status).toBe(200)
+    expect(patch.body.chats).toMatchObject({ telegram: '@new' })
+  })
 })

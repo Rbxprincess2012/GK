@@ -5,6 +5,7 @@ import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
 import { complete } from '../src/lib/yandexGpt.js'
 import { ask } from '../src/services/assistant.js'
+import { notifySupport } from '../src/services/supportNotify.js'
 
 const app = createApp()
 beforeEach(async () => { await resetDb(); await db('assistant_logs').del() })
@@ -76,6 +77,68 @@ describe('assistant.ask', () => {
     expect(r.answer).toMatch(/недоступен/)
     const log = await db('assistant_logs').first()
     expect(log.ok).toBe(false)
+  })
+
+  it('эскалация → дёргает notifyImpl с текстом вопроса', async () => {
+    await setYandex()
+    let notified = null
+    const completeImpl = async () => ({ text: 'Точно не знаю — спросите старшего', tokens: 1 })
+    const r = await ask({ question: 'непонятный вопрос' }, { completeImpl, notifyImpl: async (t) => { notified = t } })
+    expect(r.escalate).toBe(true)
+    expect(notified).toContain('непонятный вопрос')
+  })
+
+  it('обычный ответ → notifyImpl НЕ дёргается', async () => {
+    await setYandex()
+    let called = false
+    const completeImpl = async () => ({ text: 'Всё по делу', tokens: 1 })
+    await ask({ question: 'x' }, { completeImpl, notifyImpl: async () => { called = true } })
+    expect(called).toBe(false)
+  })
+})
+
+describe('supportNotify', () => {
+  it('нет chat_id → не шлёт (no_chat)', async () => {
+    const r = await notifySupport('сигнал', { sendImpl: async () => ({ ok: true }) })
+    expect(r).toEqual({ sent: false, reason: 'no_chat' })
+  })
+
+  it('есть chat_id + токен → шлёт водительским ботом', async () => {
+    await db('settings').insert({ key: 'org', value: { support_chat_id: '999' } }).onConflict('key').merge()
+    await db('settings').insert({ key: 'integration_tokens', value: { telegram_driver_bot_token: 'TK' } }).onConflict('key').merge()
+    let seen
+    const sendImpl = async (token, chatId, text) => { seen = { token, chatId, text }; return { ok: true } }
+    const r = await notifySupport('сигнал', { sendImpl })
+    expect(r).toEqual({ sent: true, reason: 'ok' })
+    expect(seen).toEqual({ token: 'TK', chatId: '999', text: 'сигнал' })
+  })
+})
+
+describe('GET /api/assistant/unanswered + resolve (суперпользователь)', () => {
+  it('возвращает эскалации/ошибки, не разобранные; ok и resolved исключены', async () => {
+    await db('assistant_logs').insert([
+      { question: 'q-esc', answer: 'a', ok: true, escalated: true, resolved: false },
+      { question: 'q-fail', answer: 'a', ok: false, escalated: false, resolved: false },
+      { question: 'q-ok', answer: 'a', ok: true, escalated: false, resolved: false },
+      { question: 'q-done', answer: 'a', ok: true, escalated: true, resolved: true },
+    ])
+    const res = await request(app).get('/api/assistant/unanswered')
+    expect(res.status).toBe(200)
+    const qs = res.body.items.map((x) => x.question)
+    expect(qs).toContain('q-esc')
+    expect(qs).toContain('q-fail')
+    expect(qs).not.toContain('q-ok')
+    expect(qs).not.toContain('q-done')
+  })
+
+  it('resolve помечает разобранным → исчезает из списка', async () => {
+    const ins = await db('assistant_logs')
+      .insert({ question: 'q', answer: 'a', ok: true, escalated: true, resolved: false }).returning('id')
+    const id = ins[0]?.id ?? ins[0]
+    const res = await request(app).post(`/api/assistant/unanswered/${id}/resolve`)
+    expect(res.status).toBe(200)
+    const after = await request(app).get('/api/assistant/unanswered')
+    expect(after.body.items.find((x) => x.id === id)).toBeUndefined()
   })
 })
 

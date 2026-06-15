@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { affectionate } from '@/lib/affection'
 import api from '@/lib/api'
 import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
+import { MessengerGuide } from '@/components/admin/MessengerGuide'
 
 // Название компании-оператора грузим один раз за сессию (settings.org.company_name).
 let companyCache = null
@@ -107,16 +108,20 @@ export function TrustedPersonChannels({ personId, personName, tgStatus, maxStatu
   useEffect(() => { fetchCompany().then(setCompany) }, [])
 
   if (!hasTg && !hasMax) return null
+  const channels = [hasTg && 'telegram', hasMax && 'max'].filter(Boolean)
   return (
-    <div className="a-msgr-cards">
-      {hasTg && (
-        <ChannelCard channel="telegram" label="Telegram" Icon={TelegramIcon} status={tgStatus}
-          personId={personId} personName={personName} company={company} onChanged={onChanged} />
-      )}
-      {hasMax && (
-        <ChannelCard channel="max" label="MAX" Icon={MaxIcon} status={maxStatus}
-          personId={personId} personName={personName} company={company} onChanged={onChanged} />
-      )}
-    </div>
+    <>
+      <div className="a-msgr-cards">
+        {hasTg && (
+          <ChannelCard channel="telegram" label="Telegram" Icon={TelegramIcon} status={tgStatus}
+            personId={personId} personName={personName} company={company} onChanged={onChanged} />
+        )}
+        {hasMax && (
+          <ChannelCard channel="max" label="MAX" Icon={MaxIcon} status={maxStatus}
+            personId={personId} personName={personName} company={company} onChanged={onChanged} />
+        )}
+      </div>
+      <MessengerGuide scenarios={['dm']} channels={channels} />
+    </>
   )
 }

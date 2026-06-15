@@ -3,6 +3,7 @@ import { db } from '../db.js'
 import { pgStorageFor } from './sessionStore.js'
 import { bindByCode, resolveDriverByChat } from '../services/driverAuth.js'
 import { goOnShift, finishShift } from '../services/driverShift.js'
+import { shiftGreeting } from './greetings.js'
 import { ordersForDriver, orderCardForDriver } from '../services/driverScope.js'
 import { markSubtask, commitOrderByDriver } from '../services/subtasks.js'
 import { putFromMax } from '../services/mediaStore.js'
@@ -47,8 +48,10 @@ function orderText(order) {
     order.object_house && `д. ${order.object_house}`,
     order.object_building && `к. ${order.object_building}`,
   ].filter(Boolean).join(', ') || order.address_raw || '—'
+  // Кликабельный адрес: координаты → точка на карте, иначе → поиск по тексту адреса.
   const map = (order.lat != null && order.lng != null)
-    ? `https://yandex.ru/maps/?ll=${order.lng},${order.lat}&z=17&pt=${order.lng},${order.lat}` : null
+    ? `https://yandex.ru/maps/?ll=${order.lng},${order.lat}&z=17&pt=${order.lng},${order.lat}`
+    : (addr !== '—' ? `https://yandex.ru/maps/?text=${encodeURIComponent(addr)}` : null)
   const addrLine = map ? `📍 <a href="${map}">${esc(addr)}</a>` : `📍 ${esc(addr)}`
   const sections = [...new Set((order.items || []).map((it) => it.section_name).filter(Boolean))]
   const notInWork = order.status && !['in_progress', 'done', 'closed'].includes(order.status)
@@ -442,7 +445,10 @@ export function createMaxDriverBot(token) {
       const km = parseInt(text, 10)
       if (!Number.isFinite(km)) return ctx.reply('Введите число (км):')
       await goOnShift(driverId, { date: today(), vehicleId: ctx.session.data?.vehicleId ?? null, odometerStart: km })
-      ctx.session.step = null; await ctx.reply('Пробег записан.'); return sendMenu(ctx)
+      ctx.session.step = null
+      const drv = await db('drivers').where({ id: driverId }).first()
+      await ctx.reply(shiftGreeting(drv?.first_name || drv?.name))
+      return sendMenu(ctx)
     }
     if (step === 'odo_end') {
       const km = parseInt(text, 10)
