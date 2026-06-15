@@ -36,6 +36,9 @@ export async function suggestDistribution(date, shiftType) {
   const base = await getSetting('base').catch(() => null)
   const dist = await getSetting('distribution').catch(() => null)
   const kmWeight = dist?.km_weight ?? 0.1
+  // Сила локализации: насколько кучность по районам важнее дневного баланса (баланс добирается
+  // накопленными баллами за период). 0 — прежнее поведение (только справедливость за день).
+  const localityWeight = dist?.locality_weight ?? 1.5
   const baseSet = base?.lat != null && base?.lng != null
 
   const drivers = (await availableDrivers(date, shiftType)).map((d) => ({
@@ -53,7 +56,13 @@ export async function suggestDistribution(date, shiftType) {
   }))
   const noGeoCount = orders.filter((o) => o.km == null).length
 
-  const result = suggest({ orders, drivers, kmWeight })
+  // Накопленный балл за прошлые 7 дней (по вчерашний день включительно) — стартовая «фора»:
+  // кто возил меньше, начинает с меньшего балла → алгоритм даёт ему больше сегодня (баланс за период).
+  const prev = await driverLoadHistory(minusDays(date, 1), 7)
+  const priorScores = {}
+  for (const h of prev.drivers) priorScores[h.driver_id] = h.score_per_shift
+
+  const result = suggest({ orders, drivers, kmWeight, locality: Math.max(localityWeight, 1), priorScores, localityWeight })
 
   // Обогащаем раскладку отображаемыми данными заявок.
   const metaById = new Map(rawOrders.map((o) => [o.id, o]))
@@ -72,7 +81,7 @@ export async function suggestDistribution(date, shiftType) {
   }))
 
   return {
-    date, shift_type: shiftType, base_set: baseSet, km_weight: kmWeight,
+    date, shift_type: shiftType, base_set: baseSet, km_weight: kmWeight, locality_weight: localityWeight,
     no_geo_count: noGeoCount, total_orders: orders.length, drivers_count: drivers.length,
     spread: result.spread, assignments,
   }

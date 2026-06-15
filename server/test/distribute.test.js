@@ -128,6 +128,34 @@ describe('suggest', () => {
     expect(r1).toEqual(r2)
   })
 
+  it('priorScores: перегруженный за период получает меньше сегодня', () => {
+    // Две одинаковые заявки; у водителя 1 высокий накопленный балл → обе уходят водителю 2.
+    const orders = [
+      { id: 1, trips: 1, km: 0, district: 'X' },
+      { id: 2, trips: 1, km: 0, district: 'X' },
+    ]
+    const r = suggest({ orders, drivers: drivers3, priorScores: { 1: 10 } })
+    const a = r.assignments.find((x) => x.driver_id === 1)
+    const b = r.assignments.find((x) => x.driver_id === 2)
+    expect(a.order_ids.length).toBe(0)
+    expect(b.order_ids.length).toBe(2)
+  })
+
+  it('localityWeight: заявки группируются по районам (кучность важнее дневного баланса)', () => {
+    const orders = [
+      { id: 1, trips: 1, km: 0, district: 'Far' },
+      { id: 2, trips: 1, km: 0, district: 'Far' },
+      { id: 3, trips: 1, km: 0, district: 'Near' },
+      { id: 4, trips: 1, km: 0, district: 'Near' },
+    ]
+    const r = suggest({ orders, drivers: drivers3, localityWeight: 5 })
+    // у каждого водителя — заявки одного района (Far к одному, Near к другому)
+    for (const a of r.assignments) {
+      const districts = new Set(a.order_ids.map((id) => orders.find((o) => o.id === id).district))
+      expect(districts.size).toBe(1)
+    }
+  })
+
   it('все заявки распределены, ничего не потеряно и не задвоено', () => {
     const orders = Array.from({ length: 9 }, (_, i) => ({
       id: i + 1, slots: (i % 3) + 1, km: (i * 7) % 50, district: ['A', 'B', 'C'][i % 3],

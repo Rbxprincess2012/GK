@@ -66,8 +66,8 @@ function orderCost(order, driver, kmWeight) {
   return tripsOf(order, driver) + kmWeight * (order.km || 0)
 }
 
-function scoreOf(driver, orders, byId, kmWeight) {
-  let s = 0
+function scoreOf(driver, orders, byId, kmWeight, priorScores) {
+  let s = (priorScores && priorScores[driver.id]) || 0
   for (const oid of orders) s += orderCost(byId.get(oid), driver, kmWeight)
   return s
 }
@@ -78,7 +78,12 @@ function spreadOf(scores) {
 }
 
 // Основная функция. Возвращает раскладку + метрики.
-export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 1.0, maxPolish } = {}) {
+//   priorScores  — { driverId: накопленный балл за прошлые дни }. Старт баллов водителей не с 0,
+//                  а с истории → справедливость выравнивается ЗА ПЕРИОД, а не за один день.
+//   localityWeight — штраф за раздробленность районов у водителя в целевой функции. >0 делает
+//                  кучность по районам важнее дневного баланса (баланс добирается priorScores).
+// Дефолты (priorScores={}, localityWeight=0) сохраняют прежнее поведение.
+export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 1.0, priorScores = {}, localityWeight = 0, maxPolish } = {}) {
   const byId = new Map(orders.map((o) => [o.id, o]))
   if (!drivers.length) {
     return { assignments: [], unassigned: orders.map((o) => o.id), spread: 0 }
@@ -87,7 +92,9 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
   // assignment: driverId -> [orderId]
   const assign = new Map(drivers.map((d) => [d.id, []]))
   const driverById = new Map(drivers.map((d) => [d.id, d]))
-  const districtsOf = (oids) => new Set(oids.map((id) => byId.get(id).district ?? null))
+  const districtOf = (oid) => byId.get(oid).district ?? null
+  const districtsOf = (oids) => new Set(oids.map(districtOf))
+  const districtCount = (oids) => new Set(oids.map(districtOf)).size
 
   // ── Фаза 1: жадно, далёкие первыми; при равенстве — к тому, кто уже везёт этот район.
   const ordered = [...orders].sort((a, b) =>
@@ -96,7 +103,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
   for (const o of ordered) {
     let best = null, bestEff = Infinity
     for (const d of drivers) {
-      const cur = scoreOf(d, assign.get(d.id), byId, kmWeight)
+      const cur = scoreOf(d, assign.get(d.id), byId, kmWeight, priorScores)
       const tentative = cur + orderCost(o, d, kmWeight)
       const sameDistrict = districtsOf(assign.get(d.id)).has(o.district ?? null)
       const eff = tentative - (sameDistrict ? locality : 0)
@@ -107,40 +114,45 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
     assign.get(best.id).push(o.id)
   }
 
-  // ── Фаза 2: полировка локальным поиском.
-  // Цель — лексикографически (разброс max−min, затем дисперсия). Дисперсия как вторичный
-  // критерий выводит из «плато», когда максимум держат сразу несколько водителей.
+  // ── Фаза 2: полировка локальным поиском. Цель — минимизировать
+  //   obj = разброс баллов (с учётом priorScores) + localityWeight·раздробленность районов,
+  // затем дисперсию (вторичный критерий выводит из «плато»). При localityWeight=0 obj=разброс.
+  const ids = drivers.map((d) => d.id)
   const scores = () => {
     const s = {}
-    for (const d of drivers) s[d.id] = scoreOf(d, assign.get(d.id), byId, kmWeight)
+    for (const d of drivers) s[d.id] = scoreOf(d, assign.get(d.id), byId, kmWeight, priorScores)
     return s
   }
-  const metric = (sc) => {
+  const fragTotal = () => ids.reduce((s, id) => s + districtCount(assign.get(id)), 0)
+  const sumSqOf = (sc) => {
     const vals = Object.values(sc)
     const mean = vals.reduce((a, b) => a + b, 0) / vals.length
-    const sumSq = vals.reduce((a, b) => a + (b - mean) ** 2, 0)
-    return { spread: Math.max(...vals) - Math.min(...vals), sumSq }
+    return vals.reduce((a, b) => a + (b - mean) ** 2, 0)
   }
+  const objOf = (sc, frag) => spreadOf(sc) + localityWeight * frag
   const better = (m, best) =>
-    m.spread < best.spread - 1e-9 ||
-    (Math.abs(m.spread - best.spread) <= 1e-9 && m.sumSq < best.sumSq - 1e-9)
+    m.obj < best.obj - 1e-9 ||
+    (Math.abs(m.obj - best.obj) <= 1e-9 && m.sumSq < best.sumSq - 1e-9)
 
   const limit = maxPolish ?? orders.length * 8 + 40
-  const ids = drivers.map((d) => d.id)
+  let curFrag = fragTotal()
   for (let iter = 0; iter < limit; iter++) {
     const sc = scores()
-    let bestMetric = metric(sc), bestOp = null
+    let bestMetric = { obj: objOf(sc, curFrag), sumSq: sumSqOf(sc) }, bestOp = null, bestFrag = curFrag
 
     // (a) перенос заявки A → B (любые водители)
     for (const A of ids) {
+      const fragA = districtCount(assign.get(A))
       for (const oid of assign.get(A)) {
         const costA = orderCost(byId.get(oid), driverById.get(A), kmWeight)
+        const fragANew = districtCount(assign.get(A).filter((x) => x !== oid))
         for (const B of ids) {
           if (B === A) continue
           const costB = orderCost(byId.get(oid), driverById.get(B), kmWeight)
+          const nFrag = curFrag - fragA + fragANew - districtCount(assign.get(B)) + districtCount([...assign.get(B), oid])
           const nsc = { ...sc, [A]: sc[A] - costA, [B]: sc[B] + costB }
-          const m = metric(nsc)
-          if (better(m, bestMetric)) { bestMetric = m; bestOp = { type: 'move', oid, A, B } }
+          const m = { obj: objOf(nsc, nFrag), sumSq: sumSqOf(nsc) }
+          if (better(m, bestMetric)) { bestMetric = m; bestOp = { type: 'move', oid, A, B }; bestFrag = nFrag }
         }
       }
     }
@@ -148,13 +160,16 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
     for (let i = 0; i < ids.length; i++) {
       for (let j = i + 1; j < ids.length; j++) {
         const A = ids[i], B = ids[j]
+        const fragA = districtCount(assign.get(A)), fragB = districtCount(assign.get(B))
         for (const oa of assign.get(A)) {
           for (const ob of assign.get(B)) {
             const nA = sc[A] - orderCost(byId.get(oa), driverById.get(A), kmWeight) + orderCost(byId.get(ob), driverById.get(A), kmWeight)
             const nB = sc[B] - orderCost(byId.get(ob), driverById.get(B), kmWeight) + orderCost(byId.get(oa), driverById.get(B), kmWeight)
+            const nFrag = curFrag - fragA + districtCount(assign.get(A).map((x) => (x === oa ? ob : x)))
+              - fragB + districtCount(assign.get(B).map((x) => (x === ob ? oa : x)))
             const nsc = { ...sc, [A]: nA, [B]: nB }
-            const m = metric(nsc)
-            if (better(m, bestMetric)) { bestMetric = m; bestOp = { type: 'swap', oa, ob, A, B } }
+            const m = { obj: objOf(nsc, nFrag), sumSq: sumSqOf(nsc) }
+            if (better(m, bestMetric)) { bestMetric = m; bestOp = { type: 'swap', oa, ob, A, B }; bestFrag = nFrag }
           }
         }
       }
@@ -167,6 +182,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
       remove(assign.get(bestOp.A), bestOp.oa); remove(assign.get(bestOp.B), bestOp.ob)
       assign.get(bestOp.A).push(bestOp.ob); assign.get(bestOp.B).push(bestOp.oa)
     }
+    curFrag = bestFrag
   }
 
   // ── Сборка результата.
@@ -182,7 +198,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
       driver_id: d.id, driver_name: d.name, capacity: d.capacity, empty_capacity: d.empty_capacity ?? 2,
       order_ids: oids.slice(),
       trips, km: round2(km),
-      score: round3(scoreOf(d, oids, byId, kmWeight)),
+      score: round3(scoreOf(d, oids, byId, kmWeight, priorScores)),
     }
   })
   return { assignments, unassigned: [], spread: round3(spreadOf(scores())), kmWeight }

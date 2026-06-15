@@ -60,6 +60,7 @@ r.put('/base', async (req, res, next) => {
 // Параметры распределения: вес километра, регион-префикс для геокодинга.
 const distributionInput = z.object({
   km_weight: z.number().min(0).optional(),
+  locality_weight: z.number().min(0).optional(), // сила кучности по районам в авто-распределении
   region: z.string().optional(),
   geocoder: z.enum(['yandex', 'nominatim']).optional(),
 }).strict()
