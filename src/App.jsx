@@ -23,7 +23,8 @@ import Schedule from '@/pages/Schedule'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
 import Templates from '@/pages/Templates'
-import Companies from '@/pages/Companies'
+import Accounts from '@/pages/Accounts'
+import Pricing from '@/pages/Pricing'
 import Users from '@/pages/Users'
 
 function RequireAuth({ roles }) {
@@ -90,7 +91,10 @@ function AppRoutes() {
           <Route path="/reports"   element={<Reports />} />
 
           <Route element={<RequireAuth roles={['superuser']} />}>
-            <Route path="/companies" element={<Companies />} />
+            <Route path="/accounts" element={<Accounts />} />
+            <Route path="/pricing" element={<Pricing />} />
+            {/* Легаси: прежний раздел «Клиенты» слит в «Учёт пользователей». */}
+            <Route path="/companies" element={<Navigate to="/accounts" replace />} />
           </Route>
           <Route element={<RequireAuth roles={['director', 'superuser']} />}>
             <Route path="/users" element={<Users />} />

@@ -6,7 +6,7 @@ const TABLES = [
   'order_subtasks', 'client_messages', 'order_drafts', 'orders',
   'route_stops', 'routes', 'invoices', 'shifts', 'outbox', 'inbound_messages', 'channels',
   'containers', 'objects', 'streets', 'drivers', 'vehicles', 'clients',
-  'container_types', 'districts', 'settings', 'users',
+  'container_types', 'districts', 'settings', 'app_sessions', 'company_payments', 'companies', 'users',
 ]
 
 export async function resetDb() {

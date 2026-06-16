@@ -1,5 +1,7 @@
 import { Router } from 'express'
 import * as users from '../services/users.js'
+import * as companies from '../services/companies.js'
+import * as sessions from '../services/sessions.js'
 import { signToken } from '../lib/jwt.js'
 import { config } from '../config.js'
 import { loginInput, setPasswordInput, registerInput, verifyCodeInput, forgotInput, resetCodeInput } from '../validators/user.js'
@@ -8,7 +10,18 @@ import { assignableRoles } from '../services/users.js'
 
 const r = Router()
 
-const issue = (user) => signToken({ sub: user.id, role: user.role, email: user.email }, config.AUTH_SECRET)
+const issue = (user, sid = null) =>
+  signToken({ sub: user.id, role: user.role, email: user.email, cid: user.company_id ?? null, sid }, config.AUTH_SECRET)
+
+// Завершение входа (общее для login/verify-code/reset-code/invite): проверка
+// биллинга тенанта (старт триала на первом входе + срок доступа) → открытие
+// сессии журнала посещений → выпуск токена. Возвращает { token } | { status, error }.
+async function loginResult(user, req) {
+  const gate = await companies.applyAccessOnLogin(user)
+  if (gate.error) return { status: 403, error: gate.error }
+  const session = await sessions.start(user, req)
+  return { token: issue(user, session?.id ?? null) }
+}
 
 r.post('/login', async (req, res, next) => {
   try {
@@ -17,7 +30,9 @@ r.post('/login', async (req, res, next) => {
     if (!user) return res.status(401).json({ error: 'invalid_credentials' })
     // Пароль верный, но почта не подтверждена кодом — направляем на подтверждение.
     if (!user.email_verified) return res.status(403).json({ error: 'email_not_verified', email: user.email })
-    res.json({ token: issue(user), user })
+    const out = await loginResult(user, req)
+    if (out.error) return res.status(out.status).json({ error: out.error })
+    res.json({ token: out.token, user })
   } catch (e) { next(e) }
 })
 
@@ -28,11 +43,13 @@ r.post('/register', async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
-// Подтверждение кода регистрации → сразу выдаём сессию.
+// Подтверждение кода регистрации → сразу выдаём сессию (первый вход директора).
 r.post('/verify-code', async (req, res, next) => {
   try {
     const user = await users.verifyRegistration(verifyCodeInput.parse(req.body))
-    res.json({ token: issue(user), user })
+    const out = await loginResult(user, req)
+    if (out.error) return res.status(out.status).json({ error: out.error })
+    res.json({ token: out.token, user })
   } catch (e) { next(e) }
 })
 
@@ -47,7 +64,9 @@ r.post('/forgot-password', async (req, res, next) => {
 r.post('/reset-code', async (req, res, next) => {
   try {
     const user = await users.resetPasswordWithCode(resetCodeInput.parse(req.body))
-    res.json({ token: issue(user), user })
+    const out = await loginResult(user, req)
+    if (out.error) return res.status(out.status).json({ error: out.error })
+    res.json({ token: out.token, user })
   } catch (e) { next(e) }
 })
 
@@ -65,8 +84,9 @@ r.post('/invite/:token', async (req, res, next) => {
   try {
     const { password } = setPasswordInput.parse(req.body)
     const user = await users.setPasswordByToken(req.params.token, password)
-    const token = signToken({ sub: user.id, role: user.role, email: user.email }, config.AUTH_SECRET)
-    res.json({ token, user })
+    const out = await loginResult(user, req)
+    if (out.error) return res.status(out.status).json({ error: out.error })
+    res.json({ token: out.token, user })
   } catch (e) { next(e) }
 })
 

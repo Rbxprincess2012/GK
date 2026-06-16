@@ -5,6 +5,7 @@ import { Truck, LogOut, SlidersHorizontal, RotateCcw, Check } from 'lucide-react
 import { useAuth } from '@/context/AuthContext'
 import { DEFAULT_LAYOUT, isValidKey } from './navConfig'
 import { loadLayout, saveLayout } from '@/lib/navLayout'
+import { useHeartbeat } from '@/lib/useHeartbeat'
 import { SidebarNav, SidebarNavEditor } from './SidebarNav'
 import { AssistantWidget } from './AssistantWidget'
 
@@ -23,6 +24,9 @@ export default function AdminShell() {
   const [expanded, setExpanded] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [layout, setLayout] = useState(() => loadLayout(DEFAULT_LAYOUT, isValidKey))
+
+  // Журнал посещений: heartbeat активной сессии, пока открыт рабочий кабинет.
+  useHeartbeat()
 
   // Сохраняем раскладку при изменении (кроме первого рендера — там она уже из хранилища).
   const mounted = useRef(false)

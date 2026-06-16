@@ -10,8 +10,11 @@ import channels from './channels.js'
 import inbound from './inbound.js'
 import outbox from './outbox.js'
 import auth from './auth.js'
+import publicRoutes from './public.js'
 import usersRoutes from './users.js'
 import companiesRoutes from './companies.js'
+import pricingRoutes from './pricing.js'
+import sessionsRoutes from './sessions.js'
 import emailOutbox from './emailOutbox.js'
 import settings from './settings.js'
 import distribution from './distribution.js'
@@ -20,7 +23,7 @@ import proofReview from './proofReview.js'
 import clientMessages from './clientMessages.js'
 import clientRecipients from './clientRecipients.js'
 import assistant from './assistant.js'
-import { authenticate, requireUser, requireUserOrService, requireRole } from '../middleware/authUser.js'
+import { authenticate, requireUser, requireUserOrService, requireRole, requireActiveCompany } from '../middleware/authUser.js'
 import { createInvoice, updateInvoice } from '../validators/invoice.js'
 import { crudRouter } from '../lib/crudRouter.js'
 import { createClient, updateClient } from '../validators/client.js'
@@ -38,16 +41,23 @@ api.use(health)            // публично
 
 api.use(authenticate)      // читает JWT/сервисный токен → req.auth
 api.use('/auth', auth)     // /auth/login публичен; /auth/me под входом внутри
+api.use('/public', publicRoutes) // публичная витрина (цены) для лендинга — без входа
 
 api.use(requireUserOrService) // всё ниже — только под входом (или сервисным токеном n8n)
+api.use(requireActiveCompany) // биллинг: истёкший период доступа компании → 403
 
 // ИИ-ассистент саппорта — любой залогиненный сотрудник (НЕ сервисный токен n8n).
 api.use('/assistant', requireUser, assistant)
 
+// Журнал посещений: heartbeat активной сессии (любой залогиненный сотрудник).
+api.use('/sessions', requireUser, sessionsRoutes)
+
 // Управление пользователями и токенами — директор/суперюзер
 api.use('/users', requireRole('director', 'superuser'), usersRoutes)
-// Компании-клиенты SaaS — только суперпользователь
+// Компании-клиенты SaaS + биллинг — только суперпользователь
 api.use('/companies', requireRole('superuser'), companiesRoutes)
+// Цены/скидки подписки — только суперпользователь
+api.use('/pricing', requireRole('superuser'), pricingRoutes)
 api.use('/email-outbox', requireRole('director', 'superuser'), emailOutbox)
 api.use('/settings', requireRole('manager', 'director', 'superuser'), settings)
 api.use('/distribution', requireRole('manager', 'director', 'superuser'), distribution)
