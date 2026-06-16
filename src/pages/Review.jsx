@@ -16,7 +16,7 @@ import { isCash, cashLabel, autoRouteOrder, fmtDate } from '@/lib/orderUi'
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
 function tomorrow() { return shiftYmd(ymd(new Date()), 1) }
-function clientLegal(o) { return o.client_legal_name || o.client_nickname || '—' }
+function clientLegal(o) { return o.client_legal_name || '—' }
 function objectName(o) { return o.object_name || `Объект #${o.object_id}` }
 function addressLine(o) {
   return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')

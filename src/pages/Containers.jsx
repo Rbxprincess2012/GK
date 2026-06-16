@@ -187,7 +187,7 @@ export default function Containers() {
             <label className="a-field"><span>Объект</span>
               <select className="a-select" value={cForm.object_id} onChange={(e) => setCForm({ ...cForm, object_id: e.target.value })}>
                 <option value="">— выберите —</option>
-                {objects.map((o) => <option key={o.id} value={o.id}>{objName(o)} · {o.client_nickname || o.client_legal_name}</option>)}
+                {objects.map((o) => <option key={o.id} value={o.id}>{objName(o)} · {o.client_legal_name}</option>)}
               </select>
             </label>
           )}

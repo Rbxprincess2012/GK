@@ -7,7 +7,7 @@ import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { DateField } from '@/components/admin/DateField'
 
 const ACTIONS = [['place', 'Установить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
-const clientLabel = (c) => c.nickname || c.legal_name || `Клиент #${c.id}`
+const clientLabel = (c) => c.legal_name || `Клиент #${c.id}`
 // Лейбл объекта: неформальное имя без дубля заказчика. Объекты часто названы
 // «<Заказчик> · <Объект>» — заказчик уже выбран рядом, поэтому срезаем его префикс
 // (а если имя ровно = заказчику — показываем адрес).
@@ -70,7 +70,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const objects = useMemo(() => objectsByClient[Number(clientId)] || [], [objectsByClient, clientId])
   const persons = trustedByClient[Number(clientId)] || []
   const selectedClient = clients.find((x) => x.id === Number(clientId))
-  const clientNames = [selectedClient?.legal_name, selectedClient?.nickname]
+  const clientNames = [selectedClient?.legal_name]
   const currentObject = objects.find((o) => o.id === Number(objectId))
   const sections = currentObject?.sections || []
 

@@ -77,9 +77,9 @@ export function plural(n, one, few, many) {
   return many
 }
 
-export function clientName(o) { return o?.client_nickname || o?.client_legal_name || '—' }
-// Заказчик — юрлицо (приоритет в карточках водителя ниже улицы/объекта).
-export function clientLegal(o) { return o?.client_legal_name || o?.client_nickname || '—' }
+// Заказчик — всегда официальное юр. наименование (неофициальный ник клиента выпилен из проекта).
+export function clientName(o) { return o?.client_legal_name || '—' }
+export function clientLegal(o) { return o?.client_legal_name || '—' }
 // Улица + дом — главное для водителя, выводим первым/сверху. Фолбэк на address_raw
 // (свободный адрес из DaData для объектов вне справочника улиц Краснодара).
 export function streetLine(o) {

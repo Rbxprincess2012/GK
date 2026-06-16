@@ -29,7 +29,7 @@ const splitName = (name) => {
 
 // Буква для «аватара» компании — из имени без правовой формы и кавычек.
 function clientInitial(c) {
-  const base = (c.nickname || c.legal_name || '')
+  const base = (c.legal_name || '')
     .replace(/^(ООО|ИП|АО|ЗАО|ПАО|ОАО)\s*/i, '')
     .replace(/[«»"'`]/g, '')
     .trim()
@@ -37,7 +37,7 @@ function clientInitial(c) {
 }
 
 const emptyClient = {
-  type: 'ooo', legal_name: '', nickname: '', inn: '', kpp: '', ogrn: '',
+  type: 'ooo', legal_name: '', inn: '', kpp: '', ogrn: '',
   legal_address: '', bank_name: '', bank_account: '', bik: '', corr_account: '',
   email: '', phone: '', default_payment_method: 'cashless',
   group_id: '', chats: {},
@@ -165,7 +165,7 @@ export default function Clients() {
     }
   }
   const delClient = async (c) => {
-    if (!(await toast.confirm(`Удалить клиента «${c.nickname || c.legal_name}»? Удалить можно только клиента без объектов и заявок.`))) return
+    if (!(await toast.confirm(`Удалить клиента «${c.legal_name}»? Удалить можно только клиента без объектов и заявок.`))) return
     try { await removeClient(c.id); toast.success('Удалено') }
     catch { toast.error('Нельзя удалить: у клиента есть объекты или заявки — сначала удалите их') }
   }
@@ -258,7 +258,6 @@ export default function Clients() {
       setForm((f) => ({
         ...f,
         legal_name: data.legal_name || f.legal_name,
-        nickname: f.nickname || data.short_name || data.company_name || '',
         inn: data.inn || f.inn,
         kpp: data.kpp || f.kpp,
         ogrn: data.ogrn || f.ogrn,
@@ -316,7 +315,7 @@ export default function Clients() {
 
   const q = search.trim().toLowerCase()
   const filtered = clients.filter((c) =>
-    !q || c.legal_name?.toLowerCase().includes(q) || c.nickname?.toLowerCase().includes(q) || c.inn?.includes(q)
+    !q || c.legal_name?.toLowerCase().includes(q) || c.inn?.includes(q)
   )
 
   const grouped = groups.map((g) => ({ group: g, items: filtered.filter((c) => c.group_id === g.id) }))
@@ -455,7 +454,7 @@ export default function Clients() {
       {/* ── Модалка клиента ── */}
       {editing && (
         <Modal
-          title={editing.id ? (editing.nickname || editing.legal_name) : 'Новый клиент'}
+          title={editing.id ? editing.legal_name : 'Новый клиент'}
           onClose={closeClient}
           width={560}
           footer={<>
@@ -489,9 +488,6 @@ export default function Clients() {
           </div>
           <label className="a-field"><span>Наименование юридического лица <b style={{ color: '#ff4655' }}>*</b></span>
             <input className="a-input" value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} placeholder="ООО «Пример»" />
-          </label>
-          <label className="a-field"><span>Неофициальное имя (ник)</span>
-            <input className="a-input" value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="Как называют в обиходе" />
           </label>
           <div className="a-field-row" style={{ alignItems: 'flex-end' }}>
             <label className="a-field"><span>ИНН <b style={{ color: '#ff4655' }}>*</b></span>
@@ -863,7 +859,7 @@ function ClientPersonsModal({ client, onClose }) {
   const pfMaxStatus = persons.find((x) => x.id === pf.id)?.max_status
 
   return (
-    <Modal title={`Доверенные лица — ${client.nickname || client.legal_name}`} onClose={onClose} width={520}>
+    <Modal title={`Доверенные лица — ${client.legal_name}`} onClose={onClose} width={520}>
       <div className="a-persons-head">
         <div className="a-muted" style={{ fontSize: '0.8rem' }}>
           Общий список лиц клиента. Доступны на всех его объектах. Если клиента позже добавить в группу компаний, лицами управляют на уровне ГК.

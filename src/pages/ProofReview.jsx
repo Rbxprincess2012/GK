@@ -88,7 +88,7 @@ export default function ProofReview() {
           <div className="a-proof-date">{dateLabel(d)}</div>
           {list.map((o) => {
             const obj = objectLine(o)
-            const nick = (o.client_nickname || '').trim()
+            const nick = (o.client_legal_name || '').trim()
             const showClient = !(nick && obj.toLowerCase().includes(nick.toLowerCase()))
             return (
               <div key={o.id} className={'a-card a-proof-row' + (isActive(o) ? '' : ' a-proof-row--closed')}

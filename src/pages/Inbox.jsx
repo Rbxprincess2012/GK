@@ -41,7 +41,7 @@ export default function Inbox() {
                 <td title={d.source_kind === 'voice' ? 'Голосовое' : 'Текст'}>
                   {d.source_kind === 'voice' ? <Mic size={15} className="a-muted" /> : <FileText size={15} className="a-muted" />}
                 </td>
-                <td>{d.client_nickname || d.client_legal_name || <span className="a-muted">—</span>}</td>
+                <td>{d.client_legal_name || <span className="a-muted">—</span>}</td>
                 <td className="a-muted">{d.object_name || d.object_hint || '—'}</td>
                 <td className="a-muted">{d.desired_date?.slice(0, 10) || '—'}{d.desired_time ? ` ${d.desired_time.slice(0, 5)}` : ''}</td>
                 <td style={{ maxWidth: 360 }}>
@@ -157,7 +157,7 @@ function ReviewDraft({ draft, objects, onClose, onDone }) {
             <select className="a-select" value={form.object_id} onChange={(e) => setForm({ ...form, object_id: e.target.value })}>
               <option value="">— выберите объект —</option>
               {clientObjects.map((o) => (
-                <option key={o.id} value={o.id}>{(o.client_nickname || o.client_legal_name)} · {objName(o)}</option>
+                <option key={o.id} value={o.id}>{o.client_legal_name} · {objName(o)}</option>
               ))}
             </select>
           </label>

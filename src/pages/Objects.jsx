@@ -4,7 +4,7 @@ import { useObjectsStore } from '@/store/objectsStore'
 import { useClientsStore } from '@/store/clientsStore'
 import { objectAddress, objectLabel as objLabel } from '@/lib/address'
 
-function clientName(o) { return o.client_nickname || o.client_legal_name || `Клиент #${o.client_id}` }
+function clientName(o) { return o.client_legal_name || `Клиент #${o.client_id}` }
 
 export default function Objects() {
   const { objects, fetchAll, loading } = useObjectsStore()

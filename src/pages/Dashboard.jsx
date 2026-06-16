@@ -10,7 +10,7 @@ const STATUS = {
   done: ['Выполнена', 'green'], closed: ['Закрыта', 'purple'], cancelled: ['Отменена', 'red'],
 }
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-function clientLegal(o) { return o.client_legal_name || o.client_nickname || '—' }
+function clientLegal(o) { return o.client_legal_name || '—' }
 function streetLine(o) {
   return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.address_raw || o.city || '—'
 }
