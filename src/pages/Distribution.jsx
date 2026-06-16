@@ -11,7 +11,7 @@ import { OrderModal } from '@/components/admin/OrderModal'
 import { DriverLoad } from '@/components/admin/DriverLoad'
 import { ContainerJob } from '@/components/admin/ContainerJob'
 import { DateField } from '@/components/admin/DateField'
-import { isCash, cashLabel, fmtDate } from '@/lib/orderUi'
+import { isCash, cashLabel, fmtDate, isBulk, bulkLabel } from '@/lib/orderUi'
 
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + n)) }
@@ -51,7 +51,7 @@ function OrderCard({ o, onOpen }) {
     <div className="a-orderrow">
       <span className="a-orderrow-num">#{o.number}</span>
       <span className="a-orderrow-street" title={streetLine(o)}>
-        {o.service_type === 'grapple' && <span style={{ marginRight: 6 }} title="Грейфер — вывоз навалом">🚛</span>}
+        {isBulk(o) && <span style={{ marginRight: 6 }} title={`${bulkLabel(o)} — вывоз навалом`}>🚛</span>}
         {isCash(o) && <span className="a-cash" style={{ marginRight: 6 }} title="Наличные">{cashLabel(o)}</span>}
         {streetLine(o)}
       </span>
@@ -253,7 +253,7 @@ export default function Distribution() {
             {suggestion.unassigned?.length > 0 && (
               <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 8, color: '#e0a14b' }}>
                 ⚠ Некому распределить ({suggestion.unassigned.length}): нет машины нужного типа на смене.{' '}
-                {suggestion.unassigned.map((u) => `#${u.number}${u.reason === 'no_grapple_vehicle' ? ' (грейфер)' : ' (контейнеровоз)'}`).join(', ')}
+                {suggestion.unassigned.map((u) => `#${u.number}`).join(', ')} — нет машины нужного типа или размера.
               </div>
             )}
             <div className="a-table-wrap" style={{ marginTop: 10 }}>
@@ -369,8 +369,8 @@ export default function Distribution() {
                       <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(o)} title="Открыть заявку — все данные">
                         <td style={{ fontWeight: 700 }}>#{o.number}</td>
                         <td style={{ fontWeight: 600 }}>{streetLine(o)}</td>
-                        <td className="a-muted">{objectLine(o)}{o.service_type === 'grapple'
-                          ? <div>🚛 Грейфер{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
+                        <td className="a-muted">{objectLine(o)}{isBulk(o)
+                          ? <div>🚛 {bulkLabel(o)}{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
                           : <ContainerJob o={o} />}</td>
                         <td className="a-muted">{clientLegal(o)}</td>
                         <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>

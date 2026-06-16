@@ -12,9 +12,14 @@ export const STATUS = {
 export const ACTION = { place: 'Установить', replace: 'Заменить', haul: 'Забрать' }
 export const ACTIONS = ['place', 'replace', 'haul']
 
-// Тип услуги заявки: контейнеры (позиции place/replace/haul) или грейфер (вывоз навалом).
-export const SERVICE = { container: 'Контейнеры', grapple: 'Грейфер' }
-export const isGrapple = (o) => o?.service_type === 'grapple'
+// Тип услуги заявки = slug типа машины. «Навальный» вывоз — любой тип ≠ container
+// (грейфер/газель/самосвал/кастом): без контейнерных позиций, объём = число ходок.
+const BULK_LABEL = { grapple: 'Грейфер', gazelle: 'Газель', samosval: 'Самосвал' }
+export const isBulk = (o) => !!o?.service_type && o.service_type !== 'container'
+// Совместимость: isGrapple оставлен как алиас isBulk (старые вызовы → любой навальный тип).
+export const isGrapple = isBulk
+// Подпись навального типа для UI (по slug). Неизвестный slug → «Вывоз навалом».
+export const bulkLabel = (o) => BULK_LABEL[o?.service_type] || 'Вывоз навалом'
 
 // Что водитель должен сделать с контейнерами на объекте — по правилам машины:
 // за рейс ≤2 пустых контейнера ТУДА (вставляются друг в друга) и ≤1 полный ОБРАТНО.

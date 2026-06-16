@@ -13,7 +13,7 @@ import { SectionReview } from '@/components/admin/SectionReview'
 import { ReassignModal } from '@/components/admin/ReassignModal'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { DateField } from '@/components/admin/DateField'
-import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, cashLabel, fmtDesiredTime, yandexMapsUrl, isGrapple } from '@/lib/orderUi'
+import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, cashLabel, fmtDesiredTime, yandexMapsUrl, isGrapple, bulkLabel } from '@/lib/orderUi'
 
 // Цвет текста статуса в шапке (тон бейджа, но без плашки — меньше визуального шума).
 // Категориальные тона статусов. Ключ 'purple' исторический — значение уведено
@@ -143,7 +143,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       desired_time: o.desired_time?.slice(0, 5) || '',
       note: o.note || '',
       grapple_runs: o.grapple_runs ?? 1,
-      items: (o.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null, container_numbers: it.container_numbers ?? '' })),
+      items: (o.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null, container_type_id: it.container_type_id ?? null, container_numbers: it.container_numbers ?? '' })),
     })
     setMode('edit')
   }
@@ -153,6 +153,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     const items = (editForm.items || [])
       .map((it) => ({
         action: it.action, quantity: Math.max(1, Number(it.quantity) || 1), section_id: it.section_id ? Number(it.section_id) : null,
+        container_type_id: (it.action === 'place' || it.action === 'replace') ? (it.container_type_id ?? null) : null,
         container_numbers: (it.action === 'replace' || it.action === 'haul') ? (it.container_numbers?.trim() || null) : null,
       }))
     try {
@@ -238,7 +239,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             {isGrapple(o) && (
               <div className="a-frow">
                 <span className="a-frl">Услуга</span>
-                <span className="a-frv">🚛 Грейфер — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</span>
+                <span className="a-frv">🚛 {bulkLabel(o)} — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</span>
               </div>
             )}
 
@@ -298,7 +299,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
                 </div>
               )}
               {isGrapple(o)
-                ? <div className="a-frv">🚛 Грейфер — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
+                ? <div className="a-frv">🚛 {bulkLabel(o)} — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
                 : <ContainerJob o={o} />}
             </>
           )}
@@ -422,7 +423,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
           )}
           {isGrapple(o) ? (
             <>
-              <div className="a-section-title">Грейфер — вывоз навалом</div>
+              <div className="a-section-title">{bulkLabel(o)} — вывоз навалом</div>
               <label className="a-field" style={{ maxWidth: 200 }}><span>Число ходок</span>
                 <input className="a-input" type="number" min={1} value={editForm.grapple_runs}
                   onChange={(e) => setEditForm({ ...editForm, grapple_runs: e.target.value })} />

@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useClientsStore } from '@/store/clientsStore'
 import { useOrdersStore } from '@/store/ordersStore'
+import { useContainersStore } from '@/store/containersStore'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { DateField } from '@/components/admin/DateField'
+import api from '@/lib/api'
 
 const ACTIONS = [['place', 'Установить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
+const needsSize = (action) => action === 'place' || action === 'replace'
 const clientLabel = (c) => c.legal_name || `Клиент #${c.id}`
 // Лейбл объекта: неформальное имя без дубля заказчика. Объекты часто названы
 // «<Заказчик> · <Объект>» — заказчик уже выбран рядом, поэтому срезаем его префикс
@@ -27,7 +30,7 @@ const objLabel = (o, clientNames = []) => {
   return inf || addr || `Объект №${o.id}`
 }
 
-const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_numbers: '' })
+const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_type_id: '', container_numbers: '' })
 // Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
 const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 
@@ -35,12 +38,14 @@ const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 export function CreateOrderModal({ onClose, onCreated }) {
   const { clients, fetchClients, objectsByClient, fetchObjects, trustedByClient, fetchTrusted } = useClientsStore()
   const { addOrder } = useOrdersStore()
+  const { types: contTypes, fetchTypes } = useContainersStore()
   const toast = useToast()
 
   const [clientId, setClientId] = useState('')
   const [objectId, setObjectId] = useState('')
-  const [service, setService] = useState('container') // тип услуги: контейнеры | грейфер
-  const [grappleRuns, setGrappleRuns] = useState(1)   // число ходок грейфера
+  const [service, setService] = useState('container') // тип услуги = slug типа машины
+  const [vtypes, setVtypes] = useState([])            // справочник типов машин
+  const [grappleRuns, setGrappleRuns] = useState(1)   // число ходок (навальный вывоз)
   const [items, setItems] = useState([newItem()])
   const [desiredDate, setDesiredDate] = useState('')
   const [desiredTime, setDesiredTime] = useState('')
@@ -50,7 +55,8 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchClients() }, [fetchClients])
+  useEffect(() => { fetchClients(); fetchTypes() }, [fetchClients, fetchTypes])
+  useEffect(() => { api.get('/vehicle-types', { params: { active: 1 } }).then(({ data }) => setVtypes(data)).catch(() => {}) }, [])
 
   // Смена клиента → грузим его объекты и доверенных лиц, сбрасываем зависимые поля.
   const changeClient = (id) => {
@@ -98,17 +104,18 @@ export function CreateOrderModal({ onClose, onCreated }) {
 
   const canSave = useMemo(() => Number(objectId) > 0 && !saving, [objectId, saving])
 
-  const isGrapple = service === 'grapple'
+  // Навальный вывоз = любой тип ≠ 'container' (грейфер/газель/самосвал): без контейнеров.
+  const isBulk = service !== 'container'
 
   const save = async () => {
     if (!Number(objectId)) { toast.error('Выберите объект'); return }
-    // Грейфер — вывоз навалом: контейнерные позиции не передаём, объём = число ходок.
-    const payloadItems = isGrapple ? [] : items
+    const payloadItems = isBulk ? [] : items
       .filter((it) => Number(it.quantity) > 0)
       .map((it) => ({
         action: it.action,
         section_id: it.section_id === '' ? null : Number(it.section_id),
         quantity: Number(it.quantity),
+        container_type_id: needsSize(it.action) && it.container_type_id !== '' ? Number(it.container_type_id) : null,
         container_numbers: needsContainerNo(it.action) ? (it.container_numbers?.trim() || null) : null,
       }))
     const payload = {
@@ -119,9 +126,9 @@ export function CreateOrderModal({ onClose, onCreated }) {
       amount: payment === 'cash' && amount !== '' ? Number(amount) : null,
       trusted_person_id: trustedId ? Number(trustedId) : null,
       note: note.trim() || undefined,
-      ...(isGrapple
-        ? { service_type: 'grapple', grapple_runs: Math.max(1, Number(grappleRuns) || 1) }
-        : (payloadItems.length ? { items: payloadItems } : {})),
+      ...(isBulk
+        ? { service_type: service, grapple_runs: Math.max(1, Number(grappleRuns) || 1) }
+        : { service_type: 'container', ...(payloadItems.length ? { items: payloadItems } : {}) }),
     }
     setSaving(true)
     try {
@@ -158,25 +165,25 @@ export function CreateOrderModal({ onClose, onCreated }) {
         </label>
       </div>
 
-      <div className="a-section-title">Тип услуги</div>
+      <div className="a-section-title">Тип услуги (тип машины)</div>
       <div className="a-field-row">
         <label className="a-field"><span>Услуга</span>
           <select className="a-select" value={service} onChange={(e) => setService(e.target.value)}>
-            <option value="container">Контейнеры</option>
-            <option value="grapple">Грейфер (вывоз навалом)</option>
+            {vtypes.length === 0 && <option value="container">Контейнеры</option>}
+            {vtypes.map((t) => <option key={t.slug} value={t.slug}>{t.carries_containers ? t.name : `${t.name} (вывоз навалом)`}</option>)}
           </select>
         </label>
-        {isGrapple && (
+        {isBulk && (
           <label className="a-field"><span>Число ходок</span>
             <input className="a-input" type="number" min={1} value={grappleRuns}
-              onChange={(e) => setGrappleRuns(e.target.value)} title="Сколько кузовов/ходок грейфера" />
+              onChange={(e) => setGrappleRuns(e.target.value)} title="Сколько кузовов/ходок" />
           </label>
         )}
       </div>
 
-      {isGrapple ? (
+      {isBulk ? (
         <div className="a-muted" style={{ fontSize: '0.82rem' }}>
-          🚛 Грейфер грузит мусор навалом ковшом — контейнеры не нужны. Детали укажите в комментарии.
+          🚛 Вывоз навалом — контейнеры не нужны. Детали укажите в комментарии.
         </div>
       ) : (
       <>
@@ -193,6 +200,16 @@ export function CreateOrderModal({ onClose, onCreated }) {
               <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
+          {needsSize(it.action) && (
+            <label className="a-field" style={{ minWidth: 150 }}><span>Размер контейнера</span>
+              <select className="a-select" value={it.container_type_id}
+                onChange={(e) => setItem(i, { container_type_id: e.target.value })}
+                title="По размеру подбирается машина">
+                <option value="">— размер —</option>
+                {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.name}{ct.volume ? ` (${ct.volume} м³)` : ''}</option>)}
               </select>
             </label>
           )}

@@ -1,14 +1,19 @@
+import { useEffect } from 'react'
 import { ACTION, ACTIONS } from '@/lib/orderUi'
 import { ContainerJob } from '@/components/admin/ContainerJob'
+import { useContainersStore } from '@/store/containersStore'
 
 // Редактор позиций заявки: что сделать с контейнерами на объекте.
-// Каждая строка = вид работы (Поставить/Заменить/Забрать) + (участок, если есть) + количество.
-// Тип контейнера и класс отходов временно убраны («на заглушке») — нигде не показываем.
-// value: [{ action, quantity, section_id? }]; onChange(next). sections — участки объекта.
+// Каждая строка = вид работы (Поставить/Заменить/Забрать) + (участок) + размер контейнера + количество.
+// value: [{ action, quantity, section_id?, container_type_id? }]; onChange(next).
 // Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
+// Размер контейнера значим, когда привозим контейнер (Поставить/Заменить) — по нему подбирается машина.
 const needsContainerNo = (action) => action === 'replace' || action === 'haul'
+const needsSize = (action) => action === 'place' || action === 'replace'
 
 export function ItemsEditor({ items, onChange, sections = [] }) {
+  const { types: contTypes, fetchTypes } = useContainersStore()
+  useEffect(() => { if (!contTypes.length) fetchTypes() }, [contTypes.length, fetchTypes])
   const hasSections = sections.length > 0
   const set = (i, patch) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
   const add = () => onChange([...items, { action: 'haul', quantity: 1, section_id: null, container_numbers: '' }])
@@ -34,6 +39,14 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
             <select className="a-select" value={it.section_id ?? ''} onChange={(e) => set(i, { section_id: e.target.value ? Number(e.target.value) : null })} title="Участок объекта">
               <option value="">весь объект</option>
               {sections.map((s) => <option key={s.id} value={s.id}>📍 {s.name}</option>)}
+            </select>
+          )}
+          {needsSize(it.action) && (
+            <select className="a-select" style={{ width: 130 }} value={it.container_type_id ?? ''}
+              onChange={(e) => set(i, { container_type_id: e.target.value ? Number(e.target.value) : null })}
+              title="Размер контейнера — по нему подбирается машина">
+              <option value="">размер…</option>
+              {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.name}{ct.volume ? ` (${ct.volume} м³)` : ''}</option>)}
             </select>
           )}
           {needsContainerNo(it.action) && (
