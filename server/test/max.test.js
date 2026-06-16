@@ -8,6 +8,7 @@ import { Bot, InlineKeyboard } from '../src/lib/maxgram.js'
 import { putFromMax } from '../src/services/mediaStore.js'
 import { sendReportToClient } from '../src/services/clientDelivery.js'
 import { bindByCode as driverBind, resolveDriverByChat, issueLink } from '../src/services/driverAuth.js'
+import { setSetting } from '../src/services/settings.js'
 import { issueCode } from '../src/services/channels.js'
 import { issuePersonInvite, bindPersonByCode } from '../src/services/trustedPersonChannels.js'
 import { issueInvite, bindByCode as recipBind } from '../src/services/clientRecipients.js'
@@ -108,6 +109,7 @@ describe('channel-aware онбординг', () => {
     await driverBind(code, 12345, 'max')
     expect((await resolveDriverByChat(12345, 'max'))?.id).toBe(d.id)
     expect(await resolveDriverByChat(12345, 'telegram')).toBeNull() // другой канал — не видит
+    await setSetting('max_driver_bot_username', { username: 'putevo_max_driver_bot' })
     expect(await issueLink(d.id, 'max')).toMatchObject({ url: expect.stringContaining('https://max.ru/') })
   })
 
