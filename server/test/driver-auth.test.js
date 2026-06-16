@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
 import { issueLink, bindByCode, resolveDriverByChat, unbind } from '../src/services/driverAuth.js'
+import { setSetting } from '../src/services/settings.js'
 
 beforeEach(resetDb)
 afterAll(() => db.destroy())
@@ -12,7 +13,8 @@ async function mkDriver(name = 'Иванов') {
 }
 
 describe('driverAuth — привязка по ссылке', () => {
-  it('issueLink даёт 6-значный код и ссылку с ним', async () => {
+  it('issueLink даёт 6-значный код и ссылку с ним (если бот настроен)', async () => {
+    await setSetting('driver_bot_username', { username: 'putevo_driver_bot' })
     const d = await mkDriver()
     const { code, url } = await issueLink(d.id)
     expect(code).toMatch(/^\d{6}$/)

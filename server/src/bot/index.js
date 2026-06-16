@@ -444,6 +444,13 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     // sr:<subId>:<orderId>:<code> — причина выбрана
     if (data.startsWith('sr:')) {
       const [, subId, orderId, code] = data.split(':')
+      // «Другое» — даём водителю описать причину своими словами (одним сообщением),
+      // затем предложим приложить фото. Текст станет комментарием к участку (его увидит менеджер).
+      if (code === 'other') {
+        ctx.session.step = 'fail_reason'
+        ctx.session.data = { subtaskId: Number(subId), orderId: Number(orderId) }
+        return ctx.reply('Опишите, что произошло — одним сообщением (фото можно добавить следующим шагом):')
+      }
       try {
         await markSubtask(Number(subId), { status: 'failed', reason_code: code, comment: reasonLabel(code), driverId })
       } catch {
@@ -497,6 +504,25 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
       try { await finishShift(driverId, { date: today(), odometerEnd: km }) }
       catch { return ctx.reply('Вы не на смене.') }
       ctx.session.step = null; await ctx.reply('🏁 Смена завершена. Хорошего отдыха!'); return sendMenu(ctx)
+    }
+    // «Другое»: первое сообщение — текст причины (комментарий участка); затем переходим к пруфу.
+    if (step === 'fail_reason') {
+      const d = ctx.session.data || {}
+      const comment = text || '✍️ Другое'
+      try {
+        await markSubtask(Number(d.subtaskId), { status: 'failed', reason_code: 'other', comment, driverId })
+      } catch {
+        ctx.session.step = null
+        return ctx.reply('Эта заявка уже не за вами или закрыта — отметить нельзя.')
+      }
+      await ctx.reply('Отмечено: не выполнено. Причина записана.')
+      await startProof(ctx, { subtaskId: Number(d.subtaskId), orderId: Number(d.orderId), mode: 'failed' })
+      // Если вместо текста пришло фото/видео/голос — сразу примем это как первый пруф.
+      if (!text) {
+        const ok = await ingestProof(ctx.message, { orderId: d.orderId, subtaskId: d.subtaskId, driverId })
+        if (ok) { const dd = ctx.session.data; dd.count = 1; if (ctx.message.photo) dd.photoCount = 1; ctx.session.data = dd }
+      }
+      return
     }
     if (step === 'proof') {
       const d = ctx.session.data || {}

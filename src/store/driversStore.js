@@ -40,9 +40,9 @@ export const useDriversStore = create((set, get) => ({
     set((s) => ({ drivers: s.drivers.filter((d) => d.id !== id) }))
   },
 
-  // Личная ссылка привязки бота: { code, url }. Менеджер отправляет водителю.
-  botLink: async (id) => {
-    const { data } = await api.post(`/drivers/${id}/bot-link`)
+  // Личная ссылка привязки бота: { code, url }. channel — 'telegram' (по умолч.) или 'max'.
+  botLink: async (id, channel = 'telegram') => {
+    const { data } = await api.post(`/drivers/${id}/bot-link`, null, { params: { channel } })
     return data
   },
 

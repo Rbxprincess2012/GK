@@ -33,7 +33,10 @@ r.post('/clients/:id/recipients/group', async (req, res, next) => {
     const channel = channelOf(req)
     const row = await issueInvite(Number(req.params.id), 'group', channel)
     const u = await usernameFor(channel)
-    res.status(201).json({ ...row, bot_username: u, bind_command: `/bind ${row.verify_code}` })
+    // В группе бот с включённым privacy-mode получает команду только с явным @username.
+    // Поэтому отдаём «/bind@bot <code>» — иначе /bind в группе «не подхватывается».
+    const bind_command = u ? `/bind@${u} ${row.verify_code}` : `/bind ${row.verify_code}`
+    res.status(201).json({ ...row, bot_username: u, bind_command })
   } catch (e) { next(e) }
 })
 

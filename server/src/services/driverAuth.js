@@ -6,12 +6,14 @@ import { getDriverBotUsername, getMaxDriverBotUsername } from './botConfig.js'
 // MAX: max.ru/<bot>?start=<code>. Канал хранится в channels.type ('telegram'|'max').
 export async function issueLink(driverId, channel = 'telegram') {
   const { code, expires_at } = await issueCode({ owner_kind: 'driver', owner_id: driverId, type: channel })
+  // Без username бота не фабрикуем битую ссылку (раньше падали в 'driver_bot' → «бот не находит»).
+  // url=null → UI покажет «бот не настроен»; код можно ввести вручную как фолбэк.
   if (channel === 'max') {
-    const username = (await getMaxDriverBotUsername()) || 'driver_bot'
-    return { code, url: `https://max.ru/${username}?start=${code}`, expires_at }
+    const username = await getMaxDriverBotUsername()
+    return { code, url: username ? `https://max.ru/${username}?start=${code}` : null, expires_at }
   }
-  const username = (await getDriverBotUsername()) || 'driver_bot'
-  return { code, url: `https://t.me/${username}?start=${code}`, expires_at }
+  const username = await getDriverBotUsername()
+  return { code, url: username ? `https://t.me/${username}?start=${code}` : null, expires_at }
 }
 
 // Бот получил deep-link payload/<code> от chat_id → привязка (идемпотентна по unique(type,external_id)).

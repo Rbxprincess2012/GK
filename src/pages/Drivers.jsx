@@ -16,6 +16,7 @@ export default function Drivers() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(empty)
   const [link, setLink] = useState(null)
+  const [linkChannel, setLinkChannel] = useState('telegram') // канал привязки: telegram | max
 
   useEffect(() => { fetchDrivers(); fetchVehicles() }, [fetchDrivers, fetchVehicles])
 
@@ -28,9 +29,13 @@ export default function Drivers() {
   }
   const close = () => setEditing(null)
 
-  const doLink = async () => {
-    try { const r = await botLink(editing.id); setLink(r.url) }
-    catch { toast.error('Не удалось сгенерировать ссылку') }
+  const doLink = async (channel = linkChannel) => {
+    setLinkChannel(channel)
+    try {
+      const r = await botLink(editing.id, channel)
+      if (!r.url) { setLink(null); toast.error(channel === 'max' ? 'MAX-бот водителя не настроен в Настройках' : 'Бот не настроен'); return }
+      setLink(r.url)
+    } catch { toast.error('Не удалось сгенерировать ссылку') }
   }
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(link); toast.success('Ссылка скопирована') }
@@ -134,8 +139,18 @@ export default function Drivers() {
             <>
               <div className="a-section-title">Доступ в бот</div>
               <label className="a-field"><span>Личная ссылка привязки (отправьте водителю)</span>
+                {/* Канал привязки: Telegram или MAX (раньше был только Telegram — MAX «не находился»). */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                  {['telegram', 'max'].map((ch) => (
+                    <button key={ch} type="button"
+                      className={`a-btn a-btn--sm ${linkChannel === ch ? 'a-btn--primary' : 'a-btn--ghost'}`}
+                      onClick={() => { setLinkChannel(ch); setLink(null) }}>
+                      {ch === 'max' ? 'MAX' : 'Telegram'}
+                    </button>
+                  ))}
+                </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button type="button" className="a-btn a-btn--ghost" onClick={doLink}>{link ? 'Обновить' : 'Сгенерировать ссылку'}</button>
+                  <button type="button" className="a-btn a-btn--ghost" onClick={() => doLink(linkChannel)}>{link ? 'Обновить' : 'Сгенерировать ссылку'}</button>
                   {link && <input className="a-input" readOnly value={link} onFocus={(e) => e.target.select()} style={{ flex: 1 }} />}
                   {link && <button type="button" className="a-btn a-btn--primary" onClick={copyLink}>Копировать</button>}
                 </div>
