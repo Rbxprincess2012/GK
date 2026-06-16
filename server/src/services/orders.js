@@ -219,13 +219,24 @@ export async function sendToReview({ shift_date, shift_type }) {
 }
 
 // «Отправить в Работу»: проверенные заявки дня (assigned/review) → in_progress.
-// Этап 2: в этот момент уйдут уведомления водителям и клиентам (пока не реализовано).
+// В этот момент кладём в outbox событие order_in_progress на каждую заявку — пайплайн
+// доставки (n8n) рассылает задание водителю и уведомление получателям клиента. Раньше
+// событие не создавалось вовсе → «уведомления при отправке в работу не уходили».
 export async function sendToWork({ shift_date, shift_type }) {
-  const rows = await db('orders')
-    .where({ shift_date, shift_type })
-    .whereIn('status', ['assigned', 'review'])
-    .update({ status: 'in_progress' }).returning('id')
-  return { moved: rows.length }
+  return db.transaction(async (trx) => {
+    const rows = await trx('orders')
+      .where({ shift_date, shift_type })
+      .whereIn('status', ['assigned', 'review'])
+      .update({ status: 'in_progress' }).returning(['id', 'assigned_driver_id'])
+    for (const r of rows) {
+      await enqueue(trx, {
+        event_type: 'order_in_progress', order_id: r.id,
+        payload: { driver_id: r.assigned_driver_id, shift_date, shift_type },
+        event_key: `in_progress:${r.id}:${shift_date}:${shift_type}`,
+      })
+    }
+    return { moved: rows.length }
+  })
 }
 
 // Задать порядок исполнения заявок (приоритет внутри водителя): seq = позиция в списке.

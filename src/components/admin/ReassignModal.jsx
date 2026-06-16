@@ -39,7 +39,9 @@ export function ReassignModal({ subtask, onClose, onDone }) {
         },
         desired_time: desiredTime,
       })
-      toast.success('Участок переназначен — в работе у водителя')
+      // Заявка получает статус «назначена» → ищите её в разделе «На проверке» на эту дату
+      // (а не в «Распределении»/«Новых»). Оттуда «Отправить в работу» — уйдёт водителю.
+      toast.success(`Переназначено → заявка${res?.number ? ` №${res.number}` : ''} в «На проверке» на ${shiftDate}`)
       onDone(res)
     } catch (e) {
       toast.error(e?.response?.data?.error === 'driver_not_available'
