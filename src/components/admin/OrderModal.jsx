@@ -13,7 +13,7 @@ import { SectionReview } from '@/components/admin/SectionReview'
 import { ReassignModal } from '@/components/admin/ReassignModal'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { DateField } from '@/components/admin/DateField'
-import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, cashLabel, fmtDesiredTime, yandexMapsUrl } from '@/lib/orderUi'
+import { STATUS, clientLegal, streetLine, objectLine, ymd, isCash, cashLabel, fmtDesiredTime, yandexMapsUrl, isGrapple } from '@/lib/orderUi'
 
 // Цвет текста статуса в шапке (тон бейджа, но без плашки — меньше визуального шума).
 // Категориальные тона статусов. Ключ 'purple' исторический — значение уведено
@@ -142,12 +142,14 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       desired_date: o.desired_date?.slice(0, 10) || '',
       desired_time: o.desired_time?.slice(0, 5) || '',
       note: o.note || '',
+      grapple_runs: o.grapple_runs ?? 1,
       items: (o.items || []).map((it) => ({ action: it.action, quantity: it.quantity ?? 1, section_id: it.section_id ?? null, container_numbers: it.container_numbers ?? '' })),
     })
     setMode('edit')
   }
 
   const doSave = async () => {
+    const grapple = isGrapple(o)
     const items = (editForm.items || [])
       .map((it) => ({
         action: it.action, quantity: Math.max(1, Number(it.quantity) || 1), section_id: it.section_id ? Number(it.section_id) : null,
@@ -160,7 +162,8 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
         desired_date: editForm.desired_date || null,
         desired_time: editForm.desired_time || null,
         note: editForm.note || null,
-        ...(items.length ? { items } : {}),
+        // Грейфер: правим число ходок, контейнерные позиции не трогаем.
+        ...(grapple ? { grapple_runs: Math.max(1, Number(editForm.grapple_runs) || 1) } : (items.length ? { items } : {})),
       })
       toast.success('Заявка обновлена'); onChanged()
     } catch { toast.error('Ошибка сохранения') }
@@ -227,6 +230,13 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
               </span>
             </div>
 
+            {isGrapple(o) && (
+              <div className="a-frow">
+                <span className="a-frl">Услуга</span>
+                <span className="a-frv">🚛 Грейфер — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</span>
+              </div>
+            )}
+
             {o.driver_name && (
               <div className="a-frow">
                 <span className="a-frl">Водитель</span>
@@ -266,9 +276,15 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             )}
           </div>
 
-          {/* Задание водителю (что взять с базы) — только пока заявка в работе.
-              Для отчёта/проверки/закрытых это неактуально — скрываем. */}
-          {!['done', 'closed', 'awaiting_confirmation', 'review'].includes(o.status)
+          {/* Задание водителю — только пока заявка в работе. Грейфер: вывоз навалом без
+              контейнеров; контейнерные — разбивка по участкам через ContainerJob. */}
+          {!['done', 'closed', 'awaiting_confirmation', 'review'].includes(o.status) && isGrapple(o) && (
+            <>
+              <div className="a-section-title">Задание водителю</div>
+              <div className="a-frv">🚛 Грейфер — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
+            </>
+          )}
+          {!['done', 'closed', 'awaiting_confirmation', 'review'].includes(o.status) && !isGrapple(o)
             && (o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (
             <>
               <div className="a-section-title">Участки — задание водителю</div>
@@ -393,12 +409,24 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
                 placeholder="напр. 4500" autoFocus />
             </label>
           )}
-          <div className="a-section-title">Контейнеры — что сделать на объекте</div>
-          <ItemsEditor
-            items={editForm.items}
-            onChange={(items) => setEditForm({ ...editForm, items })}
-            sections={order.object_sections || []}
-          />
+          {isGrapple(o) ? (
+            <>
+              <div className="a-section-title">Грейфер — вывоз навалом</div>
+              <label className="a-field" style={{ maxWidth: 200 }}><span>Число ходок</span>
+                <input className="a-input" type="number" min={1} value={editForm.grapple_runs}
+                  onChange={(e) => setEditForm({ ...editForm, grapple_runs: e.target.value })} />
+              </label>
+            </>
+          ) : (
+            <>
+              <div className="a-section-title">Контейнеры — что сделать на объекте</div>
+              <ItemsEditor
+                items={editForm.items}
+                onChange={(items) => setEditForm({ ...editForm, items })}
+                sections={order.object_sections || []}
+              />
+            </>
+          )}
 
           <label className="a-field" style={{ marginTop: 12 }}><span>Комментарий — детали / номера контейнеров</span>
             <textarea className="a-input" rows={3} value={editForm.note} onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}

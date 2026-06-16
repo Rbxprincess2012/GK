@@ -120,11 +120,15 @@ async function assertManageable(id, actorRole) {
   return target
 }
 
-export async function update(id, patch, actorRole) {
-  await assertManageable(id, actorRole)
+export async function update(id, patch, actorRole, actorId = null) {
+  const target = await assertManageable(id, actorRole)
   if (patch.role) {
     if (!assignableRoles(actorRole).includes(patch.role)) {
       throw Object.assign(new Error('role_forbidden'), { status: 403 })
+    }
+    // Свою роль менять нельзя (нельзя разжаловать/удалить собственную роль).
+    if (actorId != null && id === actorId && patch.role !== target.role) {
+      throw Object.assign(new Error('cannot_change_own_role'), { status: 403 })
     }
   }
   const fields = {}

@@ -87,6 +87,41 @@ describe('orders create', () => {
     expect(res.body.items[0].container_numbers).toBeNull()
   })
 
+  it('грейфер: заявка без позиций, service_type=grapple, grapple_runs, ровно 1 subtask на весь объект', async () => {
+    const { obj } = await fixtures()
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id, service_type: 'grapple', grapple_runs: 2, note: 'вывезти стройммусор',
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.service_type).toBe('grapple')
+    expect(res.body.grapple_runs).toBe(2)
+    expect(res.body.items).toHaveLength(0)
+    const subs = await db('order_subtasks').where({ order_id: res.body.id })
+    expect(subs).toHaveLength(1)
+    expect(subs[0].section_id).toBeNull()
+  })
+
+  it('грейфер: контейнерные позиции игнорируются, grapple_runs по умолчанию 1', async () => {
+    const { obj, ct } = await fixtures()
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id, service_type: 'grapple',
+      items: [{ action: 'haul', container_type_id: ct.id, quantity: 3 }],
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.service_type).toBe('grapple')
+    expect(res.body.grapple_runs).toBe(1)
+    expect(res.body.items).toHaveLength(0) // позиции для грейфера не создаются
+  })
+
+  it('по умолчанию service_type=container', async () => {
+    const { obj } = await fixtures()
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id, items: [{ action: 'place', quantity: 1 }],
+    })
+    expect(res.body.service_type).toBe('container')
+    expect(res.body.grapple_runs).toBeNull()
+  })
+
   it('requested_container_ids на объекте → привязка; не на объекте → 409', async () => {
     const { obj, ct } = await fixtures()
     const [onObj] = await db('containers')

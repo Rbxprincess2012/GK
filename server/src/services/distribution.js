@@ -14,7 +14,7 @@ async function newOrdersForDate(date) {
     .leftJoin('clients as c', 'c.id', 'o.client_id')
     .where({ 'o.status': 'new', 'o.desired_date': date })
     .select(
-      'o.id', 'o.number', 'ob.lat', 'ob.lng',
+      'o.id', 'o.number', 'ob.lat', 'ob.lng', 'o.service_type', 'o.grapple_runs',
       'd.name as district', 's.name as street_name', 'ob.house', 'ob.informal_name as object_name',
       'c.legal_name as client_legal_name',
       db.raw(`COALESCE((SELECT SUM(oi.quantity) FROM order_items oi
@@ -44,16 +44,24 @@ export async function suggestDistribution(date, shiftType) {
   const drivers = (await availableDrivers(date, shiftType)).map((d) => ({
     id: d.id, name: d.name, capacity: d.capacity_slots || 3,
     empty_capacity: d.empty_capacity || 2, vehicle_id: d.vehicle_id,
+    kind: d.vehicle_kind || 'container', // тип машины водителя на смене (контейнеровоз/грейфер)
   }))
   const rawOrders = await newOrdersForDate(date)
 
   // km до базы; заезды считает алгоритм по пустым/полным и вместимости машины водителя.
-  const orders = rawOrders.map((o) => ({
-    id: o.id, district: o.district || null, empties: o.empties, fulls: o.fulls,
-    km: baseSet && o.lat != null && o.lng != null
-      ? Math.round(haversineKm({ lat: o.lat, lng: o.lng }, { lat: Number(base.lat), lng: Number(base.lng) }) * 100) / 100
-      : null,
-  }))
+  // Грейфер-заявка несёт service='grapple' и intrinsic trips = число ходок (контейнерных нет).
+  const orders = rawOrders.map((o) => {
+    const isGrapple = o.service_type === 'grapple'
+    return {
+      id: o.id, district: o.district || null,
+      service: isGrapple ? 'grapple' : 'container',
+      empties: isGrapple ? null : o.empties, fulls: isGrapple ? null : o.fulls,
+      trips: isGrapple ? Math.max(1, Number(o.grapple_runs) || 1) : null,
+      km: baseSet && o.lat != null && o.lng != null
+        ? Math.round(haversineKm({ lat: o.lat, lng: o.lng }, { lat: Number(base.lat), lng: Number(base.lng) }) * 100) / 100
+        : null,
+    }
+  })
   const noGeoCount = orders.filter((o) => o.km == null).length
 
   // Накопленный балл за окно [date-7 .. date-1] (7 дней по вчерашний включительно; сегодняшний
@@ -68,23 +76,33 @@ export async function suggestDistribution(date, shiftType) {
   // Обогащаем раскладку отображаемыми данными заявок.
   const metaById = new Map(rawOrders.map((o) => [o.id, o]))
   const kmById = new Map(orders.map((o) => [o.id, o.km]))
+  const orderView = (id, emptyCap) => {
+    const m = metaById.get(id)
+    const isGrapple = m.service_type === 'grapple'
+    return {
+      id, number: m.number, district: m.district, street_name: m.street_name,
+      house: m.house, object_name: m.object_name, client_legal_name: m.client_legal_name,
+      km: kmById.get(id), service_type: isGrapple ? 'grapple' : 'container',
+      empties: isGrapple ? 0 : m.empties, fulls: isGrapple ? 0 : m.fulls,
+      grapple_runs: isGrapple ? Math.max(1, Number(m.grapple_runs) || 1) : null,
+      trips: isGrapple ? Math.max(1, Number(m.grapple_runs) || 1) : tripsFromCounts(m.empties, m.fulls, emptyCap),
+    }
+  }
   const assignments = result.assignments.map((a) => ({
     ...a,
-    orders: a.order_ids.map((id) => {
-      const m = metaById.get(id)
-      return {
-        id, number: m.number, district: m.district, street_name: m.street_name,
-        house: m.house, object_name: m.object_name, client_legal_name: m.client_legal_name,
-        km: kmById.get(id), empties: m.empties, fulls: m.fulls,
-        trips: tripsFromCounts(m.empties, m.fulls, a.empty_capacity),
-      }
-    }),
+    orders: a.order_ids.map((id) => orderView(id, a.empty_capacity)),
   }))
+
+  // Нераспределённые: нет машины нужного типа на смене (напр. грейфер-заявка без водителя-грейфера).
+  const unassigned = (result.unassigned || []).map((id) => {
+    const v = orderView(id, 2)
+    return { ...v, reason: v.service_type === 'grapple' ? 'no_grapple_vehicle' : 'no_container_vehicle' }
+  })
 
   return {
     date, shift_type: shiftType, base_set: baseSet, km_weight: kmWeight, locality_weight: localityWeight,
     no_geo_count: noGeoCount, total_orders: orders.length, drivers_count: drivers.length,
-    spread: result.spread, assignments,
+    spread: result.spread, assignments, unassigned,
   }
 }
 
@@ -102,7 +120,7 @@ export async function mapData(date, shiftType) {
         .orWhere((x) => x.where('o.shift_date', date).andWhere('o.shift_type', shiftType)
           .whereIn('o.status', ['assigned', 'review', 'in_progress']))
     })
-    .select('o.id', 'o.number', 'o.status', 'o.assigned_driver_id', 'o.distance_km',
+    .select('o.id', 'o.number', 'o.status', 'o.assigned_driver_id', 'o.distance_km', 'o.service_type',
       'ob.lat', 'ob.lng', 'd.name as district', 's.name as street_name', 'ob.house',
       'ob.informal_name as object_name', 'c.legal_name as client_legal_name', 'dr.name as driver_name')
     .orderBy('o.id')

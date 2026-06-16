@@ -37,10 +37,20 @@ export default function Users() {
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
-  const roleOpts = assignableRoles?.length ? assignableRoles : ['manager']
+  // Роль суперпользователя в выпадающем списке доступна только настоящему суперпользователю
+  // (в режиме «просмотр как директор/менеджер» эффективная роль me.role ≠ superuser — прячем).
+  const roleOpts = (assignableRoles?.length ? assignableRoles : ['manager'])
+    .filter((r) => r !== 'superuser' || me?.role === 'superuser')
+  // Себе роль менять нельзя (нельзя разжаловать/удалить собственную роль).
+  const editingSelf = editing?.id && editing.id === me?.id
+  // Суперпользователи не видны не-суперпользователю (в т.ч. суперу в режиме «смотреть как
+   // директор/менеджер» — предпросмотр должен быть честным; бэк отдаёт всех по реальному токену).
+  const canSeeSuper = me?.role === 'superuser'
+  const visibleCount = users.filter((u) => canSeeSuper || u.role !== 'superuser').length
   const q = search.trim().toLowerCase()
   const filtered = users.filter((u) =>
-    !q || `${u.last_name || ''} ${u.first_name || ''}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+    (canSeeSuper || u.role !== 'superuser')
+    && (!q || `${u.last_name || ''} ${u.first_name || ''}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)))
 
   const open = (u) => {
     setForm(u ? { ...empty, ...u, email: u.email, messengers: u.messengers || [], position: u.position || '', avatar: u.avatar || '', nav_permissions: u.nav_permissions ?? null } : { ...empty, role: roleOpts[0] })
@@ -94,7 +104,9 @@ export default function Users() {
       setEditing(null)
     } catch (e) {
       const err = e?.response?.data?.error
-      toast.error(err === 'role_forbidden' ? 'Нельзя назначить эту роль' : err === 'conflict' ? 'Email уже занят' : 'Ошибка сохранения')
+      toast.error(err === 'role_forbidden' ? 'Нельзя назначить эту роль'
+        : err === 'cannot_change_own_role' ? 'Свою роль изменить нельзя'
+        : err === 'conflict' ? 'Email уже занят' : 'Ошибка сохранения')
     }
   }
 
@@ -117,7 +129,7 @@ export default function Users() {
   return (
     <div className="a-page">
       <div className="a-page-header">
-        <h2>Пользователи <span className="a-count">{users.length}</span></h2>
+        <h2>Пользователи <span className="a-count">{visibleCount}</span></h2>
         <div style={{ display: 'flex', gap: 10 }}>
           <input className="a-input" style={{ width: 220 }} placeholder="Поиск…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <button className="a-btn a-btn--primary" onClick={() => open(null)}>+ Пользователь</button>
@@ -212,9 +224,14 @@ export default function Users() {
               onChange={(e) => setForm({ ...form, position: e.target.value })} />
           </label>
           <label className="a-field"><span>Роль</span>
-            <select className="a-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+            <select className="a-select" value={form.role} disabled={editingSelf}
+              title={editingSelf ? 'Свою роль изменить нельзя' : undefined}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}>
+              {/* Если своя роль (напр. суперпользователь) вне списка назначаемых — показываем её как текущую, но select заблокирован */}
+              {!roleOpts.includes(form.role) && <option value={form.role}>{ROLES[form.role]?.[0] || form.role}</option>}
               {roleOpts.map((r) => <option key={r} value={r}>{ROLES[r]?.[0]}</option>)}
             </select>
+            {editingSelf && <div className="a-muted" style={{ fontSize: '0.78rem' }}>Свою роль изменить нельзя.</div>}
           </label>
 
           {form.role === 'manager' && (

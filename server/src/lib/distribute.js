@@ -89,6 +89,11 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
     return { assignments: [], unassigned: orders.map((o) => o.id), spread: 0 }
   }
 
+  // Совместимость заявка↔водитель по типу машины: грейфер-заявку (service='grapple') берёт
+  // только водитель на грейфере (kind='grapple'); контейнерную — только контейнеровоз.
+  // Дефолт обеих сторон — 'container', поэтому прежнее (однотипное) поведение не меняется.
+  const canTake = (order, driver) => (order.service ?? 'container') === (driver.kind ?? 'container')
+
   // assignment: driverId -> [orderId]
   const assign = new Map(drivers.map((d) => [d.id, []]))
   const driverById = new Map(drivers.map((d) => [d.id, d]))
@@ -100,9 +105,11 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
   const ordered = [...orders].sort((a, b) =>
     (b.km || 0) - (a.km || 0) || (a.id - b.id))
 
+  const unassigned = []
   for (const o of ordered) {
     let best = null, bestEff = Infinity
     for (const d of drivers) {
+      if (!canTake(o, d)) continue
       const cur = scoreOf(d, assign.get(d.id), byId, kmWeight, priorScores)
       const tentative = cur + orderCost(o, d, kmWeight)
       const sameDistrict = districtsOf(assign.get(d.id)).has(o.district ?? null)
@@ -111,6 +118,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
         bestEff = eff; best = d
       }
     }
+    if (!best) { unassigned.push(o.id); continue } // нет машины нужного типа на смене
     assign.get(best.id).push(o.id)
   }
 
@@ -148,6 +156,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
         const fragANew = districtCount(assign.get(A).filter((x) => x !== oid))
         for (const B of ids) {
           if (B === A) continue
+          if (!canTake(byId.get(oid), driverById.get(B))) continue // B не того типа
           const costB = orderCost(byId.get(oid), driverById.get(B), kmWeight)
           const nFrag = curFrag - fragA + fragANew - districtCount(assign.get(B)) + districtCount([...assign.get(B), oid])
           const nsc = { ...sc, [A]: sc[A] - costA, [B]: sc[B] + costB }
@@ -163,6 +172,8 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
         const fragA = districtCount(assign.get(A)), fragB = districtCount(assign.get(B))
         for (const oa of assign.get(A)) {
           for (const ob of assign.get(B)) {
+            // обмен допустим, только если после него каждая заявка у машины своего типа
+            if (!canTake(byId.get(ob), driverById.get(A)) || !canTake(byId.get(oa), driverById.get(B))) continue
             const nA = sc[A] - orderCost(byId.get(oa), driverById.get(A), kmWeight) + orderCost(byId.get(ob), driverById.get(A), kmWeight)
             const nB = sc[B] - orderCost(byId.get(ob), driverById.get(B), kmWeight) + orderCost(byId.get(oa), driverById.get(B), kmWeight)
             const nFrag = curFrag - fragA + districtCount(assign.get(A).map((x) => (x === oa ? ob : x)))
@@ -201,7 +212,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
       score: round3(scoreOf(d, oids, byId, kmWeight, priorScores)),
     }
   })
-  return { assignments, unassigned: [], spread: round3(spreadOf(scores())), kmWeight }
+  return { assignments, unassigned, spread: round3(spreadOf(scores())), kmWeight }
 }
 
 function remove(arr, x) { const i = arr.indexOf(x); if (i >= 0) arr.splice(i, 1) }

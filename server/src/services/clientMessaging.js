@@ -93,10 +93,11 @@ async function sectionRows(orderId, conn) {
       'st.completed_at', 'st.completed_by_driver_id', 's.name as section_name', 'd.name as done_driver_name')
 }
 
-function sectionsText(rows) {
+function sectionsText(rows, isGrapple = false) {
   return rows.map((r) => {
-    const name = r.section_name || 'Объект'
-    if (r.status === 'done') return `• ${name} — вывезено 🟩`
+    // Грейфер — вывоз навалом без участков: одна строка «Вывоз грейфером».
+    const name = isGrapple ? 'Вывоз грейфером' : (r.section_name || 'Объект')
+    if (r.status === 'done') return `• ${name} — ${isGrapple ? 'выполнено' : 'вывезено'} 🟩`
     return `• ${name} — не выполнен${r.comment ? `: ${r.comment}` : ''}`
   }).join('\n')
 }
@@ -158,7 +159,7 @@ export async function buildClientMessage(orderId, { templateId, token } = {}, co
     date: fmtDate(head.desired_date),
     address: addressOf(head),
     driver: driverOf(head),
-    sections: sectionsText(rows),
+    sections: sectionsText(rows, head.service_type === 'grapple'),
     amount: amountOf(head),
     report_url: tok ? reportUrl(tok) : '',
   }

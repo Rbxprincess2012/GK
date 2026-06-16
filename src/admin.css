@@ -2315,4 +2315,17 @@ textarea.a-input,
   color: #b9c4ec;
   cursor: pointer;
 }
-.a-navperm input[type="checkbox"] { cursor: pointer; accent-color: #f48f1b; }
+/* Чекбоксы навперма лежат внутри .a-field — перебиваем .a-field input
+   (width:100%/padding/border раздували бы их в блок и ломали выравнивание). */
+.a-navperm input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #f48f1b;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 4px;
+  background: none;
+}

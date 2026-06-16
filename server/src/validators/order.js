@@ -8,6 +8,10 @@ export const createOrderInput = z.object({
   desired_date: z.string().optional(),
   desired_time: z.string().optional(),
   note: z.string().optional(),
+  // Тип услуги: 'container' (контейнеры, позиции place/replace/haul) или 'grapple'
+  // (грейфер — вывоз навалом, без контейнерных позиций, объём задаётся числом ходок).
+  service_type: z.enum(['container', 'grapple']).optional(),
+  grapple_runs: z.number().int().positive().optional(),
   // 'pending_review' — черновик от бота (без номера до accept); по умолчанию 'new'
   status: z.enum(['new', 'pending_review']).optional(),
   // Позиции теперь НЕ обязательны: входящая заявка = объект+дата+комментарий,
@@ -35,6 +39,7 @@ export const updateOrderInput = z.object({
   desired_date: z.string().nullable().optional(),
   desired_time: z.string().nullable().optional(),
   note: z.string().nullable().optional(),
+  grapple_runs: z.number().int().positive().optional(), // число ходок грейфера (правка)
   items: z.array(z.object({
     action: z.enum(['place', 'replace', 'haul']),
     // участок объекта (если есть); null = весь объект

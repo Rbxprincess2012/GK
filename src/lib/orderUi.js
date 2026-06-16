@@ -12,6 +12,10 @@ export const STATUS = {
 export const ACTION = { place: 'Установить', replace: 'Заменить', haul: 'Забрать' }
 export const ACTIONS = ['place', 'replace', 'haul']
 
+// Тип услуги заявки: контейнеры (позиции place/replace/haul) или грейфер (вывоз навалом).
+export const SERVICE = { container: 'Контейнеры', grapple: 'Грейфер' }
+export const isGrapple = (o) => o?.service_type === 'grapple'
+
 // Что водитель должен сделать с контейнерами на объекте — по правилам машины:
 // за рейс ≤2 пустых контейнера ТУДА (вставляются друг в друга) и ≤1 полный ОБРАТНО.
 //   E (пустых привезти) = Поставить + Заменить

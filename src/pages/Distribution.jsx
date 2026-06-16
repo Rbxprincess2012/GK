@@ -51,6 +51,7 @@ function OrderCard({ o, onOpen }) {
     <div className="a-orderrow">
       <span className="a-orderrow-num">#{o.number}</span>
       <span className="a-orderrow-street" title={streetLine(o)}>
+        {o.service_type === 'grapple' && <span style={{ marginRight: 6 }} title="Грейфер — вывоз навалом">🚛</span>}
         {isCash(o) && <span className="a-cash" style={{ marginRight: 6 }} title="Наличные">{cashLabel(o)}</span>}
         {streetLine(o)}
       </span>
@@ -249,6 +250,12 @@ export default function Distribution() {
                   : `${suggestion.no_geo_count} заявок без координат — для них километраж не учтён. Геокодируйте объекты.`}
               </div>
             )}
+            {suggestion.unassigned?.length > 0 && (
+              <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 8, color: '#e0a14b' }}>
+                ⚠ Некому распределить ({suggestion.unassigned.length}): нет машины нужного типа на смене.{' '}
+                {suggestion.unassigned.map((u) => `#${u.number}${u.reason === 'no_grapple_vehicle' ? ' (грейфер)' : ' (контейнеровоз)'}`).join(', ')}
+              </div>
+            )}
             <div className="a-table-wrap" style={{ marginTop: 10 }}>
               <table className="a-table">
                 <thead>
@@ -362,7 +369,9 @@ export default function Distribution() {
                       <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(o)} title="Открыть заявку — все данные">
                         <td style={{ fontWeight: 700 }}>#{o.number}</td>
                         <td style={{ fontWeight: 600 }}>{streetLine(o)}</td>
-                        <td className="a-muted">{objectLine(o)}<ContainerJob o={o} /></td>
+                        <td className="a-muted">{objectLine(o)}{o.service_type === 'grapple'
+                          ? <div>🚛 Грейфер{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
+                          : <ContainerJob o={o} />}</td>
                         <td className="a-muted">{clientLegal(o)}</td>
                         <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <button className="a-btn a-btn--danger a-btn--sm" onClick={() => onUnassign(o)}>Снять</button>

@@ -76,14 +76,24 @@ function orderText(order) {
   const ownFor = (sid) => sc.filter((c) => c.section_id === sid)
   const contactSuffix = (it) => it.section_id == null ? ''
     : ownFor(it.section_id).map(fmtContact).filter(Boolean).map((s) => `\n   ${s}`).join('')
-  const lines = (order.items || []).map((it) =>
-    `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`
-    + (it.container_numbers ? ` · №${esc(it.container_numbers)}` : '')
-    + contactSuffix(it))
-  if (!lines.length) lines.push('• позиции не указаны')
-  const E = Number(order.empties) || 0
-  const base = E > 0 ? `\n\nС базы взять: ${'📦'.repeat(Math.min(E, 6))}${E > 6 ? `×${E}` : ''}` : ''
-  const trips = Number(order.trips) > 1 ? `\n🔁 ${order.trips} рейса` : ''
+  // Грейфер — вывоз навалом: контейнерных позиций нет, объём задаётся числом ходок.
+  const isGrapple = order.service_type === 'grapple'
+  let work, base, trips
+  if (isGrapple) {
+    const runs = Math.max(1, Number(order.grapple_runs) || 1)
+    work = `🚛 Грейфер — вывоз навалом${runs > 1 ? `\n🔁 ${runs} ходок` : ''}`
+    base = ''; trips = ''
+  } else {
+    const lines = (order.items || []).map((it) =>
+      `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`
+      + (it.container_numbers ? ` · №${esc(it.container_numbers)}` : '')
+      + contactSuffix(it))
+    if (!lines.length) lines.push('• позиции не указаны')
+    work = lines.join('\n')
+    const E = Number(order.empties) || 0
+    base = E > 0 ? `\n\nС базы взять: ${'📦'.repeat(Math.min(E, 6))}${E > 6 ? `×${E}` : ''}` : ''
+    trips = Number(order.trips) > 1 ? `\n🔁 ${order.trips} рейса` : ''
+  }
   const cash = order.payment_method === 'cash'
     ? `\n\n💵 Оплата НАЛИЧНЫМИ${order.amount != null ? `: ${Number(order.amount)} ₽` : ''}`
     : ''
@@ -97,7 +107,7 @@ function orderText(order) {
     ? '\n\n' + rework.map((s) =>
       `↩️ Переснять${s.section_name ? ` «${esc(s.section_name)}»` : ''}${s.review_comment ? `: ${esc(s.review_comment)}` : ''}`).join('\n')
     : ''
-  return `${head}${contact}\n\n${lines.join('\n')}${base}${cash}${trips}${reworkBlock}`
+  return `${head}${contact}\n\n${work}${base}${cash}${trips}${reworkBlock}`
 }
 
 function orderKeyboard(order) {

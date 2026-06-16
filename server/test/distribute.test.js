@@ -156,6 +156,53 @@ describe('suggest', () => {
     }
   })
 
+  it('сегрегация: грейфер-заявка идёт только водителю-грейферу, контейнерная — контейнеровозу', () => {
+    const orders = [
+      { id: 1, trips: 1, km: 0, district: 'X', service: 'grapple' },
+      { id: 2, trips: 1, km: 0, district: 'X', service: 'container' },
+    ]
+    const drivers = [
+      { id: 1, name: 'Контейнеровоз', kind: 'container' },
+      { id: 2, name: 'Грейфер', kind: 'grapple' },
+    ]
+    const r = suggest({ orders, drivers })
+    const cont = r.assignments.find((a) => a.driver_id === 1)
+    const grap = r.assignments.find((a) => a.driver_id === 2)
+    expect(cont.order_ids).toEqual([2])
+    expect(grap.order_ids).toEqual([1])
+    expect(r.unassigned).toEqual([])
+  })
+
+  it('сегрегация: грейфер-заявка без водителя-грейфера → в unassigned', () => {
+    const orders = [{ id: 1, trips: 1, km: 0, district: 'X', service: 'grapple' }]
+    const drivers = [{ id: 1, name: 'Контейнеровоз', kind: 'container' }]
+    const r = suggest({ orders, drivers })
+    expect(r.unassigned).toEqual([1])
+    expect(r.assignments.every((a) => a.order_ids.length === 0)).toBe(true)
+  })
+
+  it('сегрегация: несколько грейфер-заявок делятся между грейфер-водителями, не уходят контейнеровозам', () => {
+    const orders = Array.from({ length: 4 }, (_, i) => ({ id: i + 1, trips: 1, km: 0, district: 'X', service: 'grapple' }))
+    const drivers = [
+      { id: 1, name: 'К', kind: 'container' },
+      { id: 2, name: 'Г1', kind: 'grapple' },
+      { id: 3, name: 'Г2', kind: 'grapple' },
+    ]
+    const r = suggest({ orders, drivers })
+    const cont = r.assignments.find((a) => a.driver_id === 1)
+    expect(cont.order_ids).toEqual([]) // контейнеровозу грейфер не достаётся
+    const grapTotal = r.assignments.filter((a) => a.driver_id !== 1).flatMap((a) => a.order_ids).sort()
+    expect(grapTotal).toEqual([1, 2, 3, 4])
+    expect(r.unassigned).toEqual([])
+  })
+
+  it('дефолт без типов сохраняет прежнее поведение (всё container)', () => {
+    const orders = [{ id: 1, trips: 1, km: 0, district: 'X' }]
+    const r = suggest({ orders, drivers: drivers3 })
+    expect(r.unassigned).toEqual([])
+    expect(r.assignments.flatMap((a) => a.order_ids)).toEqual([1])
+  })
+
   it('все заявки распределены, ничего не потеряно и не задвоено', () => {
     const orders = Array.from({ length: 9 }, (_, i) => ({
       id: i + 1, slots: (i % 3) + 1, km: (i * 7) % 50, district: ['A', 'B', 'C'][i % 3],

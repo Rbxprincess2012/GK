@@ -15,6 +15,14 @@ describe('simple resources', () => {
     expect(dup.status).toBe(409)
   })
 
+  it('vehicles: тип машины (kind) — по умолчанию container, можно завести грейфер', async () => {
+    const def = await request(app).post('/api/vehicles').send({ gov_number: 'Г100ГГ' }).expect(201)
+    expect(def.body.kind).toBe('container')
+    const grap = await request(app).post('/api/vehicles')
+      .send({ gov_number: 'Г200ГГ', kind: 'grapple' }).expect(201)
+    expect(grap.body.kind).toBe('grapple')
+  })
+
   it('containers: создание и фильтр по object_id', async () => {
     const [ct] = await db('container_types').insert({ name: 'Стандартный' }).returning('*')
     const [cl] = await db('clients')

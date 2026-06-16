@@ -131,6 +131,7 @@ export async function createOrder(payload) {
     // Черновики от бота (pending_review) НЕ получают номер — он присваивается при accept.
     // Обычные (new) нумеруются сразу из последовательности.
     const isDraft = payload.status === 'pending_review'
+    const isGrapple = payload.service_type === 'grapple'
     const [order] = await trx('orders').insert({
       client_id: obj.client_id,
       object_id: payload.object_id,
@@ -140,13 +141,17 @@ export async function createOrder(payload) {
       desired_date: payload.desired_date ?? null,
       desired_time: payload.desired_time ?? null,
       note: payload.note ?? null,
+      // Грейфер — вывоз навалом; контейнерных позиций нет, объём = число ходок (по умолч. 1).
+      service_type: isGrapple ? 'grapple' : 'container',
+      grapple_runs: isGrapple ? (payload.grapple_runs ?? 1) : null,
       status: isDraft ? 'pending_review' : 'new',
       number: isDraft ? null : trx.raw("nextval('orders_number_seq')"),
     }).returning('*')
 
     // Участки этого объекта — section_id у позиции принимаем только из них (иначе → весь объект).
     const sectionIds = new Set(await trx('sections').where({ object_id: payload.object_id }).pluck('id'))
-    for (const it of payload.items || []) {
+    // Грейфер не работает с контейнерами — позиции игнорируем (заявка = объект целиком).
+    for (const it of (isGrapple ? [] : (payload.items || []))) {
       const [item] = await trx('order_items').insert({
         order_id: order.id,
         action: it.action,
@@ -276,6 +281,10 @@ export async function updateOrder(id, payload) {
     const patch = {}
     for (const k of ['trusted_person_id', 'payment_method', 'amount', 'desired_date', 'desired_time', 'note']) {
       if (k in payload) patch[k] = payload[k] ?? null
+    }
+    // Число ходок грейфера — только для грейфер-заявок (для контейнерных поле неактуально).
+    if ('grapple_runs' in payload && order.service_type === 'grapple') {
+      patch.grapple_runs = payload.grapple_runs ?? 1
     }
     if (Object.keys(patch).length) await trx('orders').where({ id }).update(patch)
 

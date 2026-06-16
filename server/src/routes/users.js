@@ -16,7 +16,7 @@ r.post('/', async (req, res, next) => {
 })
 
 r.patch('/:id', async (req, res, next) => {
-  try { res.json(await svc.update(Number(req.params.id), updateUserInput.parse(req.body), actorRole(req))) } catch (e) { next(e) }
+  try { res.json(await svc.update(Number(req.params.id), updateUserInput.parse(req.body), actorRole(req), actorId(req))) } catch (e) { next(e) }
 })
 
 r.post('/:id/reset-password', async (req, res, next) => {

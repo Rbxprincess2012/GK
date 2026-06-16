@@ -39,6 +39,8 @@ export function CreateOrderModal({ onClose, onCreated }) {
 
   const [clientId, setClientId] = useState('')
   const [objectId, setObjectId] = useState('')
+  const [service, setService] = useState('container') // тип услуги: контейнеры | грейфер
+  const [grappleRuns, setGrappleRuns] = useState(1)   // число ходок грейфера
   const [items, setItems] = useState([newItem()])
   const [desiredDate, setDesiredDate] = useState('')
   const [desiredTime, setDesiredTime] = useState('')
@@ -96,9 +98,12 @@ export function CreateOrderModal({ onClose, onCreated }) {
 
   const canSave = useMemo(() => Number(objectId) > 0 && !saving, [objectId, saving])
 
+  const isGrapple = service === 'grapple'
+
   const save = async () => {
     if (!Number(objectId)) { toast.error('Выберите объект'); return }
-    const payloadItems = items
+    // Грейфер — вывоз навалом: контейнерные позиции не передаём, объём = число ходок.
+    const payloadItems = isGrapple ? [] : items
       .filter((it) => Number(it.quantity) > 0)
       .map((it) => ({
         action: it.action,
@@ -114,7 +119,9 @@ export function CreateOrderModal({ onClose, onCreated }) {
       amount: payment === 'cash' && amount !== '' ? Number(amount) : null,
       trusted_person_id: trustedId ? Number(trustedId) : null,
       note: note.trim() || undefined,
-      ...(payloadItems.length ? { items: payloadItems } : {}),
+      ...(isGrapple
+        ? { service_type: 'grapple', grapple_runs: Math.max(1, Number(grappleRuns) || 1) }
+        : (payloadItems.length ? { items: payloadItems } : {})),
     }
     setSaving(true)
     try {
@@ -151,6 +158,28 @@ export function CreateOrderModal({ onClose, onCreated }) {
         </label>
       </div>
 
+      <div className="a-section-title">Тип услуги</div>
+      <div className="a-field-row">
+        <label className="a-field"><span>Услуга</span>
+          <select className="a-select" value={service} onChange={(e) => setService(e.target.value)}>
+            <option value="container">Контейнеры</option>
+            <option value="grapple">Грейфер (вывоз навалом)</option>
+          </select>
+        </label>
+        {isGrapple && (
+          <label className="a-field"><span>Число ходок</span>
+            <input className="a-input" type="number" min={1} value={grappleRuns}
+              onChange={(e) => setGrappleRuns(e.target.value)} title="Сколько кузовов/ходок грейфера" />
+          </label>
+        )}
+      </div>
+
+      {isGrapple ? (
+        <div className="a-muted" style={{ fontSize: '0.82rem' }}>
+          🚛 Грейфер грузит мусор навалом ковшом — контейнеры не нужны. Детали укажите в комментарии.
+        </div>
+      ) : (
+      <>
       <div className="a-section-title">Позиции</div>
       {items.map((it, i) => (
         <div key={i} className="a-field-row a-posrow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -183,6 +212,8 @@ export function CreateOrderModal({ onClose, onCreated }) {
         </div>
       ))}
       <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={addRow}>+ Позиция</button>
+      </>
+      )}
 
       <div className="a-section-title">Детали</div>
       <div className="a-field-row">

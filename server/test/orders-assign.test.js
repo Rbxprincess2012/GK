@@ -30,6 +30,24 @@ describe('orders assign', () => {
     expect(res.body.assigned_driver_id).toBe(drv.id)
   })
 
+  it('грейфер: при назначении trips = число ходок, load_score = ходки + km_weight*км', async () => {
+    const [cl] = await db('clients')
+      .insert({ type: 'ooo', legal_name: 'G', default_payment_method: 'cashless' }).returning('*')
+    const [obj] = await db('objects').insert({ client_id: cl.id }).returning('*')
+    const [order] = await db('orders')
+      .insert({ client_id: cl.id, object_id: obj.id, payment_method: 'cashless', service_type: 'grapple', grapple_runs: 3 })
+      .returning('*')
+    const [drv] = await db('drivers').insert({ name: 'Грейферов' }).returning('*')
+    await db('shifts').insert({ driver_id: drv.id, date: '2026-06-03', shift_type: 'day', status: 'present' })
+
+    const res = await request(app).post(`/api/orders/${order.id}/assign`)
+      .send({ driver_id: drv.id, shift_date: '2026-06-03', shift_type: 'day' })
+    expect(res.status).toBe(200)
+    expect(res.body.trips).toBe(3) // ходки, а не контейнерная формула
+    // без базы/координат км не учитывается → load_score = trips
+    expect(Number(res.body.load_score)).toBe(3)
+  })
+
   it('назначение на отсутствующего (sick) → 409', async () => {
     const order = await makeOrder()
     const [drv] = await db('drivers').insert({ name: 'Петров' }).returning('*')
