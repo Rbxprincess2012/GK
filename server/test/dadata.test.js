@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
-import { findPartyByInn, suggestAddress } from '../src/services/dadata.js'
+import { findPartyByInn, suggestAddress, suggestBank } from '../src/services/dadata.js'
 import { setTokens } from '../src/services/settings.js'
 
 beforeEach(resetDb)
@@ -94,6 +94,58 @@ describe('dadata suggestAddress', () => {
   it('ошибка DaData → 502', async () => {
     await setTokens({ dadata_token: 'T' })
     await expect(suggestAddress('x', async () => ({ ok: false, json: async () => ({}) })))
+      .rejects.toMatchObject({ status: 502 })
+  })
+})
+
+describe('dadata findPartyByInn — сокращённый адрес', () => {
+  it('собирает короткий адрес из компонентов (без индекса/региона)', async () => {
+    await setTokens({ dadata_token: 'T' })
+    const sampleWithParts = {
+      suggestions: [{
+        value: 'ООО "ПРИМЕР"',
+        data: {
+          name: { full_with_opf: 'ОБЩЕСТВО ... "ПРИМЕР"' },
+          address: {
+            value: '350000, Краснодарский край, г Краснодар, ул Красная, д 1',
+            unrestricted_value: '350000, Краснодарский край, г Краснодар, ул Красная, д 1',
+            data: { city_type: 'г', city: 'Краснодар', street_type: 'ул', street: 'Красная', house_type: 'д', house: '1' },
+          },
+        },
+      }],
+    }
+    const r = await findPartyByInn('123', async () => ({ ok: true, json: async () => sampleWithParts }))
+    expect(r.legal_address).toBe('г Краснодар, ул Красная, д 1')
+    expect(r.legal_address_full).toContain('350000')
+  })
+})
+
+const bankSample = {
+  suggestions: [{
+    value: 'ПАО СБЕРБАНК',
+    data: { bic: '044525225', correspondent_account: '30101810400000000225', name: { payment: 'ПАО СБЕРБАНК' } },
+  }],
+}
+
+describe('dadata suggestBank', () => {
+  it('нет токена → 400', async () => {
+    await expect(suggestBank('Сбербанк', async () => ({ ok: true, json: async () => ({}) })))
+      .rejects.toMatchObject({ status: 400 })
+  })
+
+  it('маппит банк, БИК и корр. счёт; шлёт токен и query', async () => {
+    await setTokens({ dadata_token: 'T' })
+    let captured
+    const fetchImpl = async (url, opts) => { captured = { url, opts }; return { ok: true, json: async () => bankSample } }
+    const list = await suggestBank('044525225', fetchImpl)
+    expect(captured.url).toContain('suggest/bank')
+    expect(JSON.parse(captured.opts.body).query).toBe('044525225')
+    expect(list[0]).toMatchObject({ bank_name: 'ПАО СБЕРБАНК', bik: '044525225', corr_account: '30101810400000000225' })
+  })
+
+  it('ошибка DaData → 502', async () => {
+    await setTokens({ dadata_token: 'T' })
+    await expect(suggestBank('x', async () => ({ ok: false, json: async () => ({}) })))
       .rejects.toMatchObject({ status: 502 })
   })
 })

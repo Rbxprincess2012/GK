@@ -24,24 +24,24 @@ export function ClientRecipients({ clientId }) {
   }, [clientId])
   useEffect(() => { load() }, [load])
 
-  const addDm = () => api.post(`/clients/${clientId}/recipients/dm`, null, { params: { channel } })
-    .then(({ data }) => { setInvite({ kind: 'dm', channel, link: data.invite_link }); load() }).catch(() => toast.error('Не удалось'))
   const addGroup = () => api.post(`/clients/${clientId}/recipients/group`, null, { params: { channel } })
     .then(({ data }) => { setInvite({ kind: 'group', channel, command: data.bind_command, bot: data.bot_username }); load() }).catch(() => toast.error('Не удалось'))
   const remove = (id) => api.delete(`/recipients/${id}`).then(() => load()).catch(() => toast.error('Не удалось'))
   const copy = (t) => navigator.clipboard.writeText(t).then(() => toast.success('Скопировано')).catch(() => {})
 
-  const visible = list.filter((r) => r.status !== 'revoked')
+  // Здесь — только групповой чат заказчика. Личные получатели настраиваются в «Доверенных лицах».
+  const visible = list.filter((r) => r.status !== 'revoked' && r.kind === 'group')
   return (
     <>
-      <div className="a-section-title">Получатели отчётов</div>
+      <div className="a-section-title">Групповой чат для отчётов</div>
       <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 8 }}>
-        {aff}, тут всё просто: сюда уходит отчёт, когда ты подтверждаешь заявку. Можно добавить
-        личный чат человека или общую группу заказчика — в Telegram или MAX. Выбери канал и жми «+».
+        {aff}, здесь задаются параметры группового чата заказчика — туда уходит отчёт, когда
+        подтверждаешь заявку. Если нужно, чтобы отчёты приходили конкретным лицам — перейди в
+        «Доверенные лица». Выбери канал и подключи группу.
       </div>
-      <MessengerGuide scenarios={['dm', 'group']} />
+      <MessengerGuide scenarios={['group']} />
       {visible.length === 0 && (
-        <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 8 }}>Пока никого — добавьте получателя ниже.</div>
+        <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 8 }}>Группа ещё не подключена — добавьте ниже.</div>
       )}
       {visible.map((r) => {
         const [label, color] = STATUS[r.status] || ['', '#92a2d4']
@@ -69,34 +69,18 @@ export function ClientRecipients({ clientId }) {
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-        <button className="a-btn a-btn--ghost a-btn--sm" onClick={addDm}>+ Личный чат</button>
-        <button className="a-btn a-btn--ghost a-btn--sm" onClick={addGroup}>+ Группа</button>
-        <button className="a-btn a-btn--ghost a-btn--sm" onClick={load}>⟳ Обновить</button>
+        <button className="a-btn a-btn--ghost a-btn--sm" onClick={addGroup}>+ Подключить группу</button>
       </div>
 
-      {invite?.kind === 'dm' && invite.link && (
-        <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 10 }}>
-          {aff}, объясняю на пальцах: скопируй ссылку и отправь её человеку (СМС, почта, мессенджер).
-          Он откроет, нажмёт «Старт» — и строка станет ✅ активен. Это личка: отчёт видит только он.
-          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-            <input className="a-input" readOnly value={invite.link} style={{ fontSize: '0.78rem' }} />
-            <button className="a-btn a-btn--primary a-btn--sm" onClick={() => copy(invite.link)}>Копировать</button>
-          </div>
-        </div>
-      )}
-      {invite?.kind === 'dm' && !invite.link && (
-        <div style={{ fontSize: '0.8rem', marginTop: 10, color: '#f4a840' }}>
-          {invite.channel === 'max' ? 'Клиентский MAX-бот' : 'Клиентский бот'} не запущен (нет username).
-          Впишите токен в Настройках и поднимите бот — ссылка появится.
-        </div>
-      )}
       {invite?.kind === 'group' && (
         <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 10 }}>
           {aff}, по группе так: добавь нашего бота {invite.bot ? `@${invite.bot}` : '(клиентский бот)'} в
           группу заказчика и отправь там вот эту команду — бот ответит «✅ Привязано».
-          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+          {/* Поле + кнопки одной высоты: Копировать, затем Обновить статус привязки. */}
+          <div className="a-fieldrow" style={{ marginTop: 4 }}>
             <input className="a-input" readOnly value={invite.command} style={{ fontSize: '0.78rem' }} />
-            <button className="a-btn a-btn--primary a-btn--sm" onClick={() => copy(invite.command)}>Копировать</button>
+            <button className="a-btn a-btn--primary a-iconbtn" onClick={() => copy(invite.command)}>Копировать</button>
+            <button className="a-btn a-btn--ghost a-iconbtn" onClick={load} title="Обновить статус привязки">⟳ Обновить</button>
           </div>
           <div style={{ marginTop: 6, color: '#f4a840' }}>
             ⚠️ Важно: в группе отчёт видят ВСЕ участники. Подключай группу, только если там сидит

@@ -5,8 +5,8 @@ import api from '@/lib/api'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
-import { PhoneMessengerField, MessengerTag, MessengerChatInputs, TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
-import { formatPhone } from '@/lib/phone'
+import { PhoneMessengerField, MessengerTag, TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
+import { formatPhone, toNational, toFull, formatNat } from '@/lib/phone'
 import { ClientRecipients } from '@/components/admin/ClientRecipients'
 import { TrustedPersonChannels } from '@/components/admin/TrustedPersonChannels'
 
@@ -66,6 +66,8 @@ export default function Clients() {
   const [editing, setEditing] = useState(null) // client modal
   const [form, setForm] = useState(emptyClient)
   const [pullingInn, setPullingInn] = useState(false)
+  const [bankQuery, setBankQuery] = useState('')   // БИК или название банка для DaData
+  const [pullingBank, setPullingBank] = useState(false)
   const [objModal, setObjModal] = useState(null) // { clientId, object }
   const [objForm, setObjForm] = useState(emptyObject)
   const [objSaving, setObjSaving] = useState(false)
@@ -155,8 +157,9 @@ export default function Clients() {
       if (d?.error === 'conflict') msg = 'Дубликат: клиент с таким ИНН уже есть'
       else if (d?.error === 'fk_violation') msg = 'Неверная ссылка (группа компаний?)'
       else if (d?.error === 'validation' && Array.isArray(d.issues)) {
-        const fields = d.issues.map((i) => (i.path || []).join('.')).filter(Boolean)
-        msg = `Проверьте поля: ${[...new Set(fields)].join(', ') || 'данные неверны'}`
+        // Показываем понятные русские сообщения из валидатора (по одному на поле).
+        const msgs = [...new Set(d.issues.map((i) => i.message).filter(Boolean))]
+        msg = msgs.length ? msgs.join('. ') : 'Проверьте правильность заполнения полей'
       } else if (d?.error) msg = `Ошибка сохранения: ${d.error}`
       toast.error(msg)
     }
@@ -270,6 +273,22 @@ export default function Clients() {
             : 'Не удалось получить данные DaData',
       )
     } finally { setPullingInn(false) }
+  }
+  // Автозаполнение банковских реквизитов по БИК или названию через DaData (одно поле).
+  const pullBank = async () => {
+    const query = bankQuery.trim()
+    if (!query) { toast.error('Введите БИК или название банка'); return }
+    setPullingBank(true)
+    try {
+      const { data } = await api.post('/settings/dadata/bank', { query })
+      const b = Array.isArray(data) ? data[0] : null
+      if (!b) { toast.error('Банк не найден'); return }
+      setForm((f) => ({ ...f, bank_name: b.bank_name || f.bank_name, bik: b.bik || f.bik, corr_account: b.corr_account || f.corr_account }))
+      toast.success('Банк подтянут из DaData — проверьте и сохраните')
+    } catch (e) {
+      const err = e?.response?.data?.error
+      toast.error(err === 'dadata_token_missing' ? 'Токен DaData не задан в Настройках' : 'Не удалось получить данные банка')
+    } finally { setPullingBank(false) }
   }
   // Принудительный автогеокодинг существующего объекта (по адресу).
   const geocodeObj = async () => {
@@ -481,36 +500,52 @@ export default function Clients() {
             <label className="a-field"><span>КПП</span>
               <input className="a-input" value={form.kpp} onChange={(e) => setForm({ ...form, kpp: e.target.value })} />
             </label>
-            <label className="a-field"><span>ОГРН</span>
-              <input className="a-input" value={form.ogrn} onChange={(e) => setForm({ ...form, ogrn: e.target.value })} />
-            </label>
             <button type="button" className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap', height: 40, boxSizing: 'border-box' }}
               onClick={pullClientByInn} disabled={pullingInn} title="Заполнить реквизиты по ИНН через DaData">
               {pullingInn ? '…' : '↧ По ИНН'}
             </button>
           </div>
+          {/* ОГРН — на всю ширину, чтобы помещалась вся запись (13–15 цифр). */}
+          <label className="a-field"><span>ОГРН</span>
+            <input className="a-input" value={form.ogrn} onChange={(e) => setForm({ ...form, ogrn: e.target.value })} />
+          </label>
+          {/* Юр. адрес — в две строки на случай длинного адреса. */}
           <label className="a-field"><span>Юр. адрес</span>
-            <input className="a-input" value={form.legal_address} onChange={(e) => setForm({ ...form, legal_address: e.target.value })} />
+            <textarea className="a-input" rows={2} style={{ resize: 'vertical' }}
+              value={form.legal_address} onChange={(e) => setForm({ ...form, legal_address: e.target.value })} />
           </label>
           <div className="a-field-row">
             <label className="a-field"><span>Телефон</span>
-              <input className="a-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <input className="a-input" inputMode="tel" placeholder="+7 9XX XXX-XX-XX"
+                value={'+7' + (toNational(form.phone) ? ' ' + formatNat(toNational(form.phone)) : ' ')}
+                onChange={(e) => setForm({ ...form, phone: toFull(toNational(e.target.value)) })} />
             </label>
             <label className="a-field"><span>E-mail</span>
-              <input className="a-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <input className="a-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </label>
           </div>
-          <div className="a-section-title">Чаты в мессенджерах</div>
-          <div className="a-note">
-            Адрес общего чата клиента/ГК (ссылка на группу или личку) — куда слать отчёты по заявкам.
-          </div>
-          <MessengerChatInputs
-            messengers={['telegram', 'max']} chats={form.chats}
-            onChange={(chats) => setForm({ ...form, chats })}
-          />
-          {editing.id && <ClientRecipients clientId={editing.id} />}
+          {editing.id
+            ? <ClientRecipients clientId={editing.id} />
+            : <>
+                <div className="a-section-title">Групповой чат для отчётов</div>
+                <div className="a-note">
+                  Здесь задаются параметры группового чата заказчика. Сохраните клиента — появится
+                  команда для подключения группы. Чтобы отчёты приходили конкретным лицам, перейдите
+                  в «Доверенные лица».
+                </div>
+              </>}
 
           <div className="a-section-title">Банковские реквизиты</div>
+          {/* Автозаполнение по БИК или названию банка через DaData (одно поле). */}
+          <label className="a-field"><span>Поиск банка (БИК или название)</span>
+            <div className="a-fieldrow">
+              <input className="a-input" value={bankQuery} placeholder="044525225 или «Сбербанк»"
+                onChange={(e) => setBankQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pullBank() } }} />
+              <button type="button" className="a-btn a-btn--soft a-iconbtn" onClick={pullBank} disabled={pullingBank}
+                title="Подтянуть банк, БИК и корр. счёт через DaData">{pullingBank ? '…' : '↧ Найти'}</button>
+            </div>
+          </label>
           <label className="a-field"><span>Банк</span>
             <input className="a-input" value={form.bank_name} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} />
           </label>

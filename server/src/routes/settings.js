@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import * as svc from '../services/settings.js'
 import { geocode } from '../lib/geocode.js'
-import { findPartyByInn, suggestAddress } from '../services/dadata.js'
+import { findPartyByInn, suggestAddress, suggestBank } from '../services/dadata.js'
 import { requireRole } from '../middleware/authUser.js'
 
 const r = Router()
@@ -150,6 +150,15 @@ r.post('/dadata/address', async (req, res, next) => {
     const query = String(req.body?.query || '').trim()
     if (!query) return res.status(400).json({ error: 'query_required' })
     res.json(await suggestAddress(query))
+  } catch (e) { next(e) }
+})
+
+// Подсказки по банкам (БИК или название) → банк + БИК + корр. счёт. Для реквизитов клиента.
+r.post('/dadata/bank', async (req, res, next) => {
+  try {
+    const query = String(req.body?.query || '').trim()
+    if (!query) return res.status(400).json({ error: 'query_required' })
+    res.json(await suggestBank(query))
   } catch (e) { next(e) }
 })
 
