@@ -186,7 +186,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
     <>
       <button className="a-btn a-btn--ghost" onClick={() => setMode(null)}>Назад</button>
       {mode === 'assign' && <button className="a-btn a-btn--primary" onClick={doAssign} disabled={!assignForm.driver_id}>Сохранить</button>}
-      {mode === 'complete' && <button className="a-btn a-btn--primary" onClick={doComplete}>Завершить</button>}
+      {mode === 'complete' && <button className="a-btn a-btn--primary" onClick={doComplete}>Отметить выполненной</button>}
       {mode === 'edit' && <button className="a-btn a-btn--primary" onClick={doSave} disabled={!editForm?.desired_date}>Сохранить</button>}
     </>
   ) : (
@@ -195,7 +195,12 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
       {o.status !== 'done' && o.status !== 'closed' && o.status !== 'awaiting_confirmation' && <button className="a-btn a-btn--ghost" onClick={startEdit}>✎ Редактировать</button>}
       {o.status === 'pending_review' && <button className="a-btn a-btn--success" onClick={doSendToOrders}>Отправить в Заявки →</button>}
       {canAssign && <button className="a-btn a-btn--primary" onClick={() => setMode('assign')}>{o.status === 'new' ? 'Назначить' : 'Переназначить / перенести'}</button>}
-      {(o.status === 'assigned' || o.status === 'in_progress') && <button className="a-btn a-btn--success" onClick={() => setMode('complete')}>Завершить</button>}
+      {(o.status === 'assigned' || o.status === 'in_progress') && (
+        <button className="a-btn a-btn--success" onClick={() => setMode('complete')}
+          title="Отметить заявку исполненной вручную (без бота водителя): зафиксировать движения контейнеров/фото и закрыть как выполненную">
+          Отметить выполненной
+        </button>
+      )}
       {o.status === 'awaiting_confirmation' && (
         <button className="a-btn a-btn--primary" onClick={doConfirm} disabled={!canConfirm}
           title={!canConfirm ? 'Примите все выполненные участки и разрулите невыполненные' : undefined}>
@@ -276,19 +281,25 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
             )}
           </div>
 
-          {/* Задание водителю — только пока заявка в работе. Грейфер: вывоз навалом без
-              контейнеров; контейнерные — разбивка по участкам через ContainerJob. */}
-          {!['done', 'closed', 'awaiting_confirmation', 'review'].includes(o.status) && isGrapple(o) && (
+          {/* Задание водителю — пока заявка в работе И на проверке. На проверке показываем
+              ровно то, что уйдёт водителю в мессенджер (адрес, город, время, контакт) —
+              наглядно видно содержимое сообщения. Грейфер: вывоз навалом; контейнеры — по участкам. */}
+          {!['done', 'closed', 'awaiting_confirmation'].includes(o.status)
+            && (isGrapple(o) || o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (
             <>
               <div className="a-section-title">Задание водителю</div>
-              <div className="a-frv">🚛 Грейфер — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
-            </>
-          )}
-          {!['done', 'closed', 'awaiting_confirmation', 'review'].includes(o.status) && !isGrapple(o)
-            && (o.items?.length > 0 || o.empties > 0 || o.fulls > 0) && (
-            <>
-              <div className="a-section-title">Участки — задание водителю</div>
-              <ContainerJob o={o} />
+              {o.status === 'review' && (
+                <div className="a-msgr-preview a-muted" style={{ fontSize: '0.85rem', marginBottom: 8, lineHeight: 1.5 }}>
+                  <div>📍 {streetLine(o)}{o.city ? `, ${o.city}` : ''}</div>
+                  <div>⚡ {fmtDesiredTime(o.desired_time) || 'Как можно быстрее'}</div>
+                  {o.trusted_person_name && (
+                    <div>👤 {o.trusted_person_name}{o.trusted_person_phone ? ` · ${o.trusted_person_phone}` : ''}</div>
+                  )}
+                </div>
+              )}
+              {isGrapple(o)
+                ? <div className="a-frv">🚛 Грейфер — вывоз навалом{Number(o.grapple_runs) > 1 ? ` · ${o.grapple_runs} ходок` : ''}</div>
+                : <ContainerJob o={o} />}
             </>
           )}
 

@@ -1411,6 +1411,7 @@ textarea.a-input,
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+  flex-wrap: wrap;           /* много кнопок (В архив/Редактировать/Переназначить/…) — переносим, не обрезаем */
   border-top: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0;            /* футер закреплён снизу, не скроллится */
 }
