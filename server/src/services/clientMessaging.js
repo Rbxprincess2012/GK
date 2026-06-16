@@ -34,19 +34,19 @@ export function buildDeepLink(phone, messenger = 'telegram') {
 // ── Сборка сообщения и приёмка (с БД) ──
 
 const DEFAULT_BODY = [
-  'Здравствуйте, {client}!',
+  'Здравствуйте, уважаемые партнёры!',
   '',
-  'Заявка №{number} от {date} — выполнено ✅',
+  'Заявка №{number} от {date} — {status}',
   '',
+  'Заказчик: {client}',
   'Объект: {address}',
   'Водитель: {driver}',
-  '',
-  'По участкам:',
-  '{sections}',
-  '',
   'Сумма: {amount}',
   '',
-  'Фотоотчёт: {report_url}',
+  'Информация по участкам:',
+  '{sections}',
+  '',
+  'Отчёт по заявке: {report_url}',
 ].join('\n')
 
 function fmtDate(d) {
@@ -93,13 +93,31 @@ async function sectionRows(orderId, conn) {
       'st.completed_at', 'st.completed_by_driver_id', 's.name as section_name', 'd.name as done_driver_name')
 }
 
-function sectionsText(rows, isGrapple = false) {
-  return rows.map((r) => {
-    // Грейфер — вывоз навалом без участков: одна строка «Вывоз грейфером».
+// «Информация по участкам»: выполненные (rows на этой заявке) — 🟢, перенесённые из-за
+// невыполнения (carried — ушли в отдельные заявки) — 🔴. 📍 перед каждым участком.
+function sectionsText(rows, carried = [], isGrapple = false) {
+  const lines = []
+  const seen = new Set()
+  for (const r of rows) {
     const name = isGrapple ? 'Вывоз грейфером' : (r.section_name || 'Объект')
-    if (r.status === 'done') return `• ${name} — ${isGrapple ? 'выполнено' : 'вывезено'} 🟩`
-    return `• ${name} — не выполнен${r.comment ? `: ${r.comment}` : ''}`
-  }).join('\n')
+    seen.add(name)
+    lines.push(`📍 ${name} — ${r.status === 'done' ? 'выполнено 🟢' : 'выполнить не удалось 🔴'}`)
+  }
+  for (const c of carried) {
+    const name = c.section_name || 'Объект'
+    if (seen.has(name)) continue
+    lines.push(`📍 ${name} — выполнить не удалось 🔴`)
+  }
+  return lines.join('\n')
+}
+
+// Статус заявки с согласованием рода (заявка — ж.р.): полностью / частично / не выполнена.
+function statusLine(rows, carried = []) {
+  const total = rows.length + carried.length
+  const done = rows.filter((r) => r.status === 'done').length
+  if (total === 0 || done === total) return 'выполнена ✅'
+  if (done === 0) return 'не выполнена ❌'
+  return 'выполнена частично 🟡'
 }
 
 // Участки, выделенные из заявки в отдельные «остаточные» заявки (ещё не выполнены) —
@@ -118,7 +136,7 @@ function messageTail(carried) {
   const tail = []
   if (carried.length) {
     const names = carried.map((c) => (c.section_name ? `«${c.section_name}»` : 'участок')).join(', ')
-    tail.push(`⚠️ ${carried.length > 1 ? 'Участки' : 'Участок'} ${names} выполнить не удалось — передали менеджеру на ручную обработку, свяжемся с вами отдельно.`)
+    tail.push(`⚠️ ${carried.length > 1 ? 'Участки' : 'Участок'} ${names} выполнить не удалось — подробности в Отчёте по заявке. Передали информацию менеджеру на ручную обработку. Перераспределим в ближайшее время или свяжемся с вами отдельно.`)
   }
   tail.push('Ждём вашего следующего заказа! 🚛')
   return tail.join('\n\n')
@@ -152,18 +170,21 @@ export async function buildClientMessage(orderId, { templateId, token } = {}, co
   const head = await orderHead({ 'o.id': orderId }, conn)
   if (!head) return null
   const rows = await sectionRows(orderId, conn)
+  const carried = await carriedOverSections(orderId, conn)
   const tok = token || head.public_token
+  const isGrapple = head.service_type === 'grapple'
   const vars = {
-    client: head.client_nickname || head.client_legal_name || `Клиент #${head.id}`,
+    // Заказчик — официальное юр. наименование (неофициальный ник клиента выпилен из проекта).
+    client: head.client_legal_name || `Клиент #${head.id}`,
     number: head.number ?? head.id,
     date: fmtDate(head.desired_date),
+    status: statusLine(rows, carried),
     address: addressOf(head),
     driver: driverOf(head),
-    sections: sectionsText(rows, head.service_type === 'grapple'),
+    sections: sectionsText(rows, carried, isGrapple),
     amount: amountOf(head),
     report_url: tok ? reportUrl(tok) : '',
   }
-  const carried = await carriedOverSections(orderId, conn)
   const body = renderTemplate(await activeTemplateBody(templateId), vars).trimEnd() + '\n\n' + messageTail(carried)
   const results = rows.map((r) => ({ sub_no: r.sub_no, section_id: r.section_id, status: r.status }))
   return { body, results, vars, head, carried }
@@ -266,13 +287,22 @@ export async function publicReport(token) {
   }
   const driverLine = driverName ? (vehStr ? `${driverName} · ${vehStr}` : driverName) : '—'
 
+  // Контакты менеджера для клиента (из настроек компании) + есть ли невыполненные участки.
+  const org = (await getSetting('org')) || {}
+  const manager = (org.manager_name || org.manager_phone)
+    ? { name: org.manager_name || '', phone: org.manager_phone || '' }
+    : null
+  const hasFailed = rows.some((r) => r.status !== 'done')
+
   return {
     number: head.number ?? head.id,
-    client: head.client_nickname || head.client_legal_name || `Клиент #${head.id}`,
+    client: head.client_legal_name || `Клиент #${head.id}`,
     date: fmtDate(head.desired_date),
     address: addressOf(head),
     driver: driverLine,
     amount: amountOf(head),
+    manager,
+    has_failed: hasFailed,
     sections: rows.map((r) => {
       const attsFor = atts.filter((a) => a.subtask_id === r.id)
       // Время выполнения: когда участок закрыт, иначе — момент последнего оставленного пруфа.

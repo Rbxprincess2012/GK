@@ -234,6 +234,15 @@ export default function Settings() {
             <input className="a-input" value={org.email || ''} onChange={setOrgField('email')} />
           </label>
         </div>
+        {/* Контакты менеджера — показываются клиенту в Отчёте по заявке («вопросы — менеджеру»). */}
+        <div className="a-field-row">
+          <label className="a-field"><span>Менеджер (ФИО для клиента)</span>
+            <input className="a-input" value={org.manager_name || ''} placeholder="Иванова Мария" onChange={setOrgField('manager_name')} />
+          </label>
+          <label className="a-field"><span>Телефон менеджера</span>
+            <input className="a-input" value={org.manager_phone || ''} placeholder="+7 …" onChange={setOrgField('manager_phone')} />
+          </label>
+        </div>
 
         {isSuper && (
           <>

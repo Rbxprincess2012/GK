@@ -105,6 +105,9 @@ const orgInput = z.object({
   legal_address: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
+  // Контакты менеджера для клиента (показываются в Отчёте по заявке).
+  manager_name: z.string().optional(),
+  manager_phone: z.string().optional(),
   bank_name: z.string().optional(),
   bank_account: z.string().optional(),
   bik: z.string().optional(),

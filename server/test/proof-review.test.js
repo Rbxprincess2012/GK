@@ -195,6 +195,6 @@ describe('приёмка: перенос невыполненного участ
     const movedS2 = await db('order_subtasks').where({ id: s2.id }).first()
     expect(movedS2.order_id).toBe(child.id)
     const msgs = await db('client_messages').where({ order_id: order.id })
-    expect(msgs[0].body).toContain('передали менеджеру')
+    expect(msgs[0].body).toContain('менеджеру на ручную обработку')
   })
 })

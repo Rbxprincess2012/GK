@@ -8,6 +8,11 @@ import { bindPersonByCode } from '../services/trustedPersonChannels.js'
 //  • deep-link payload p<code>  (личка) → доверенное лицо
 //  • /bind <code>               (группа) → получатель-группа (kind 'group')
 const personTitle = (from) => [from?.first_name, from?.username && `@${from.username}`].filter(Boolean).join(' ')
+// Имя для обращения: «Фамилия Имя» → часть после фамилии (фамилия в приветствии не нужна).
+const addressName = (full) => {
+  const parts = String(full || '').trim().split(/\s+/)
+  return parts.length > 1 ? parts.slice(1).join(' ') : (parts[0] || '')
+}
 
 export function createMaxClientBot(token) {
   const bot = new Bot(token)
@@ -18,7 +23,7 @@ export function createMaxClientBot(token) {
     // Префикс 'p' → код доверенного лица; иначе — получатель клиента.
     if (/^p\d+$/.test(code)) {
       const r = await bindPersonByCode(code.slice(1), { chat_id: ctx.chat.id, channel: 'max' })
-      return ctx.reply(r ? `Готово, ${r.name}! Сюда будут приходить отчёты о выполнении заявок по вашим объектам.` : 'Ссылка недействительна или уже использована.')
+      return ctx.reply(r ? `Готово, ${addressName(r.name)}! Сюда будут приходить отчёты о выполнении заявок по вашим объектам.` : 'Ссылка недействительна или уже использована.')
     }
     const r = await bindByCode(code, { chat_id: ctx.chat.id, kind: 'dm', title: personTitle(ctx.from), channel: 'max' })
     return ctx.reply(r ? 'Готово! Сюда будут приходить отчёты о выполнении ваших заявок.' : 'Ссылка недействительна или уже использована.')

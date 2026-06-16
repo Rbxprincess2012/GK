@@ -8,6 +8,12 @@ import { bindPersonByCode } from '../services/trustedPersonChannels.js'
 //  • /bind  <code>   в группе → привязать группу (kind 'group')
 // title бот подставляет сам (имя/@username или название группы).
 const personTitle = (from) => [from?.first_name, from?.username && `@${from.username}`].filter(Boolean).join(' ')
+// Имя доверенного лица для обращения: храним «Фамилия Имя» — берём часть после первой (фамилии).
+// Фамилия в приветствии не нужна. Без пробела — используем как есть.
+const addressName = (full) => {
+  const parts = String(full || '').trim().split(/\s+/)
+  return parts.length > 1 ? parts.slice(1).join(' ') : (parts[0] || '')
+}
 
 export function createClientBot(token) {
   const bot = new Bot(token)
@@ -18,7 +24,7 @@ export function createClientBot(token) {
     // Префикс 'p' → код доверенного лица; иначе — получатель клиента.
     if (/^p\d+$/.test(code)) {
       const r = await bindPersonByCode(code.slice(1), { chat_id: ctx.chat.id })
-      return ctx.reply(r ? `Готово, ${r.name}! Сюда будут приходить отчёты о выполнении заявок по вашим объектам.` : 'Ссылка недействительна или уже использована.')
+      return ctx.reply(r ? `Готово, ${addressName(r.name)}! Сюда будут приходить отчёты о выполнении заявок по вашим объектам.` : 'Ссылка недействительна или уже использована.')
     }
     const r = await bindByCode(code, { chat_id: ctx.chat.id, kind: 'dm', title: personTitle(ctx.from) })
     return ctx.reply(r ? 'Готово! Сюда будут приходить отчёты о выполнении ваших заявок.' : 'Ссылка недействительна или уже использована.')
