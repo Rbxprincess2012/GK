@@ -81,7 +81,7 @@ function orderText(order) {
   const ownFor = (sid) => sc.filter((c) => c.section_id === sid) // лица именно этого участка
   // Под участком — его лицо(а); для позиции без участка ничего (объектное лицо идёт под объектом).
   const contactSuffix = (it) => it.section_id == null ? ''
-    : ownFor(it.section_id).map(fmtContact).filter(Boolean).map((s) => `\n   ${s}`).join('')
+    : ownFor(it.section_id).map(fmtContact).filter(Boolean).map((s) => `\n${s}`).join('')
   // Грейфер — вывоз навалом: контейнерных позиций нет, объём задаётся числом ходок.
   const isGrapple = order.service_type === 'grapple'
   let work, base, trips
@@ -90,12 +90,15 @@ function orderText(order) {
     work = `🚛 Грейфер — вывоз навалом${runs > 1 ? `\n🔁 ${runs} ходок` : ''}`
     base = ''; trips = ''
   } else {
-    const lines = (order.items || []).map((it) =>
-      `• ${it.section_name ? `${esc(it.section_name)} — ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`
+    // Каждый участок — отдельным блоком: «📍 Участок: действие N · №…» + контакт под ним.
+    // Блоки разделяем пустой строкой; над ними — заголовок «Задание водителю …».
+    const hasSections = (order.items || []).some((it) => it.section_name)
+    const blocks = (order.items || []).map((it) =>
+      `${it.section_name ? '📍 ' : '• '}${it.section_name ? `${esc(it.section_name)}: ` : ''}${ACTION[it.action] || it.action} ${it.quantity}`
       + (it.container_numbers ? ` · №${esc(it.container_numbers)}` : '')
       + contactSuffix(it))
-    if (!lines.length) lines.push('• позиции не указаны')
-    work = lines.join('\n')
+    const header = hasSections ? 'Задание водителю по участкам 📍:' : 'Задание водителю:'
+    work = blocks.length ? `${header}\n${blocks.join('\n\n')}` : 'Позиции не указаны'
     const E = Number(order.empties) || 0
     base = E > 0 ? `\n\nС базы взять: ${'📦'.repeat(Math.min(E, 6))}${E > 6 ? `×${E}` : ''}` : ''
     trips = Number(order.trips) > 1 ? `\n🔁 ${order.trips} рейса` : ''
