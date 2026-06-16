@@ -99,7 +99,7 @@ function sectionsText(rows, carried = [], isGrapple = false) {
   const lines = []
   const seen = new Set()
   for (const r of rows) {
-    const name = isGrapple ? 'Вывоз грейфером' : (r.section_name || 'Объект')
+    const name = isGrapple ? 'Вывоз навалом' : (r.section_name || 'Объект')
     seen.add(name)
     lines.push(`📍 ${name} — ${r.status === 'done' ? 'выполнено 🟢' : 'выполнить не удалось 🔴'}`)
   }
@@ -172,7 +172,7 @@ export async function buildClientMessage(orderId, { templateId, token } = {}, co
   const rows = await sectionRows(orderId, conn)
   const carried = await carriedOverSections(orderId, conn)
   const tok = token || head.public_token
-  const isGrapple = head.service_type === 'grapple'
+  const isGrapple = head.service_type && head.service_type !== 'container' // навальный вывоз
   const vars = {
     // Заказчик — официальное юр. наименование (неофициальный ник клиента выпилен из проекта).
     client: head.client_legal_name || `Клиент #${head.id}`,

@@ -91,10 +91,17 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
     return { assignments: [], unassigned: orders.map((o) => o.id), spread: 0 }
   }
 
-  // Совместимость заявка↔водитель по типу машины: грейфер-заявку (service='grapple') берёт
-  // только водитель на грейфере (kind='grapple'); контейнерную — только контейнеровоз.
-  // Дефолт обеих сторон — 'container', поэтому прежнее (однотипное) поведение не меняется.
-  const canTake = (order, driver) => (order.service ?? 'container') === (driver.kind ?? 'container')
+  // Совместимость заявка↔водитель: (1) по ТИПУ машины — service-slug заявки == kind-slug машины
+  // (грейфер→грейфер, газель→газель, контейнер→контейнеровоз; дефолт обеих сторон 'container');
+  // (2) по РАЗМЕРУ — все размеры контейнеров заявки (order.sizes) должна возить машина (driver.sizes).
+  // Заявка без размеров (навальная или размер не указан) проходит только тип-проверку.
+  const canTake = (order, driver) => {
+    if ((order.service ?? 'container') !== (driver.kind ?? 'container')) return false
+    const need = order.sizes || []
+    if (!need.length) return true
+    const have = driver.sizes || []
+    return need.every((s) => have.includes(s))
+  }
 
   // assignment: driverId -> [orderId]
   const assign = new Map(drivers.map((d) => [d.id, []]))

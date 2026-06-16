@@ -30,9 +30,11 @@ export async function metricsForOrder(orderId, { vehicleId = null, conn = db } =
 
   const hasCoords = o?.lat != null && o?.lng != null && base?.lat != null && base?.lng != null
   const km = hasCoords ? haversineKm({ lat: Number(o.lat), lng: Number(o.lng) }, { lat: Number(base.lat), lng: Number(base.lng) }) : null
-  // Грейфер: заезды = число ходок (контейнерная физика неприменима). Иначе — по позициям/вместимости.
+  // Навальный вывоз (грейфер/газель/самосвал, т.е. любой тип ≠ 'container'): заезды = число ходок
+  // (контейнерная физика неприменима). Контейнеровоз — по позициям/вместимости пустых.
   const emptyCap = await emptyCapForVehicle(vehicleId, conn)
-  const trips = o?.service_type === 'grapple'
+  const isBulk = o?.service_type && o.service_type !== 'container'
+  const trips = isBulk
     ? Math.max(1, Number(o.grapple_runs) || 1)
     : await tripsForOrder(orderId, emptyCap, conn)
   const distance_km = km == null ? null : Math.round(km * 100) / 100

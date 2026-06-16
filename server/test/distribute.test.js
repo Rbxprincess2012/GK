@@ -211,6 +211,44 @@ describe('suggest', () => {
     expect(r.assignments.flatMap((a) => a.order_ids)).toEqual([1])
   })
 
+  it('сегрегация по размеру: заявка на 16 м³ идёт только машине, возящей 16', () => {
+    const orders = [{ id: 1, trips: 1, km: 0, service: 'container', sizes: [16] }]
+    const drivers = [
+      { id: 1, name: 'возит 8', kind: 'container', sizes: [8] },
+      { id: 2, name: 'возит 16/20', kind: 'container', sizes: [16, 20] },
+    ]
+    const r = suggest({ orders, drivers })
+    expect(r.assignments.find((a) => a.driver_id === 1).order_ids).toEqual([])
+    expect(r.assignments.find((a) => a.driver_id === 2).order_ids).toEqual([1])
+    expect(r.unassigned).toEqual([])
+  })
+
+  it('сегрегация по размеру: нет машины нужного размера → в unassigned', () => {
+    const orders = [{ id: 1, trips: 1, km: 0, service: 'container', sizes: [27] }]
+    const drivers = [{ id: 1, name: 'возит 8/16', kind: 'container', sizes: [8, 16] }]
+    const r = suggest({ orders, drivers })
+    expect(r.unassigned).toEqual([1])
+  })
+
+  it('заявка без размера достаётся любому контейнеровозу', () => {
+    const orders = [{ id: 1, trips: 1, km: 0, service: 'container', sizes: [] }]
+    const drivers = [{ id: 1, name: 'без размеров', kind: 'container', sizes: [] }]
+    const r = suggest({ orders, drivers })
+    expect(r.assignments[0].order_ids).toEqual([1])
+    expect(r.unassigned).toEqual([])
+  })
+
+  it('сегрегация по типу: газель-заявку берёт только газель, не самосвал', () => {
+    const orders = [{ id: 1, trips: 1, km: 0, service: 'gazelle' }]
+    const drivers = [
+      { id: 1, name: 'Самосвал', kind: 'samosval' },
+      { id: 2, name: 'Газель', kind: 'gazelle' },
+    ]
+    const r = suggest({ orders, drivers })
+    expect(r.assignments.find((a) => a.driver_id === 1).order_ids).toEqual([])
+    expect(r.assignments.find((a) => a.driver_id === 2).order_ids).toEqual([1])
+  })
+
   it('все заявки распределены, ничего не потеряно и не задвоено', () => {
     const orders = Array.from({ length: 9 }, (_, i) => ({
       id: i + 1, slots: (i % 3) + 1, km: (i * 7) % 50, district: ['A', 'B', 'C'][i % 3],

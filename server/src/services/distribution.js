@@ -22,11 +22,15 @@ async function newOrdersForDate(date) {
       db.raw(`COALESCE((SELECT SUM(oi.quantity) FROM order_items oi
                WHERE oi.order_id = o.id AND oi.action IN ('replace','haul')), 0)::int AS fulls`),
       db.raw(`COALESCE((SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id), 0)::int AS item_count`),
+      // Различные размеры контейнеров заявки (для сегрегации по размеру при распределении).
+      db.raw(`COALESCE((SELECT array_agg(DISTINCT oi.container_type_id) FROM order_items oi
+               WHERE oi.order_id = o.id AND oi.container_type_id IS NOT NULL), '{}') AS sizes`),
     )
     .orderBy('o.id')
   return rows.map((r) => ({
     ...r,
     empties: Number(r.empties) || 0, fulls: Number(r.fulls) || 0,
+    sizes: Array.isArray(r.sizes) ? r.sizes.map(Number) : [],
     lat: r.lat == null ? null : Number(r.lat), lng: r.lng == null ? null : Number(r.lng),
   }))
 }
@@ -46,20 +50,22 @@ export async function suggestDistribution(date, shiftType) {
   const drivers = (await availableDrivers(date, shiftType)).map((d) => ({
     id: d.id, name: d.name, capacity: d.capacity_slots || 3,
     empty_capacity: d.empty_capacity || 2, vehicle_id: d.vehicle_id,
-    kind: d.vehicle_kind || 'container', // тип машины водителя на смене (контейнеровоз/грейфер)
+    kind: d.vehicle_kind || 'container', // тип машины (slug): контейнеровоз/грейфер/газель/самосвал
+    sizes: Array.isArray(d.vehicle_sizes) ? d.vehicle_sizes.map(Number) : [], // возимые размеры контейнеров
   }))
   const rawOrders = await newOrdersForDate(date)
 
   // km до базы; заезды считает алгоритм по пустым/полным и вместимости машины водителя.
   // Грейфер-заявка несёт service='grapple' и intrinsic trips = число ходок (контейнерных нет).
   const orders = rawOrders.map((o) => {
-    const isGrapple = o.service_type === 'grapple'
+    const isBulk = o.service_type && o.service_type !== 'container'
     return {
-      id: o.id, district: o.district || null,
+      id: o.id,
       lat: o.lat ?? null, lng: o.lng ?? null, // для кучности по координатам (распределение)
-      service: isGrapple ? 'grapple' : 'container',
-      empties: isGrapple ? null : o.empties, fulls: isGrapple ? null : o.fulls,
-      trips: isGrapple ? Math.max(1, Number(o.grapple_runs) || 1) : null,
+      service: o.service_type || 'container', // slug типа машины (сегрегация по типу)
+      sizes: isBulk ? [] : o.sizes,           // размеры контейнеров (сегрегация по размеру)
+      empties: isBulk ? null : o.empties, fulls: isBulk ? null : o.fulls,
+      trips: isBulk ? Math.max(1, Number(o.grapple_runs) || 1) : null,
       km: baseSet && o.lat != null && o.lng != null
         ? Math.round(haversineKm({ lat: o.lat, lng: o.lng }, { lat: Number(base.lat), lng: Number(base.lng) }) * 100) / 100
         : null,
@@ -81,15 +87,15 @@ export async function suggestDistribution(date, shiftType) {
   const kmById = new Map(orders.map((o) => [o.id, o.km]))
   const orderView = (id, emptyCap) => {
     const m = metaById.get(id)
-    const isGrapple = m.service_type === 'grapple'
+    const isBulk = m.service_type && m.service_type !== 'container'
     return {
       id, number: m.number, city: m.city, street_name: m.street_name,
       house: m.house, building: m.building, address_raw: m.address_raw,
       object_name: m.object_name, client_legal_name: m.client_legal_name,
-      km: kmById.get(id), service_type: isGrapple ? 'grapple' : 'container',
-      empties: isGrapple ? 0 : m.empties, fulls: isGrapple ? 0 : m.fulls,
-      grapple_runs: isGrapple ? Math.max(1, Number(m.grapple_runs) || 1) : null,
-      trips: isGrapple ? Math.max(1, Number(m.grapple_runs) || 1) : tripsFromCounts(m.empties, m.fulls, emptyCap),
+      km: kmById.get(id), service_type: m.service_type || 'container',
+      empties: isBulk ? 0 : m.empties, fulls: isBulk ? 0 : m.fulls,
+      grapple_runs: isBulk ? Math.max(1, Number(m.grapple_runs) || 1) : null,
+      trips: isBulk ? Math.max(1, Number(m.grapple_runs) || 1) : tripsFromCounts(m.empties, m.fulls, emptyCap),
     }
   }
   const assignments = result.assignments.map((a) => ({
@@ -100,7 +106,8 @@ export async function suggestDistribution(date, shiftType) {
   // Нераспределённые: нет машины нужного типа на смене (напр. грейфер-заявка без водителя-грейфера).
   const unassigned = (result.unassigned || []).map((id) => {
     const v = orderView(id, 2)
-    return { ...v, reason: v.service_type === 'grapple' ? 'no_grapple_vehicle' : 'no_container_vehicle' }
+    // Нет совместимой машины: либо нужного типа (грейфер/газель/самосвал), либо нужного размера.
+    return { ...v, reason: 'no_compatible_vehicle' }
   })
 
   return {

@@ -82,12 +82,14 @@ function orderText(order) {
   // Под участком — его лицо(а); для позиции без участка ничего (объектное лицо идёт под объектом).
   const contactSuffix = (it) => it.section_id == null ? ''
     : ownFor(it.section_id).map(fmtContact).filter(Boolean).map((s) => `\n${s}`).join('')
-  // Грейфер — вывоз навалом: контейнерных позиций нет, объём задаётся числом ходок.
-  const isGrapple = order.service_type === 'grapple'
+  // Навальный вывоз (грейфер/газель/самосвал) — контейнеров нет, объём = число ходок.
+  const BULK = { grapple: 'Грейфер', gazelle: 'Газель', samosval: 'Самосвал' }
+  const isBulk = order.service_type && order.service_type !== 'container'
   let work, base, trips
-  if (isGrapple) {
+  if (isBulk) {
     const runs = Math.max(1, Number(order.grapple_runs) || 1)
-    work = `🚛 Грейфер — вывоз навалом${runs > 1 ? `\n🔁 ${runs} ходок` : ''}`
+    const label = BULK[order.service_type] || 'Вывоз навалом'
+    work = `🚛 ${label} — вывоз навалом${runs > 1 ? `\n🔁 ${runs} ходок` : ''}`
     base = ''; trips = ''
   } else {
     // Каждый участок — отдельным блоком: «📍 Участок: действие N · №…» + контакт под ним.

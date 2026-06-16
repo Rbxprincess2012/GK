@@ -27,7 +27,8 @@ import { authenticate, requireUser, requireUserOrService, requireRole, requireAc
 import { createInvoice, updateInvoice } from '../validators/invoice.js'
 import { crudRouter } from '../lib/crudRouter.js'
 import { createClient, updateClient } from '../validators/client.js'
-import { createVehicle, updateVehicle } from '../validators/vehicle.js'
+import vehiclesRoutes from './vehicles.js'
+import vehicleTypesRoutes from './vehicleTypes.js'
 import { createDriver, updateDriver } from '../validators/driver.js'
 import { createContainerType, updateContainerType } from '../validators/containerType.js'
 import { createContainer, updateContainer } from '../validators/container.js'
@@ -94,7 +95,8 @@ api.post('/drivers/:id/bot-link', requireRole('manager', 'director', 'superuser'
 })
 
 api.use('/clients', crudRouter('clients', { createSchema: createClient, updateSchema: updateClient, jsonbFields: ['chats'] }))
-api.use('/vehicles', crudRouter('vehicles', { createSchema: createVehicle, updateSchema: updateVehicle }))
+api.use('/vehicle-types', vehicleTypesRoutes)
+api.use('/vehicles', vehiclesRoutes)
 api.use('/drivers', crudRouter('drivers', { createSchema: createDriver, updateSchema: updateDriver }))
 api.use('/trusted-persons', trustedPersons)
 api.use('/sections', crudRouter('sections', {

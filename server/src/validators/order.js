@@ -8,9 +8,9 @@ export const createOrderInput = z.object({
   desired_date: z.string().optional(),
   desired_time: z.string().optional(),
   note: z.string().optional(),
-  // Тип услуги: 'container' (контейнеры, позиции place/replace/haul) или 'grapple'
-  // (грейфер — вывоз навалом, без контейнерных позиций, объём задаётся числом ходок).
-  service_type: z.enum(['container', 'grapple']).optional(),
+  // Тип услуги = slug типа машины: 'container' (контейнеры, позиции с размером) либо
+  // любой «навальный» тип (grapple/gazelle/samosval/кастом) — без позиций, объём = число ходок.
+  service_type: z.string().optional(),
   grapple_runs: z.number().int().positive().optional(),
   // 'pending_review' — черновик от бота (без номера до accept); по умолчанию 'new'
   status: z.enum(['new', 'pending_review']).optional(),

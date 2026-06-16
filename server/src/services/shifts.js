@@ -43,6 +43,9 @@ export function availableDrivers(date, shiftType) {
       db.raw(`(SELECT v.empty_capacity FROM vehicles v
                WHERE v.id = COALESCE(s.vehicle_id, dr.default_vehicle_id)) AS empty_capacity`),
       db.raw(`(SELECT v.kind FROM vehicles v
-               WHERE v.id = COALESCE(s.vehicle_id, dr.default_vehicle_id)) AS vehicle_kind`))
+               WHERE v.id = COALESCE(s.vehicle_id, dr.default_vehicle_id)) AS vehicle_kind`),
+      db.raw(`(SELECT COALESCE(array_agg(vct.container_type_id), '{}')
+               FROM vehicle_container_types vct
+               WHERE vct.vehicle_id = COALESCE(s.vehicle_id, dr.default_vehicle_id)) AS vehicle_sizes`))
     .orderBy('dr.name')
 }
