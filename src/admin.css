@@ -2315,43 +2315,20 @@ textarea.a-input,
   color: #b9c4ec;
   cursor: pointer;
 }
-/* Кастомный чекбокс навперма (appearance:none): лежит внутри .a-field, поэтому
-   полностью изолируем от .a-field input — её width:100%/padding/border раздували бокс
-   и ломали выравнивание, а нативный контрол с форсированным размером 15px давал
-   субпиксельный пересчёт (дрожание строк) при каждом движении курсора. */
+/* Обычные нативные чекбоксы (галочка + оранжевый акцент). Лежат внутри .a-field,
+   поэтому сбрасываем унаследованные от .a-field input width:100%/padding/border/transition —
+   именно они раздували бокс (ломая выравнивание) и давали дрожание строк при наведении. */
 .a-navperm input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  flex: 0 0 auto;
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 1px solid rgba(255,255,255,0.28);
-  border-radius: 4px;
-  background: rgba(255,255,255,0.05);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 12px 12px;
+  accent-color: #f48f1b;
   cursor: pointer;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
   transition: none;
-}
-.a-navperm input[type="checkbox"]:checked,
-.a-navperm input[type="checkbox"]:indeterminate {
-  background-color: #f48f1b;
-  border-color: #f48f1b;
-}
-.a-navperm input[type="checkbox"]:checked {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23150d02' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M5 13l4 4L19 7'/%3e%3c/svg%3e");
-}
-.a-navperm input[type="checkbox"]:indeterminate {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23150d02' stroke-width='3.5' stroke-linecap='round'%3e%3cpath d='M6 12h12'/%3e%3c/svg%3e");
-}
-.a-navperm input[type="checkbox"]:focus-visible {
-  outline: 2px solid rgba(244,143,27,0.6);
-  outline-offset: 1px;
 }
 /* Стабильная высота строк прав — текст не «прыгает» по вертикали при наведении. */
 .a-navperm-sec, .a-navperm-item { line-height: 1.25; }
