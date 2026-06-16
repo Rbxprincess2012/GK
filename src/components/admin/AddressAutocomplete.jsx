@@ -63,10 +63,8 @@ export function AddressAutocomplete({ value, onPick, placeholder = 'Адрес: 
               onClick={() => pick(s)}
             >
               <span>{s.value}</span>
-              {(s.district || s.lat == null) && (
-                <span className="a-muted" style={{ fontSize: '0.78rem' }}>
-                  {s.district || ''}{s.lat == null ? `${s.district ? ' · ' : ''}без координат` : ''}
-                </span>
+              {s.lat == null && (
+                <span className="a-muted" style={{ fontSize: '0.78rem' }}>без координат</span>
               )}
             </button>
           ))}

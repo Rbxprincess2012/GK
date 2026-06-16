@@ -120,7 +120,7 @@ export default function Orders() {
           <div className="a-table-wrap">
             <table className="a-table a-orders-table">
               <thead>
-                <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Район</th><th>Водитель</th><th>Статус</th><th></th></tr>
+                <tr><th>№</th><th>Объект</th><th>Адрес</th><th>Время</th><th>Заказчик</th><th>Оплата</th><th>Город</th><th>Водитель</th><th>Статус</th><th></th></tr>
               </thead>
               {groups.map(({ date, list, unassigned }, gi) => {
                 const overdue = date && date < todayStr
@@ -154,7 +154,7 @@ export default function Orders() {
                         <td>{isCash(o)
                           ? <span className="a-cash" title="Наличные">{cashLabel(o)}</span>
                           : <span className="a-muted">Безнал</span>}</td>
-                        <td className="a-muted">{o.district ? (o.district_alias || o.district) : '—'}</td>
+                        <td className="a-muted">{o.city || '—'}</td>
                         <td className="a-muted" title={o.driver_name || ''}>{o.driver_name || '—'}</td>
                         <td><span className={`a-badge a-badge--${STATUS[o.status]?.[1]}`}>{STATUS[o.status]?.[0]}</span></td>
                         <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>

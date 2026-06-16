@@ -49,15 +49,15 @@ export function containerJob(o) {
 //   3) внутри района: сначала доставки (пустые → объект), потом заборы (порожний рейс);
 //   4) при равенстве — по номеру заявки.
 export function autoRouteOrder(orders = []) {
-  const districtKey = (o) => o?.district_alias || o?.district || 'яяя' // неизвестный район — в конец
+  const cityKey = (o) => o?.city || 'яяя' // неизвестный населённый пункт — в конец
   const hasDelivery = (o) => containerJob(o).empties > 0
 
-  // Район «доставочный», если в нём есть хотя бы одна заявка с доставкой пустых.
+  // Населённый пункт «доставочный», если в нём есть хотя бы одна заявка с доставкой пустых.
   const deliveryDistricts = new Set()
-  for (const o of orders) if (hasDelivery(o)) deliveryDistricts.add(districtKey(o))
+  for (const o of orders) if (hasDelivery(o)) deliveryDistricts.add(cityKey(o))
 
   return [...orders].sort((a, b) => {
-    const da = districtKey(a), db = districtKey(b)
+    const da = cityKey(a), db = cityKey(b)
     const ra = deliveryDistricts.has(da) ? 0 : 1
     const rb = deliveryDistricts.has(db) ? 0 : 1
     if (ra !== rb) return ra - rb            // доставочные районы раньше
@@ -84,7 +84,7 @@ export function clientLegal(o) { return o?.client_legal_name || o?.client_nickna
 // (свободный адрес из DaData для объектов вне справочника улиц Краснодара).
 export function streetLine(o) {
   return [o?.street_name, o?.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
-    || o?.address_raw || o?.district_alias || o?.district || '—'
+    || o?.address_raw || o?.city || '—'
 }
 // Ссылка на точку объекта в Яндекс.Картах: по координатам (приоритет) или по тексту адреса.
 export function yandexMapsUrl(o) {
@@ -92,7 +92,7 @@ export function yandexMapsUrl(o) {
   if (lat != null && lat !== '' && lng != null && lng !== '') {
     return `https://yandex.ru/maps/?ll=${lng},${lat}&z=17&pt=${lng},${lat}`
   }
-  const addr = [o?.street_name, o?.object_house && `д. ${o.object_house}`, o?.district].filter(Boolean).join(', ')
+  const addr = [o?.street_name, o?.object_house && `д. ${o.object_house}`, o?.city].filter(Boolean).join(', ')
     || o?.address_raw
   return addr ? `https://yandex.ru/maps/?text=${encodeURIComponent(addr)}` : null
 }

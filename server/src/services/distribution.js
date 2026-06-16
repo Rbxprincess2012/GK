@@ -15,7 +15,7 @@ async function newOrdersForDate(date) {
     .where({ 'o.status': 'new', 'o.desired_date': date })
     .select(
       'o.id', 'o.number', 'ob.lat', 'ob.lng', 'o.service_type', 'o.grapple_runs',
-      'd.name as district', 's.name as street_name', 'ob.house', 'ob.building', 'ob.address_raw',
+      'd.name as district', 's.name as street_name', 'ob.house', 'ob.building', 'ob.address_raw', 'ob.city',
       'ob.informal_name as object_name', 'c.legal_name as client_legal_name',
       db.raw(`COALESCE((SELECT SUM(oi.quantity) FROM order_items oi
                WHERE oi.order_id = o.id AND oi.action IN ('place','replace')), 0)::int AS empties`),
@@ -83,7 +83,7 @@ export async function suggestDistribution(date, shiftType) {
     const m = metaById.get(id)
     const isGrapple = m.service_type === 'grapple'
     return {
-      id, number: m.number, district: m.district, street_name: m.street_name,
+      id, number: m.number, city: m.city, street_name: m.street_name,
       house: m.house, building: m.building, address_raw: m.address_raw,
       object_name: m.object_name, client_legal_name: m.client_legal_name,
       km: kmById.get(id), service_type: isGrapple ? 'grapple' : 'container',
@@ -125,7 +125,7 @@ export async function mapData(date, shiftType) {
           .whereIn('o.status', ['assigned', 'review', 'in_progress']))
     })
     .select('o.id', 'o.number', 'o.status', 'o.assigned_driver_id', 'o.distance_km', 'o.service_type',
-      'ob.lat', 'ob.lng', 'd.name as district', 's.name as street_name', 'ob.house', 'ob.building', 'ob.address_raw',
+      'ob.lat', 'ob.lng', 'd.name as district', 's.name as street_name', 'ob.house', 'ob.building', 'ob.address_raw', 'ob.city',
       'ob.informal_name as object_name', 'c.legal_name as client_legal_name', 'dr.name as driver_name')
     .orderBy('o.id')
 

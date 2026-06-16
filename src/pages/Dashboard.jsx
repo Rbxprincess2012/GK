@@ -12,7 +12,7 @@ const STATUS = {
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function clientLegal(o) { return o.client_legal_name || o.client_nickname || '—' }
 function streetLine(o) {
-  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.district_alias || o.district || '—'
+  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.address_raw || o.city || '—'
 }
 function objectLine(o) { return o.object_name || `Объект #${o.object_id}` }
 

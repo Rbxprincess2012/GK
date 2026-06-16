@@ -255,7 +255,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
                       ? <a href={u} target="_blank" rel="noreferrer" className="a-maplink" title="Открыть точку в Яндекс.Картах">📍 {streetLine(o)}</a>
                       : <>📍 {streetLine(o)}</>
                   })()}
-                  {(o.district_alias || o.district) ? ` · ${o.district_alias || o.district}` : ''}
+                  {o.city ? ` · ${o.city}` : ''}
                 </span>
               </span>
             </div>

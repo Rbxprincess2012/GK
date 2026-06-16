@@ -18,7 +18,7 @@ function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd
 function tomorrow() { return shiftYmd(ymd(new Date()), 1) }
 function clientLegal(o) { return o.client_legal_name || o.client_nickname || '—' }
 function streetLine(o) {
-  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.district_alias || o.district || '—'
+  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.address_raw || o.city || '—'
 }
 function objectLine(o) { return o.object_name || `Объект #${o.object_id}` }
 
@@ -94,7 +94,7 @@ export default function Distribution() {
 
   const byDistrict = useMemo(() => {
     const m = {}
-    for (const o of newOrders) { const k = o.district_alias || o.district || 'Без района'; (m[k] ||= []).push(o) }
+    for (const o of newOrders) { const k = o.city || 'Без населённого пункта'; (m[k] ||= []).push(o) }
     return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0]))
   }, [newOrders])
 
@@ -281,12 +281,12 @@ export default function Distribution() {
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'start' }}>
-          {/* заявки по районам */}
+          {/* заявки по населённым пунктам */}
           <div>
             {byDistrict.length === 0 && <div className="a-card"><div className="a-empty">Нераспределённых заявок нет</div></div>}
-            {byDistrict.map(([district, list]) => (
-              <div key={district} className="a-card" style={{ marginBottom: 14 }}>
-                <div className="a-section-title" style={{ marginTop: 0 }}>{district}</div>
+            {byDistrict.map(([city, list]) => (
+              <div key={city} className="a-card" style={{ marginBottom: 14 }}>
+                <div className="a-section-title" style={{ marginTop: 0 }}>{city}</div>
                 <div className="a-orderrow a-orderrow--head">
                   <span className="a-orderrow-num">№</span>
                   <span className="a-orderrow-street">Улица</span>

@@ -12,7 +12,7 @@ function tomorrow() { return shiftYmd(ymd(new Date()), 1) }
 
 const UNASSIGNED = '#7c8db5'
 function addrLine(o) {
-  return [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ') || o.district || '—'
+  return [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ') || o.address_raw || o.city || '—'
 }
 
 export default function ShiftMap() {
