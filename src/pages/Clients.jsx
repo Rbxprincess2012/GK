@@ -4,7 +4,7 @@ import { useClientsStore } from '@/store/clientsStore'
 import api from '@/lib/api'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
-import { StreetPicker } from '@/components/admin/StreetPicker'
+import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
 import { PhoneMessengerField, MessengerTag, MessengerChatInputs, TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 import { formatPhone } from '@/lib/phone'
 import { ClientRecipients } from '@/components/admin/ClientRecipients'
@@ -45,7 +45,7 @@ const emptyClient = {
 
 const emptyObject = {
   city: '', street_id: '', street_name: '', district_id: '', district: '', district_alias: '',
-  house: '', building: '', informal_name: '', requires_photo: true, note: '',
+  address_raw: '', house: '', building: '', informal_name: '', requires_photo: true, note: '',
   lat: '', lng: '', geo_source: null,
   trusted_links: [], // [{ trusted_person_id, section_id|null }]
   sections: [],       // участки объекта (только у существующего объекта)
@@ -171,7 +171,7 @@ export default function Clients() {
   const openObject = (clientId, o) => {
     setObjForm(o ? {
       ...emptyObject, ...o,
-      street_name: o.street_name || '', district: o.district || '',
+      street_name: o.street_name || '', district: o.district || '', address_raw: o.address_raw || '',
       street_id: o.street_id ?? '', district_id: o.district_id ?? '',
       trusted_links: (o.trusted_persons || []).map((p) => ({ trusted_person_id: p.id, section_id: p.section_id ?? null })),
       sections: o.sections || [],
@@ -204,6 +204,7 @@ export default function Clients() {
     city: objForm.city || undefined,
     street_id: objForm.street_id === '' ? null : Number(objForm.street_id),
     district_id: objForm.district_id === '' ? null : Number(objForm.district_id),
+    address_raw: objForm.address_raw || undefined,
     house: objForm.house || undefined,
     building: objForm.building || undefined,
     informal_name: objForm.informal_name || undefined,
@@ -211,6 +212,7 @@ export default function Clients() {
     requires_photo: objForm.requires_photo === false ? false : true,
     lat: objForm.lat === '' || objForm.lat == null ? undefined : Number(objForm.lat),
     lng: objForm.lng === '' || objForm.lng == null ? undefined : Number(objForm.lng),
+    geo_source: objForm.geo_source || undefined,
     trusted_links: objForm.trusted_links || [],
   })
 
@@ -547,14 +549,24 @@ export default function Clients() {
               </button>
             </div>
           </label>
+          <label className="a-field"><span>Адрес (поиск по РФ)</span>
+            <AddressAutocomplete
+              key={objModal.object?.id ?? 'new'}
+              value={objForm.address_raw}
+              onPick={(s) => setObjForm((f) => ({
+                ...f,
+                address_raw: s.value,
+                city: s.city || f.city,
+                house: s.house || f.house,
+                lat: s.lat ?? '', lng: s.lng ?? '',
+                geo_source: s.lat != null ? 'dadata' : f.geo_source,
+                // свободный адрес → справочник Краснодара не используем
+                street_id: '', street_name: '', district_id: '', district: '', district_alias: '',
+              }))}
+            />
+          </label>
           <label className="a-field"><span>Город (населённый пункт)</span>
             <input className="a-input" value={objForm.city} onChange={(e) => setObjForm({ ...objForm, city: e.target.value })} placeholder="Краснодар" />
-          </label>
-          <label className="a-field"><span>Улица</span>
-            <StreetPicker
-              value={{ street_name: objForm.street_name }}
-              onPick={(s) => setObjForm({ ...objForm, ...s })}
-            />
           </label>
           <div className="a-field-row">
             <label className="a-field"><span>Дом</span>
@@ -664,10 +676,10 @@ function objName(o) {
   return o.informal_name || objAddr(o) || `Объект #${o.id}`
 }
 
-// Адрес объекта одной строкой.
+// Адрес объекта одной строкой. Фолбэк на свободный address_raw (DaData, любой город).
 function objAddr(o) {
   const parts = [o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`].filter(Boolean)
-  return parts.join(', ') || '—'
+  return parts.join(', ') || o.address_raw || '—'
 }
 
 // Участки объекта + доверенные лица (с уровнем: весь объект или конкретный участок).

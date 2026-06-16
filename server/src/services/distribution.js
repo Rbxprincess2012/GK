@@ -15,8 +15,8 @@ async function newOrdersForDate(date) {
     .where({ 'o.status': 'new', 'o.desired_date': date })
     .select(
       'o.id', 'o.number', 'ob.lat', 'ob.lng', 'o.service_type', 'o.grapple_runs',
-      'd.name as district', 's.name as street_name', 'ob.house', 'ob.informal_name as object_name',
-      'c.legal_name as client_legal_name',
+      'd.name as district', 's.name as street_name', 'ob.house', 'ob.building', 'ob.address_raw',
+      'ob.informal_name as object_name', 'c.legal_name as client_legal_name',
       db.raw(`COALESCE((SELECT SUM(oi.quantity) FROM order_items oi
                WHERE oi.order_id = o.id AND oi.action IN ('place','replace')), 0)::int AS empties`),
       db.raw(`COALESCE((SELECT SUM(oi.quantity) FROM order_items oi
@@ -36,9 +36,11 @@ export async function suggestDistribution(date, shiftType) {
   const base = await getSetting('base').catch(() => null)
   const dist = await getSetting('distribution').catch(() => null)
   const kmWeight = dist?.km_weight ?? 0.1
-  // Сила локализации: насколько кучность по районам важнее дневного баланса (баланс добирается
-  // накопленными баллами за период). 0 — прежнее поведение (только справедливость за день).
+  // Сила локализации: насколько кучность (близость заявок по координатам) важнее дневного баланса
+  // (баланс добирается накопленными баллами за период). 0 — прежнее поведение (только баланс за день).
   const localityWeight = dist?.locality_weight ?? 1.5
+  // Порог км, в пределах которого заявки считаются «в одной зоне» (кучность по координатам, не по району).
+  const clusterKm = dist?.cluster_km ?? 2
   const baseSet = base?.lat != null && base?.lng != null
 
   const drivers = (await availableDrivers(date, shiftType)).map((d) => ({
@@ -54,6 +56,7 @@ export async function suggestDistribution(date, shiftType) {
     const isGrapple = o.service_type === 'grapple'
     return {
       id: o.id, district: o.district || null,
+      lat: o.lat ?? null, lng: o.lng ?? null, // для кучности по координатам (распределение)
       service: isGrapple ? 'grapple' : 'container',
       empties: isGrapple ? null : o.empties, fulls: isGrapple ? null : o.fulls,
       trips: isGrapple ? Math.max(1, Number(o.grapple_runs) || 1) : null,
@@ -71,7 +74,7 @@ export async function suggestDistribution(date, shiftType) {
   const priorScores = {}
   for (const h of prev.drivers) priorScores[h.driver_id] = h.score_per_shift
 
-  const result = suggest({ orders, drivers, kmWeight, locality: Math.max(localityWeight, 1), priorScores, localityWeight })
+  const result = suggest({ orders, drivers, kmWeight, locality: Math.max(localityWeight, 1), priorScores, localityWeight, clusterKm })
 
   // Обогащаем раскладку отображаемыми данными заявок.
   const metaById = new Map(rawOrders.map((o) => [o.id, o]))
@@ -81,7 +84,8 @@ export async function suggestDistribution(date, shiftType) {
     const isGrapple = m.service_type === 'grapple'
     return {
       id, number: m.number, district: m.district, street_name: m.street_name,
-      house: m.house, object_name: m.object_name, client_legal_name: m.client_legal_name,
+      house: m.house, building: m.building, address_raw: m.address_raw,
+      object_name: m.object_name, client_legal_name: m.client_legal_name,
       km: kmById.get(id), service_type: isGrapple ? 'grapple' : 'container',
       empties: isGrapple ? 0 : m.empties, fulls: isGrapple ? 0 : m.fulls,
       grapple_runs: isGrapple ? Math.max(1, Number(m.grapple_runs) || 1) : null,
@@ -121,7 +125,7 @@ export async function mapData(date, shiftType) {
           .whereIn('o.status', ['assigned', 'review', 'in_progress']))
     })
     .select('o.id', 'o.number', 'o.status', 'o.assigned_driver_id', 'o.distance_km', 'o.service_type',
-      'ob.lat', 'ob.lng', 'd.name as district', 's.name as street_name', 'ob.house',
+      'ob.lat', 'ob.lng', 'd.name as district', 's.name as street_name', 'ob.house', 'ob.building', 'ob.address_raw',
       'ob.informal_name as object_name', 'c.legal_name as client_legal_name', 'dr.name as driver_name')
     .orderBy('o.id')
 

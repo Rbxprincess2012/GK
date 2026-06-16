@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
-import { findPartyByInn } from '../src/services/dadata.js'
+import { findPartyByInn, suggestAddress } from '../src/services/dadata.js'
 import { setTokens } from '../src/services/settings.js'
 
 beforeEach(resetDb)
@@ -50,6 +50,50 @@ describe('dadata findPartyByInn', () => {
   it('ошибка DaData (res.ok=false) → 502', async () => {
     await setTokens({ dadata_token: 'T' })
     await expect(findPartyByInn('7719402047', async () => ({ ok: false, json: async () => ({}) })))
+      .rejects.toMatchObject({ status: 502 })
+  })
+})
+
+const addrSample = {
+  suggestions: [{
+    value: 'г Сочи, ул Навагинская, д 9',
+    data: {
+      city: 'Сочи', street_with_type: 'ул Навагинская', house: '9',
+      city_district_with_type: 'р-н Центральный', geo_lat: '43.5855', geo_lon: '39.7231',
+    },
+  }],
+}
+
+describe('dadata suggestAddress', () => {
+  it('нет токена → 400', async () => {
+    await expect(suggestAddress('Сочи', async () => ({ ok: true, json: async () => ({}) })))
+      .rejects.toMatchObject({ status: 400 })
+  })
+
+  it('маппит адрес + координаты + район; шлёт токен и query', async () => {
+    await setTokens({ dadata_token: 'T' })
+    let captured
+    const fetchImpl = async (url, opts) => { captured = { url, opts }; return { ok: true, json: async () => addrSample } }
+    const list = await suggestAddress('Сочи Навагинская 9', fetchImpl)
+    expect(captured.url).toContain('suggest/address')
+    expect(JSON.parse(captured.opts.body).query).toBe('Сочи Навагинская 9')
+    expect(captured.opts.headers.Authorization).toBe('Token T')
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({
+      value: 'г Сочи, ул Навагинская, д 9', city: 'Сочи', street: 'ул Навагинская',
+      house: '9', district: 'р-н Центральный', lat: 43.5855, lng: 39.7231,
+    })
+  })
+
+  it('пустой suggestions → []', async () => {
+    await setTokens({ dadata_token: 'T' })
+    const r = await suggestAddress('нет', async () => ({ ok: true, json: async () => ({ suggestions: [] }) }))
+    expect(r).toEqual([])
+  })
+
+  it('ошибка DaData → 502', async () => {
+    await setTokens({ dadata_token: 'T' })
+    await expect(suggestAddress('x', async () => ({ ok: false, json: async () => ({}) })))
       .rejects.toMatchObject({ status: 502 })
   })
 })

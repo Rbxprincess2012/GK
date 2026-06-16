@@ -48,23 +48,25 @@ export async function createObject(data) {
     const street = await db('streets').where({ id: payload.street_id }).first()
     if (street) payload.district_id = street.district_id
   }
-  // Координаты заданы вручную → они приоритетнее авто-геокодинга.
-  const manual = payload.lat != null && payload.lng != null
-  if (manual) { payload.geo_source = 'manual'; payload.geocoded_at = db.fn.now() }
+  // Координаты заданы (ручной пин ИЛИ из DaData-подсказки) → приоритетнее авто-геокодинга.
+  const hasCoords = payload.lat != null && payload.lng != null
+  if (hasCoords) { payload.geo_source = payload.geo_source || 'manual'; payload.geocoded_at = db.fn.now() }
+  else delete payload.geo_source // без координат источник не храним
   const row = await db.transaction(async (trx) => {
     const [r] = await trx('objects').insert(payload).returning('*')
     if (trusted_links) await syncTrustedLinks(trx, r.id, trusted_links)
     return r
   })
-  if (!manual) geocodeObject(row.id).catch(() => {}) // авто, best-effort
+  if (!hasCoords) geocodeObject(row.id).catch(() => {}) // авто, best-effort
   return row
 }
 
 // Обновление объекта: скалярные поля + (опц.) полная замена привязок доверенных лиц.
 export async function updateObject(id, data) {
   const { trusted_links, ...patch } = data
-  const manual = patch.lat != null && patch.lng != null
-  if (manual) { patch.geo_source = 'manual'; patch.geocoded_at = db.fn.now() }
+  const hasCoords = patch.lat != null && patch.lng != null
+  if (hasCoords) { patch.geo_source = patch.geo_source || 'manual'; patch.geocoded_at = db.fn.now() }
+  else if ('geo_source' in patch) delete patch.geo_source
   const row = await db.transaction(async (trx) => {
     let r = await trx('objects').where({ id }).first()
     if (!r) return null
@@ -74,9 +76,9 @@ export async function updateObject(id, data) {
     if (trusted_links !== undefined) await syncTrustedLinks(trx, id, trusted_links)
     return r
   })
-  // Сменили адрес без ручных координат → перегеокодировать (geocodeObject не трогает manual).
-  const addressTouched = ['street_id', 'house', 'building', 'district_id'].some((k) => k in patch)
-  if (row && !manual && addressTouched) geocodeObject(id, { force: true }).catch(() => {})
+  // Сменили адрес без новых координат → перегеокодировать (geocodeObject не трогает manual).
+  const addressTouched = ['street_id', 'house', 'building', 'district_id', 'address_raw', 'city'].some((k) => k in patch)
+  if (row && !hasCoords && addressTouched) geocodeObject(id, { force: true }).catch(() => {})
   return row
 }
 

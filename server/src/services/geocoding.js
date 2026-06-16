@@ -25,7 +25,7 @@ async function loadObjectForGeo(id) {
     .leftJoin('districts as d', 'd.id', 'o.district_id')
     .where('o.id', id)
     .select('o.id', 'o.lat', 'o.lng', 'o.geo_source', 'o.house', 'o.building',
-      's.name as street_name', 'd.name as district')
+      'o.city', 'o.address_raw', 's.name as street_name', 'd.name as district')
     .first()
 }
 
@@ -37,8 +37,13 @@ export async function geocodeObject(id, { force = false } = {}) {
   if (o.geo_source === 'manual') return { skipped: 'manual' }
   if (!force && o.lat != null && o.lng != null) return { skipped: 'has_coords' }
 
-  const parts = buildParts({ region: await regionPrefix(), ...o })
-  const hit = await geocode(parts)
+  // Объект из справочника (есть улица) → структурированный запрос; иначе свободный
+  // адрес (address_raw, любой город РФ из DaData) — целой строкой.
+  const query = o.street_name
+    ? buildParts({ region: await regionPrefix(), ...o })
+    : (o.address_raw || null)
+  if (!query) return { skipped: 'no_address' }
+  const hit = await geocode(query)
   if (!hit) return { skipped: 'no_result' }
 
   // Защита от ложного матча в другом городе: точка не должна быть абсурдно далеко от базы.

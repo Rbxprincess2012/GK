@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
-import { useRefsStore } from '@/store/refsStore'
+import api from '@/lib/api'
 
-// Автокомплит улицы. При выборе отдаёт {street_id, street_name, district_id, district, district_alias}.
-export function StreetPicker({ value, onPick, placeholder = 'Начните вводить улицу…' }) {
-  const searchStreets = useRefsStore((s) => s.searchStreets)
-  const [q, setQ] = useState(value?.street_name || '')
+// Автокомплит адреса по DaData (любой город РФ). При выборе отдаёт
+// { value, city, street, house, district, lat, lng } — заполняет объект свободным
+// адресом + координатами, минуя справочник улиц Краснодара.
+export function AddressAutocomplete({ value, onPick, placeholder = 'Адрес: город, улица, дом…' }) {
+  // Стартовое значение берём из пропа; при выборе обновляем сами. Внешняя смена
+  // объекта пересоздаёт компонент через key у места использования (без sync-эффекта).
+  const [q, setQ] = useState(value || '')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const boxRef = useRef(null)
   const timer = useRef(null)
-
-  useEffect(() => { setQ(value?.street_name || '') }, [value?.street_name])
 
   useEffect(() => {
     const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false) }
@@ -20,28 +21,18 @@ export function StreetPicker({ value, onPick, placeholder = 'Начните вв
   }, [])
 
   const onType = (text) => {
-    setQ(text)
-    setOpen(true)
+    setQ(text); setOpen(true)
     clearTimeout(timer.current)
-    if (text.trim().length < 2) { setResults([]); return }
+    if (text.trim().length < 3) { setResults([]); return }
     timer.current = setTimeout(async () => {
-      const data = await searchStreets(text.trim())
-      setResults(data)
-      setActive(0)
-    }, 220)
+      try {
+        const { data } = await api.post('/settings/dadata/address', { query: text.trim() })
+        setResults(Array.isArray(data) ? data : []); setActive(0)
+      } catch { setResults([]) }
+    }, 250)
   }
 
-  const pick = (s) => {
-    onPick({
-      street_id: s.id,
-      street_name: s.name,
-      district_id: s.district_id,
-      district: s.district,
-      district_alias: s.district_alias || null,
-    })
-    setQ(s.name)
-    setOpen(false)
-  }
+  const pick = (s) => { onPick(s); setQ(s.value); setOpen(false) }
 
   const onKey = (e) => {
     if (!open || !results.length) return
@@ -65,16 +56,18 @@ export function StreetPicker({ value, onPick, placeholder = 'Начните вв
         <div className="a-autocomplete">
           {results.map((s, i) => (
             <button
-              key={s.id}
+              key={i}
               type="button"
               className={'a-autocomplete-item' + (i === active ? ' active' : '')}
               onMouseEnter={() => setActive(i)}
               onClick={() => pick(s)}
             >
-              <span>{s.name}</span>
-              <span className="a-muted" style={{ fontSize: '0.78rem' }}>
-                {s.district}{s.district_alias ? ` · ${s.district_alias}` : ''}
-              </span>
+              <span>{s.value}</span>
+              {(s.district || s.lat == null) && (
+                <span className="a-muted" style={{ fontSize: '0.78rem' }}>
+                  {s.district || ''}{s.lat == null ? `${s.district ? ' · ' : ''}без координат` : ''}
+                </span>
+              )}
             </button>
           ))}
         </div>

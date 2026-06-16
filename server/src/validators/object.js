@@ -12,6 +12,7 @@ const base = {
   requires_photo: z.boolean().nullable().optional(),
   lat: z.number().nullable().optional(),
   lng: z.number().nullable().optional(),
+  geo_source: z.string().optional(), // 'manual' | 'dadata' | 'yandex' | 'nominatim'
   note: z.string().optional(),
   // Привязки доверенных лиц: лицо клиента + уровень (section_id = участок или null = весь объект).
   // Передаётся полностью — заменяет набор целиком.

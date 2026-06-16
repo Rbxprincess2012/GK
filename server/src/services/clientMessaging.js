@@ -69,7 +69,7 @@ function fmtDateTime(d) {
 
 function addressOf(o) {
   return [o.city, o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`]
-    .filter(Boolean).join(', ') || (o.informal_name || '—')
+    .filter(Boolean).join(', ') || o.address_raw || (o.informal_name || '—')
 }
 
 function amountOf(o) {
@@ -135,7 +135,7 @@ async function orderHead(where, conn) {
     .leftJoin('vehicles as v', 'v.id', 'o.vehicle_id')
     .where(where)
     .select(
-      'o.*', 'ob.city', 'ob.house', 'ob.building', 'ob.informal_name', 's.name as street_name',
+      'o.*', 'ob.city', 'ob.house', 'ob.building', 'ob.informal_name', 'ob.address_raw', 's.name as street_name',
       'cl.nickname as client_nickname', 'cl.legal_name as client_legal_name',
       'd.name as driver_name', 'v.model as veh_model', 'v.gov_number as veh_gov',
     ).first()

@@ -6,8 +6,8 @@
 //   trips(заявка)   = ceil(slots / capacity_машины)   (минимум 1)
 //   km(заявка)      = прямое расстояние объект→база (гаверсинус), 0 если нет координат
 //
-// Алгоритм C: жадный старт (далёкие первыми, с группировкой по району) + полировка
-// парными переносами/обменами, уменьшающими разброс.
+// Алгоритм C: жадный старт (далёкие первыми, с гео-группировкой по близости координат) +
+// полировка парными переносами/обменами, уменьшающими разброс.
 
 const R_KM = 6371 // радиус Земли, км
 
@@ -80,10 +80,12 @@ function spreadOf(scores) {
 // Основная функция. Возвращает раскладку + метрики.
 //   priorScores  — { driverId: накопленный балл за прошлые дни }. Старт баллов водителей не с 0,
 //                  а с истории → справедливость выравнивается ЗА ПЕРИОД, а не за один день.
-//   localityWeight — штраф за раздробленность районов у водителя в целевой функции. >0 делает
-//                  кучность по районам важнее дневного баланса (баланс добирается priorScores).
+//   localityWeight — штраф за географическую раздробленность заявок водителя в целевой функции. >0
+//                  делает кучность (близость по координатам) важнее дневного баланса (баланс
+//                  добирается priorScores). Без координат кучность не действует → чистый баланс.
+//   clusterKm    — порог км, в пределах которого две заявки считаются «в одной зоне» (single-linkage).
 // Дефолты (priorScores={}, localityWeight=0) сохраняют прежнее поведение.
-export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 1.0, priorScores = {}, localityWeight = 0, maxPolish } = {}) {
+export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 1.0, priorScores = {}, localityWeight = 0, clusterKm = 2, maxPolish } = {}) {
   const byId = new Map(orders.map((o) => [o.id, o]))
   if (!drivers.length) {
     return { assignments: [], unassigned: orders.map((o) => o.id), spread: 0 }
@@ -97,11 +99,41 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
   // assignment: driverId -> [orderId]
   const assign = new Map(drivers.map((d) => [d.id, []]))
   const driverById = new Map(drivers.map((d) => [d.id, d]))
-  const districtOf = (oid) => byId.get(oid).district ?? null
-  const districtsOf = (oids) => new Set(oids.map(districtOf))
-  const districtCount = (oids) => new Set(oids.map(districtOf)).size
 
-  // ── Фаза 1: жадно, далёкие первыми; при равенстве — к тому, кто уже везёт этот район.
+  // Кучность по координатам (район как ярлык в алгоритме НЕ участвует — работает в любом городе).
+  const coordOf = (oid) => {
+    const o = byId.get(oid)
+    return o && o.lat != null && o.lng != null ? { lat: o.lat, lng: o.lng } : null
+  }
+  // Расстояние между заявками (км), мемоизировано; ∞ если у любой нет координат.
+  const distCache = new Map()
+  const distKm = (a, b) => {
+    if (a === b) return 0
+    const key = a < b ? `${a}|${b}` : `${b}|${a}`
+    let v = distCache.get(key)
+    if (v === undefined) { const d = haversineKm(coordOf(a), coordOf(b)); v = d == null ? Infinity : d; distCache.set(key, v) }
+    return v
+  }
+  // Есть ли у водителя уже заявка в пределах clusterKm от данной (аналог «того же района»).
+  const nearExisting = (oids, oid) => oids.some((x) => distKm(x, oid) <= clusterKm)
+  // Число гео-кластеров в наборе (single-linkage по порогу clusterKm); заявки без координат —
+  // каждая сама по себе. Геометрический аналог прежнего «числа районов» у водителя.
+  const clusterCount = (oids) => {
+    const n = oids.length
+    if (n <= 1) return n
+    const parent = oids.map((_, i) => i)
+    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i] } return i }
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        if (distKm(oids[i], oids[j]) <= clusterKm) parent[find(i)] = find(j)
+      }
+    }
+    let c = 0
+    for (let i = 0; i < n; i++) if (find(i) === i) c++
+    return c
+  }
+
+  // ── Фаза 1: жадно, далёкие первыми; при равенстве — к тому, у кого рядом уже есть заявка.
   const ordered = [...orders].sort((a, b) =>
     (b.km || 0) - (a.km || 0) || (a.id - b.id))
 
@@ -112,8 +144,8 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
       if (!canTake(o, d)) continue
       const cur = scoreOf(d, assign.get(d.id), byId, kmWeight, priorScores)
       const tentative = cur + orderCost(o, d, kmWeight)
-      const sameDistrict = districtsOf(assign.get(d.id)).has(o.district ?? null)
-      const eff = tentative - (sameDistrict ? locality : 0)
+      const near = nearExisting(assign.get(d.id), o.id)
+      const eff = tentative - (near ? locality : 0)
       if (eff < bestEff - 1e-9 || (Math.abs(eff - bestEff) <= 1e-9 && (!best || d.id < best.id))) {
         bestEff = eff; best = d
       }
@@ -123,7 +155,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
   }
 
   // ── Фаза 2: полировка локальным поиском. Цель — минимизировать
-  //   obj = разброс баллов (с учётом priorScores) + localityWeight·раздробленность районов,
+  //   obj = разброс баллов (с учётом priorScores) + localityWeight·гео-раздробленность (число кластеров),
   // затем дисперсию (вторичный критерий выводит из «плато»). При localityWeight=0 obj=разброс.
   const ids = drivers.map((d) => d.id)
   const scores = () => {
@@ -131,7 +163,7 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
     for (const d of drivers) s[d.id] = scoreOf(d, assign.get(d.id), byId, kmWeight, priorScores)
     return s
   }
-  const fragTotal = () => ids.reduce((s, id) => s + districtCount(assign.get(id)), 0)
+  const fragTotal = () => ids.reduce((s, id) => s + clusterCount(assign.get(id)), 0)
   const sumSqOf = (sc) => {
     const vals = Object.values(sc)
     const mean = vals.reduce((a, b) => a + b, 0) / vals.length
@@ -150,15 +182,15 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
 
     // (a) перенос заявки A → B (любые водители)
     for (const A of ids) {
-      const fragA = districtCount(assign.get(A))
+      const fragA = clusterCount(assign.get(A))
       for (const oid of assign.get(A)) {
         const costA = orderCost(byId.get(oid), driverById.get(A), kmWeight)
-        const fragANew = districtCount(assign.get(A).filter((x) => x !== oid))
+        const fragANew = clusterCount(assign.get(A).filter((x) => x !== oid))
         for (const B of ids) {
           if (B === A) continue
           if (!canTake(byId.get(oid), driverById.get(B))) continue // B не того типа
           const costB = orderCost(byId.get(oid), driverById.get(B), kmWeight)
-          const nFrag = curFrag - fragA + fragANew - districtCount(assign.get(B)) + districtCount([...assign.get(B), oid])
+          const nFrag = curFrag - fragA + fragANew - clusterCount(assign.get(B)) + clusterCount([...assign.get(B), oid])
           const nsc = { ...sc, [A]: sc[A] - costA, [B]: sc[B] + costB }
           const m = { obj: objOf(nsc, nFrag), sumSq: sumSqOf(nsc) }
           if (better(m, bestMetric)) { bestMetric = m; bestOp = { type: 'move', oid, A, B }; bestFrag = nFrag }
@@ -169,15 +201,15 @@ export function suggest({ orders = [], drivers = [], kmWeight = 0.1, locality = 
     for (let i = 0; i < ids.length; i++) {
       for (let j = i + 1; j < ids.length; j++) {
         const A = ids[i], B = ids[j]
-        const fragA = districtCount(assign.get(A)), fragB = districtCount(assign.get(B))
+        const fragA = clusterCount(assign.get(A)), fragB = clusterCount(assign.get(B))
         for (const oa of assign.get(A)) {
           for (const ob of assign.get(B)) {
             // обмен допустим, только если после него каждая заявка у машины своего типа
             if (!canTake(byId.get(ob), driverById.get(A)) || !canTake(byId.get(oa), driverById.get(B))) continue
             const nA = sc[A] - orderCost(byId.get(oa), driverById.get(A), kmWeight) + orderCost(byId.get(ob), driverById.get(A), kmWeight)
             const nB = sc[B] - orderCost(byId.get(ob), driverById.get(B), kmWeight) + orderCost(byId.get(oa), driverById.get(B), kmWeight)
-            const nFrag = curFrag - fragA + districtCount(assign.get(A).map((x) => (x === oa ? ob : x)))
-              - fragB + districtCount(assign.get(B).map((x) => (x === ob ? oa : x)))
+            const nFrag = curFrag - fragA + clusterCount(assign.get(A).map((x) => (x === oa ? ob : x)))
+              - fragB + clusterCount(assign.get(B).map((x) => (x === ob ? oa : x)))
             const nsc = { ...sc, [A]: nA, [B]: nB }
             const m = { obj: objOf(nsc, nFrag), sumSq: sumSqOf(nsc) }
             if (better(m, bestMetric)) { bestMetric = m; bestOp = { type: 'swap', oa, ob, A, B }; bestFrag = nFrag }

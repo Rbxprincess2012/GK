@@ -141,19 +141,27 @@ describe('suggest', () => {
     expect(b.order_ids.length).toBe(2)
   })
 
-  it('localityWeight: заявки группируются по районам (кучность важнее дневного баланса)', () => {
+  it('localityWeight: заявки группируются по близости координат (кучность важнее дневного баланса)', () => {
+    // Две тесные гео-зоны, далеко друг от друга: {1,2} ~1 км и {3,4} ~1 км, между зонами ~20+ км.
     const orders = [
-      { id: 1, trips: 1, km: 0, district: 'Far' },
-      { id: 2, trips: 1, km: 0, district: 'Far' },
-      { id: 3, trips: 1, km: 0, district: 'Near' },
-      { id: 4, trips: 1, km: 0, district: 'Near' },
+      { id: 1, trips: 1, km: 0, lat: 45.10, lng: 39.00 },
+      { id: 2, trips: 1, km: 0, lat: 45.11, lng: 39.00 },
+      { id: 3, trips: 1, km: 0, lat: 45.00, lng: 39.30 },
+      { id: 4, trips: 1, km: 0, lat: 45.01, lng: 39.30 },
     ]
-    const r = suggest({ orders, drivers: drivers3, localityWeight: 5 })
-    // у каждого водителя — заявки одного района (Far к одному, Near к другому)
-    for (const a of r.assignments) {
-      const districts = new Set(a.order_ids.map((id) => orders.find((o) => o.id === id).district))
-      expect(districts.size).toBe(1)
-    }
+    const r = suggest({ orders, drivers: drivers3, localityWeight: 5, clusterKm: 2 })
+    const groupOf = (id) => r.assignments.findIndex((a) => a.order_ids.includes(id))
+    expect(groupOf(1)).toBe(groupOf(2))      // близкие — к одному водителю
+    expect(groupOf(3)).toBe(groupOf(4))
+    expect(groupOf(1)).not.toBe(groupOf(3))  // далёкие зоны — к разным
+  })
+
+  it('кучность без координат не действует — заявки всё равно распределяются (любой город)', () => {
+    const orders = Array.from({ length: 6 }, (_, i) => ({ id: i + 1, trips: 1, km: 0 })) // нет lat/lng
+    const r = suggest({ orders, drivers: drivers3, localityWeight: 5, clusterKm: 2 })
+    const counts = r.assignments.map((a) => a.order_ids.length).sort()
+    expect(counts).toEqual([3, 3])           // чистый баланс (2 водителя), без падений
+    expect(r.unassigned).toEqual([])
   })
 
   it('сегрегация: грейфер-заявка идёт только водителю-грейферу, контейнерная — контейнеровозу', () => {

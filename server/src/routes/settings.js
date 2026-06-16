@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import * as svc from '../services/settings.js'
 import { geocode } from '../lib/geocode.js'
-import { findPartyByInn } from '../services/dadata.js'
+import { findPartyByInn, suggestAddress } from '../services/dadata.js'
 import { requireRole } from '../middleware/authUser.js'
 
 const r = Router()
@@ -60,7 +60,8 @@ r.put('/base', async (req, res, next) => {
 // Параметры распределения: вес километра, регион-префикс для геокодинга.
 const distributionInput = z.object({
   km_weight: z.number().min(0).optional(),
-  locality_weight: z.number().min(0).optional(), // сила кучности по районам в авто-распределении
+  locality_weight: z.number().min(0).optional(), // сила кучности (близость заявок) в авто-распределении
+  cluster_km: z.number().min(0).max(50).optional(), // порог км «одной зоны» для кучности по координатам
   region: z.string().optional(),
   geocoder: z.enum(['yandex', 'nominatim']).optional(),
 }).strict()
@@ -140,6 +141,15 @@ r.post('/dadata/party', async (req, res, next) => {
     const data = await findPartyByInn(query)
     if (!data) return res.status(404).json({ error: 'not_found' })
     res.json(data)
+  } catch (e) { next(e) }
+})
+
+// Подсказки адреса (любой город РФ) → адрес + координаты + район. Для ввода объекта.
+r.post('/dadata/address', async (req, res, next) => {
+  try {
+    const query = String(req.body?.query || '').trim()
+    if (!query) return res.status(400).json({ error: 'query_required' })
+    res.json(await suggestAddress(query))
   } catch (e) { next(e) }
 })
 

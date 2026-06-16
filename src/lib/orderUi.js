@@ -80,10 +80,11 @@ export function plural(n, one, few, many) {
 export function clientName(o) { return o?.client_nickname || o?.client_legal_name || '—' }
 // Заказчик — юрлицо (приоритет в карточках водителя ниже улицы/объекта).
 export function clientLegal(o) { return o?.client_legal_name || o?.client_nickname || '—' }
-// Улица + дом — главное для водителя, выводим первым/сверху.
+// Улица + дом — главное для водителя, выводим первым/сверху. Фолбэк на address_raw
+// (свободный адрес из DaData для объектов вне справочника улиц Краснодара).
 export function streetLine(o) {
   return [o?.street_name, o?.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
-    || o?.district_alias || o?.district || '—'
+    || o?.address_raw || o?.district_alias || o?.district || '—'
 }
 // Ссылка на точку объекта в Яндекс.Картах: по координатам (приоритет) или по тексту адреса.
 export function yandexMapsUrl(o) {
@@ -92,12 +93,14 @@ export function yandexMapsUrl(o) {
     return `https://yandex.ru/maps/?ll=${lng},${lat}&z=17&pt=${lng},${lat}`
   }
   const addr = [o?.street_name, o?.object_house && `д. ${o.object_house}`, o?.district].filter(Boolean).join(', ')
+    || o?.address_raw
   return addr ? `https://yandex.ru/maps/?text=${encodeURIComponent(addr)}` : null
 }
 // Имя объекта (неформальное), второй по приоритету.
 export function objectLine(o) { return o?.object_name || `Объект #${o?.object_id}` }
 export function orderTitle(o) {
-  return o?.object_name || [o?.street_name, o?.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || `Объект #${o?.object_id}`
+  return o?.object_name || [o?.street_name, o?.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
+    || o?.address_raw || `Объект #${o?.object_id}`
 }
 export function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

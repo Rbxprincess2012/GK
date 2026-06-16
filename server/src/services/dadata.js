@@ -32,3 +32,36 @@ export async function findPartyByInn(query, fetchImpl = fetch) {
     management_post: d.management?.post || '',
   }
 }
+
+// DaData «Подсказки по адресу» (suggest/address) — для ввода адреса объекта в ЛЮБОМ
+// городе РФ (вместо справочника улиц Краснодара). Возвращает нормализованный адрес +
+// координаты (geo_lat/geo_lon, по ФИАС/ГАР) + район города — всё одним запросом.
+// Тот же токен и бесплатный тариф (10k/сутки).
+const SUGGEST_ADDRESS = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
+
+export async function suggestAddress(query, fetchImpl = fetch) {
+  const tokens = await getTokens()
+  const token = tokens.dadata_token
+  if (!token) throw Object.assign(new Error('dadata_token_missing'), { status: 400 })
+  const res = await fetchImpl(SUGGEST_ADDRESS, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Token ${token}` },
+    body: JSON.stringify({ query, count: 7 }),
+  })
+  if (!res.ok) throw Object.assign(new Error('dadata_error'), { status: 502 })
+  const json = await res.json()
+  return (json?.suggestions || []).map((s) => {
+    const d = s.data || {}
+    const lat = d.geo_lat != null ? Number(d.geo_lat) : null
+    const lng = d.geo_lon != null ? Number(d.geo_lon) : null
+    return {
+      value: s.value || '',                                   // полный нормализованный адрес → address_raw
+      city: d.city || d.settlement || d.region || '',         // населённый пункт
+      street: d.street_with_type || '',
+      house: d.house || '',
+      district: d.city_district_with_type || d.city_district || '', // район города (ярлык)
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    }
+  })
+}
