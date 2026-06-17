@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
 import { sendReportToClient } from '../src/services/clientDelivery.js'
+import { sendInWorkNotice } from '../src/services/clientMessaging.js'
 import { issuePersonInvite, bindPersonByCode } from '../src/services/trustedPersonChannels.js'
 
 beforeEach(resetDb)
@@ -68,6 +69,28 @@ describe('clientDelivery — рассылка отчёта', () => {
     const res = await sendReportToClient(order.id, { body: 'x', token: 't', fetchImpl })
     expect(res.recipients).toBe(1) // только клиентский получатель
     expect(calls).toEqual(['111'])
+  })
+})
+
+describe('clientMessaging — уведомление «принято в работу»', () => {
+  it('клиенту и доверенному лицу шлёт РАЗНЫЕ шаблоны; лицу — по имени без фамилии', async () => {
+    const [cl] = await db('clients').insert({ type: 'ooo', legal_name: 'X', default_payment_method: 'cash' }).returning('*')
+    const [ob] = await db('objects').insert({ client_id: cl.id, city: 'Краснодар' }).returning('*')
+    const [order] = await db('orders').insert({ client_id: cl.id, object_id: ob.id, payment_method: 'cash', number: 77, desired_date: '2026-06-20', desired_time: '14:00', status: 'in_progress' }).returning('*')
+    await db('client_recipients').insert({ client_id: cl.id, kind: 'group', chat_id: 111, status: 'active' })
+    const [tp] = await db('trusted_persons').insert({ client_id: cl.id, name: 'Сидоров Анна', tg_chat_id: 222, tg_status: 'active' }).returning('*')
+    await db('object_trusted_persons').insert({ object_id: ob.id, trusted_person_id: tp.id, section_id: null })
+
+    const byChat = {}
+    const fetchImpl = async (url, opts) => { const b = JSON.parse(opts.body); byChat[String(b.chat_id)] = b.text; return { json: async () => ({ ok: true }) } }
+    const res = await sendInWorkNotice(order.id, { fetchImpl })
+
+    expect(res.sent).toBe(2)
+    expect(byChat['111']).toContain('уважаемые партнёры')   // клиент — общий шаблон
+    expect(byChat['111']).toContain('принята в работу')
+    expect(byChat['222']).toContain('Анна')                 // лицо — по имени
+    expect(byChat['222']).not.toContain('Сидоров')          // без фамилии
+    expect(byChat['222']).toContain('принята в работу')
   })
 })
 

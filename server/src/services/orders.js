@@ -3,6 +3,7 @@ import { applyMovement } from './inventory.js'
 import { enqueue } from './outbox.js'
 import { metricsForOrder } from './orderMetrics.js'
 import { syncSubtasks, createSubtasksForNewOrder } from './subtasks.js'
+import { sendInWorkNotice } from './clientMessaging.js'
 
 // Номер(а) контейнера значимы только для «Заменить»/«Забрать» (забираем существующий).
 // Для «Поставить» — null (ставим новый). Пустую строку нормализуем в null.
@@ -220,25 +221,23 @@ export async function sendToReview({ shift_date, shift_type }) {
   return { moved: rows.length }
 }
 
-// «Отправить в Работу»: проверенные заявки дня (assigned/review) → in_progress.
-// В этот момент кладём в outbox событие order_in_progress на каждую заявку — пайплайн
-// доставки (n8n) рассылает задание водителю и уведомление получателям клиента. Раньше
-// событие не создавалось вовсе → «уведомления при отправке в работу не уходили».
-export async function sendToWork({ shift_date, shift_type }) {
-  return db.transaction(async (trx) => {
+// «Отправить в Работу»: проверенные заявки дня (assigned/review) → in_progress. Затем
+// НАПРЯМУЮ (без n8n) рассылаем уведомление «принято в работу»: клиенту и доверенным лицам,
+// каждому свой шаблон (sendInWorkNotice). Рассылка — ВНЕ транзакции (HTTP не держит tx);
+// сетевые ошибки не валят перевод статусов. sendImpl инъектируется в тестах.
+export async function sendToWork({ shift_date, shift_type }, { sendImpl = sendInWorkNotice } = {}) {
+  const ids = await db.transaction(async (trx) => {
     const rows = await trx('orders')
       .where({ shift_date, shift_type })
       .whereIn('status', ['assigned', 'review'])
-      .update({ status: 'in_progress' }).returning(['id', 'assigned_driver_id'])
-    for (const r of rows) {
-      await enqueue(trx, {
-        event_type: 'order_in_progress', order_id: r.id,
-        payload: { driver_id: r.assigned_driver_id, shift_date, shift_type },
-        event_key: `in_progress:${r.id}:${shift_date}:${shift_type}`,
-      })
-    }
-    return { moved: rows.length }
+      .update({ status: 'in_progress' }).returning('id')
+    return rows.map((r) => r.id)
   })
+  let notified = 0, failed = 0
+  for (const id of ids) {
+    try { const r = await sendImpl(id); notified += r?.sent || 0; failed += r?.failed || 0 } catch { /* не валим перевод */ }
+  }
+  return { moved: ids.length, notified, failed }
 }
 
 // Задать порядок исполнения заявок (приоритет внутри водителя): seq = позиция в списке.

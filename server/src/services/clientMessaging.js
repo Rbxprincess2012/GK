@@ -3,7 +3,9 @@ import { db } from '../db.js'
 import { enqueue } from './outbox.js'
 import { config } from '../config.js'
 import { getSetting } from './settings.js'
-import { sendReportToClient } from './clientDelivery.js'
+import { sendReportToClient, tgSend, maxSend } from './clientDelivery.js'
+import { getClientBotToken, getMaxClientBotToken } from './botConfig.js'
+import { activePersonsForObject } from './trustedPersonChannels.js'
 import { carryOverSubtaskTx } from './subtasks.js'
 
 const BASE_URL = config.APP_URL || 'https://putevo.su'
@@ -248,6 +250,72 @@ export async function confirmOrder(orderId, { userId = null, templateId, sendImp
   })
   const delivery = await sendImpl(orderId, { body: acc.body })
   return { ...acc, delivery }
+}
+
+// ── Уведомление «принято в работу» (прямая отправка, без n8n) ──
+// Два шаблона: клиенту (общий чат/группа) и доверенному лицу (по имени). {time_line} —
+// планируемое время или «как можно скорее». Шлём напрямую в Telegram/MAX, как отчёт.
+const INWORK_CLIENT = [
+  'Здравствуйте, уважаемые партнёры!',
+  '',
+  'Заявка №{number} от {date} принята в работу 🚛',
+  'Объект: {address}',
+  '{time_line}',
+  '',
+  'Сообщим, как только водитель выполнит заявку. Спасибо, что выбираете нас!',
+].join('\n')
+
+const INWORK_PERSON = [
+  'Здравствуйте, {name}!',
+  '',
+  'Ваша заявка №{number} от {date} принята в работу 🚛',
+  'Объект: {address}',
+  '{time_line}',
+  '',
+  'Пришлём отчёт сразу после выполнения.',
+].join('\n')
+
+// Имя для обращения: храним «Фамилия Имя» → часть после фамилии (фамилия не нужна).
+function firstName(full) {
+  const parts = String(full || '').trim().split(/\s+/)
+  return parts.length > 1 ? parts.slice(1).join(' ') : (parts[0] || '')
+}
+
+// Разослать уведомление «в работу»: клиенту (его получатели) — INWORK_CLIENT; доверенным
+// лицам объекта — INWORK_PERSON (с именем). Прямая HTTP-отправка; сетевые ошибки копятся в failed.
+export async function sendInWorkNotice(orderId, { fetchImpl } = {}, conn = db) {
+  const head = await orderHead({ 'o.id': orderId }, conn)
+  if (!head) return { sent: 0, failed: 0 }
+  const timeLine = head.desired_time
+    ? `Планируемое время заезда: ${String(head.desired_time).slice(0, 5)}`
+    : 'Заберём как можно скорее.'
+  const baseVars = { number: head.number ?? head.id, date: fmtDate(head.desired_date), address: addressOf(head), time_line: timeLine }
+  const clientBody = renderTemplate(INWORK_CLIENT, baseVars)
+
+  const recips = await conn('client_recipients').where({ client_id: head.client_id, status: 'active' })
+  const persons = await activePersonsForObject(head.object_id, conn)
+
+  let tgTk, maxTk
+  const tokenFor = async (ch) => {
+    if (ch === 'max') { if (maxTk === undefined) maxTk = await getMaxClientBotToken(); return maxTk }
+    if (tgTk === undefined) tgTk = await getClientBotToken(); return tgTk
+  }
+  let sent = 0, failed = 0
+  const deliver = async (ch, chatId, body) => {
+    try {
+      const tk = await tokenFor(ch)
+      const out = ch === 'max' ? await maxSend(tk, chatId, body, fetchImpl) : await tgSend(tk, chatId, body, fetchImpl)
+      out?.ok ? sent++ : failed++
+    } catch { failed++ }
+  }
+
+  for (const r of recips) await deliver(r.channel || 'telegram', r.chat_id, clientBody)
+  for (const p of persons) {
+    const body = renderTemplate(INWORK_PERSON, { ...baseVars, name: firstName(p.name) })
+    if (p.tg_status === 'active' && p.tg_chat_id != null) await deliver('telegram', p.tg_chat_id, body)
+    if (p.max_status === 'active' && p.max_chat_id != null) await deliver('max', p.max_chat_id, body)
+  }
+  return { sent, failed, recipients: recips.length + persons.length }
 }
 
 // Зафиксировать факт ручной отправки менеджером (диплинк скопирован/открыт).
