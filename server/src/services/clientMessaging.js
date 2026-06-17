@@ -260,7 +260,6 @@ const INWORK_CLIENT = [
   '',
   'Заявка №{number} от {date} принята в работу 🚛',
   'Объект: {address}',
-  '{time_line}',
   '',
   'Сообщим, как только водитель выполнит заявку. Спасибо, что выбираете нас!',
 ].join('\n')
@@ -270,7 +269,6 @@ const INWORK_PERSON = [
   '',
   'Ваша заявка №{number} от {date} принята в работу 🚛',
   'Объект: {address}',
-  '{time_line}',
   '',
   'Пришлём отчёт сразу после выполнения.',
 ].join('\n')
@@ -286,10 +284,7 @@ function firstName(full) {
 export async function sendInWorkNotice(orderId, { fetchImpl } = {}, conn = db) {
   const head = await orderHead({ 'o.id': orderId }, conn)
   if (!head) return { sent: 0, failed: 0 }
-  const timeLine = head.desired_time
-    ? `Планируемое время заезда: ${String(head.desired_time).slice(0, 5)}`
-    : 'Заберём как можно скорее.'
-  const baseVars = { number: head.number ?? head.id, date: fmtDate(head.desired_date), address: addressOf(head), time_line: timeLine }
+  const baseVars = { number: head.number ?? head.id, date: fmtDate(head.desired_date), address: addressOf(head) }
   const clientBody = renderTemplate(INWORK_CLIENT, baseVars)
 
   const recips = await conn('client_recipients').where({ client_id: head.client_id, status: 'active' })
