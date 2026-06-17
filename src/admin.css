@@ -1131,6 +1131,9 @@ textarea.a-input,
 .a-grpcard-field .a-input { font-size: 0.82rem; }
 /* Мини-подсказка под полем: что делать со ссылкой/командой. */
 .a-grpcard-hint { font-size: 0.74rem; line-height: 1.35; color: #8493bd; }
+/* Пошаговая инструкция под полем «Имя бота» (нумерованная). */
+.a-grpcard-steps { margin: 4px 0 0; padding-left: 18px; font-size: 0.78rem; line-height: 1.45; color: #aeb9dd; }
+.a-grpcard-steps li { margin-bottom: 3px; }
 /* Канал = карточка + полная инструкция под ней. */
 .a-grpchannel { display: flex; flex-direction: column; gap: 8px; }
 

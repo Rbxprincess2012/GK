@@ -3,7 +3,6 @@ import api from '@/lib/api'
 import { useToast } from '@/components/admin/Toast'
 import { useAuth } from '@/context/AuthContext'
 import { affectionate } from '@/lib/affection'
-import { MessengerGuide } from '@/components/admin/MessengerGuide'
 import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 
 // Групповой чат заказчика для отчётов — отдельная карточка на мессенджер (MAX сверху, Telegram
@@ -12,6 +11,8 @@ import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 
 function GroupCard({ clientId, channel, label, Icon }) {
   const toast = useToast()
+  const { user } = useAuth()
+  const managerName = user?.first_name
   const [info, setInfo] = useState(null) // { id, status, title, bot_username, bind_command }
   const [busy, setBusy] = useState(false)
 
@@ -24,7 +25,6 @@ function GroupCard({ clientId, channel, label, Icon }) {
   const status = info?.status ?? null
   const used = status !== null
   const bot = info?.bot_username
-  const botUrl = bot ? (channel === 'max' ? `https://max.ru/${bot}` : `https://t.me/${bot}`) : null
   const copy = (t) => navigator.clipboard.writeText(t).then(() => toast.success('Скопировано')).catch(() => {})
 
   const toggle = async (on) => {
@@ -66,17 +66,36 @@ function GroupCard({ clientId, channel, label, Icon }) {
 
           {bot && (
             <label className="a-grpcard-field">
-              <span className="a-grpcard-field-label">Ссылка на бота</span>
+              <span className="a-grpcard-field-label">Имя нашего бота</span>
               <div className="a-fieldrow">
-                <input className="a-input" readOnly value={botUrl} onFocus={(e) => e.target.select()} />
-                <a className="a-btn a-btn--primary" href={botUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Открыть</a>
-                <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(botUrl)}>Копировать</button>
+                <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
+                <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
               </div>
-              <span className="a-grpcard-hint">
-                {channel === 'max'
-                  ? '1) Открой ссылку (или перешли менеджеру) и нажми у бота «Запустить»/Старт — он попадёт в список твоих чатов. 2) В группе заказчика «Добавить участника» → выбери бота из списка (искать по id не нужно). 3) Назначь его администратором и отправь команду привязки ниже.'
-                  : '1) Открой ссылку (или перешли менеджеру) и нажми «Запустить». 2) Добавь бота в группу заказчика. 3) Отправь команду привязки ниже.'}
-              </span>
+              {channel === 'max' ? (
+                <ol className="a-grpcard-steps">
+                  <li>Нажми возле имени бота кнопку «Копировать».</li>
+                  <li>Отправь себе{managerName ? `, ${managerName},` : ''} в MAX то, что скопировал(а).</li>
+                  <li>Нажми «Начать». После этого бот появится в твоих контактах.</li>
+                  <li>Перейди в группу с нашим клиентом.</li>
+                  <li>Нажми на название группы сверху, ниже выбери «Добавить участников».</li>
+                  <li>В поле сверху «Найти по имени» снова вставь скопированное ранее имя бота.</li>
+                  <li>Нажми на него, потом кнопку «Добавить».</li>
+                  <li>Жми «Администраторы» → «Добавить администратора» → «Putevo_CLIENT».</li>
+                  <li>Кнопка «Назначить администратором». Назад – Назад.</li>
+                  <li>Скопируй «Команду привязки» ниже и отправь её сообщением в эту группу — бот ответит «✅ Привязано».</li>
+                  <li>Готово! Теперь наш бот будет отправлять отчёты по заказам в эту группу.</li>
+                </ol>
+              ) : (
+                <ol className="a-grpcard-steps">
+                  <li>Нажми возле имени бота кнопку «Копировать».</li>
+                  <li>Открой Telegram и зайди в группу с нашим клиентом (или создай её и добавь людей заказчика).</li>
+                  <li>Нажми на название группы сверху, выбери «Добавить участников».</li>
+                  <li>В поиске вставь скопированное имя бота, выбери его и нажми «Добавить».</li>
+                  <li>Если Telegram предупредит, что это бот — подтверди. Права администратора не нужны.</li>
+                  <li>Скопируй «Команду привязки» ниже и отправь её сообщением в эту группу — бот ответит «✅ Привязано».</li>
+                  <li>Готово! Теперь наш бот будет отправлять отчёты по заказам в эту группу.</li>
+                </ol>
+              )}
             </label>
           )}
 
@@ -84,11 +103,6 @@ function GroupCard({ clientId, channel, label, Icon }) {
             <span className="a-grpcard-bound">✅ Привязано к группе «{info.title || 'без названия'}». Отчёты по заявкам заказчика уходят туда.</span>
           ) : (
             <>
-              {channel === 'max' && (
-                <div className="a-grpcard-warn">
-                  ⚠️ В MAX сначала сделай бота администратором группы — иначе он не видит команду /bind.
-                </div>
-              )}
               {info?.bind_command && (
                 <label className="a-grpcard-field">
                   <span className="a-grpcard-field-label">Команда привязки</span>
@@ -123,14 +137,8 @@ export function ClientRecipients({ clientId }) {
         приходить конкретным лицам — это в «Доверенных лицах».
       </div>
       <div className="a-msgr-cards">
-        <div className="a-grpchannel">
-          <GroupCard clientId={clientId} channel="max" label="MAX" Icon={MaxIcon} />
-          <MessengerGuide scenarios={['group']} channels={['max']} open />
-        </div>
-        <div className="a-grpchannel">
-          <GroupCard clientId={clientId} channel="telegram" label="Telegram" Icon={TelegramIcon} />
-          <MessengerGuide scenarios={['group']} channels={['telegram']} open />
-        </div>
+        <GroupCard clientId={clientId} channel="max" label="MAX" Icon={MaxIcon} />
+        <GroupCard clientId={clientId} channel="telegram" label="Telegram" Icon={TelegramIcon} />
       </div>
     </>
   )
