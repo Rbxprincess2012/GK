@@ -24,6 +24,7 @@ function GroupCard({ clientId, channel, label, Icon }) {
   const status = info?.status ?? null
   const used = status !== null
   const bot = info?.bot_username
+  const botUrl = bot ? (channel === 'max' ? `https://max.ru/${bot}` : `https://t.me/${bot}`) : null
   const copy = (t) => navigator.clipboard.writeText(t).then(() => toast.success('Скопировано')).catch(() => {})
 
   const toggle = async (on) => {
@@ -68,12 +69,13 @@ function GroupCard({ clientId, channel, label, Icon }) {
               <span className="a-grpcard-field-label">Бот</span>
               <div className="a-fieldrow">
                 <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
+                <a className="a-btn a-btn--primary" href={botUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Открыть бота</a>
                 <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
               </div>
               <span className="a-grpcard-hint">
                 {channel === 'max'
-                  ? 'Имя нашего бота. Найди его по этому имени в поиске MAX, добавь в группу заказчика и назначь администратором группы.'
-                  : 'Имя нашего бота. Найди его по этому имени в поиске Telegram и добавь в группу заказчика.'}
+                  ? 'Нажми «Открыть бота» → в профиле бота выбери «Добавить в группу» → выбери группу заказчика и назначь его администратором. (Поиск по имени в MAX ботов часто не находит — добавляй из профиля.)'
+                  : 'Нажми «Открыть бота» → добавь его в группу заказчика (или найди по имени в поиске Telegram).'}
               </span>
             </label>
           )}
