@@ -11,7 +11,7 @@ import { bindByCode as driverBind, resolveDriverByChat, issueLink } from '../src
 import { setSetting } from '../src/services/settings.js'
 import { issueCode } from '../src/services/channels.js'
 import { issuePersonInvite, bindPersonByCode } from '../src/services/trustedPersonChannels.js'
-import { issueInvite, bindByCode as recipBind } from '../src/services/clientRecipients.js'
+import { issueInvite, bindByCode as recipBind, ensureGroupInvite, groupRecipient } from '../src/services/clientRecipients.js'
 import { createMaxClientBot } from '../src/bot/maxClientBot.js'
 
 afterAll(() => db.destroy())
@@ -144,6 +144,18 @@ describe('channel-aware онбординг', () => {
     const bound = await recipBind(inv.verify_code, { chat_id: 999, kind: 'dm', title: 'T', channel: 'max' })
     expect(bound.channel).toBe('max')
     expect(String(bound.chat_id)).toBe('999')
+  })
+
+  it('группа: ensureGroupInvite идемпотентен — повторный вызов не плодит дубли pending', async () => {
+    const [cl] = await db('clients').insert({ type: 'ooo', legal_name: 'G', default_payment_method: 'cash' }).returning('*')
+    const a = await ensureGroupInvite(cl.id, 'max')
+    const b = await ensureGroupInvite(cl.id, 'max')
+    expect(b.id).toBe(a.id) // переиспользовали ту же pending-строку
+    const rows = await db('client_recipients').where({ client_id: cl.id, kind: 'group', channel: 'max' })
+    expect(rows).toHaveLength(1)
+    // groupRecipient возвращает её же; telegram-канал — отдельная строка/состояние
+    expect((await groupRecipient(cl.id, 'max'))?.id).toBe(a.id)
+    expect(await groupRecipient(cl.id, 'telegram')).toBeUndefined()
   })
 })
 

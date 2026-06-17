@@ -4,96 +4,125 @@ import { useToast } from '@/components/admin/Toast'
 import { useAuth } from '@/context/AuthContext'
 import { affectionate } from '@/lib/affection'
 import { MessengerGuide } from '@/components/admin/MessengerGuide'
+import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 
-// Получатели отчётов клиента: личные чаты + группы, по каналам Telegram/MAX. Онбординг — через
-// deep-link ссылку (личка) или команду /bind (группа). Показывается только для сохранённого клиента.
-const KIND_ICON = { dm: '👤', group: '👥' }
-const CH_ICON = { telegram: '✈️', max: '🟦' }
-const STATUS = { pending: ['⏳ ожидает', '#f4a840'], active: ['✅ активен', '#2ecc71'] }
+// Групповой чат заказчика для отчётов — отдельная карточка на мессенджер (MAX сверху, Telegram
+// ниже). Чекбокс «Использовать» подключает/отключает канал; при подключении показываем имя бота
+// и команду /bind (обе с «Копировать») и пошаговую инструкцию. Привязка — через одноразовый код.
 
-export function ClientRecipients({ clientId }) {
+function GroupCard({ clientId, channel, label, Icon }) {
   const toast = useToast()
   const { user } = useAuth()
   const aff = affectionate(user?.first_name)
-  const [list, setList] = useState([])
-  const [channel, setChannel] = useState('telegram')
-  const [invite, setInvite] = useState(null) // { kind, channel, link } | { kind:'group', command, bot }
+  const [info, setInfo] = useState(null) // { id, status, title, bot_username, bind_command }
+  const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
-    api.get(`/clients/${clientId}/recipients`).then(({ data }) => setList(data || [])).catch(() => {})
-  }, [clientId])
+    api.get(`/clients/${clientId}/recipients/group`, { params: { channel } })
+      .then(({ data }) => setInfo(data)).catch(() => {})
+  }, [clientId, channel])
   useEffect(() => { load() }, [load])
 
-  const addGroup = () => api.post(`/clients/${clientId}/recipients/group`, null, { params: { channel } })
-    .then(({ data }) => { setInvite({ kind: 'group', channel, command: data.bind_command, bot: data.bot_username }); load() }).catch(() => toast.error('Не удалось'))
-  const remove = (id) => api.delete(`/recipients/${id}`).then(() => load()).catch(() => toast.error('Не удалось'))
+  const status = info?.status ?? null
+  const used = status !== null
+  const bot = info?.bot_username
   const copy = (t) => navigator.clipboard.writeText(t).then(() => toast.success('Скопировано')).catch(() => {})
 
-  // Здесь — только групповой чат заказчика. Личные получатели настраиваются в «Доверенных лицах».
-  const visible = list.filter((r) => r.status !== 'revoked' && r.kind === 'group')
+  const toggle = async (on) => {
+    if (busy) return
+    if (on) {
+      setBusy(true)
+      try { const { data } = await api.post(`/clients/${clientId}/recipients/group`, null, { params: { channel } }); setInfo(data) }
+      catch { toast.error('Не удалось подключить') } finally { setBusy(false) }
+    } else {
+      if (status === 'active' && !(await toast.confirm(`Отключить ${label}-группу? Отчёты перестанут приходить.`))) return
+      if (!info?.id) { setInfo({ ...info, status: null }); return }
+      setBusy(true)
+      try { await api.delete(`/recipients/${info.id}`); setInfo({ ...info, id: null, status: null, title: null, bind_command: null }) }
+      catch { toast.error('Не удалось отключить') } finally { setBusy(false) }
+    }
+  }
+
+  return (
+    <div className={`a-msgr-card a-grpcard a-grpcard--${channel}${used ? '' : ' a-grpcard--off'}`}>
+      <div className="a-msgr-card-head">
+        <span className="a-msgr-card-title"><Icon size={16} /><span>{label}</span></span>
+        <span className="a-grpcard-head-right">
+          {status === 'active' && <span className="a-msgr-badge a-msgr-badge--ok">✅ активен</span>}
+          {status === 'pending' && <span className="a-msgr-badge a-msgr-badge--wait">⏳ ожидает</span>}
+          <label className="a-grpcard-use">
+            <input type="checkbox" checked={used} disabled={busy} onChange={(e) => toggle(e.target.checked)} />
+            <span>Использовать</span>
+          </label>
+        </span>
+      </div>
+
+      {!used ? (
+        <div className="a-grpcard-off-hint">Выключено — отчёты в {label} не уходят. Включите, чтобы привязать группу заказчика.</div>
+      ) : (
+        <div className="a-msgr-card-body">
+          {!bot && (
+            <span className="a-grpcard-warn">{label}-бот не настроен — впишите токен в Настройках.</span>
+          )}
+
+          {bot && (
+            <label className="a-grpcard-field">
+              <span className="a-grpcard-field-label">Бот</span>
+              <div className="a-fieldrow">
+                <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
+                <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
+              </div>
+            </label>
+          )}
+
+          {status === 'active' ? (
+            <span className="a-grpcard-bound">✅ Привязано к группе «{info.title || 'без названия'}». Отчёты по заявкам заказчика уходят туда.</span>
+          ) : (
+            <>
+              {info?.bind_command && (
+                <label className="a-grpcard-field">
+                  <span className="a-grpcard-field-label">Команда привязки</span>
+                  <div className="a-fieldrow">
+                    <input className="a-input" readOnly value={info.bind_command} onFocus={(e) => e.target.select()} />
+                    <button type="button" className="a-btn a-btn--primary" onClick={() => copy(info.bind_command)}>Копировать</button>
+                    <button type="button" className="a-iconbtn" onClick={load} title="Обновить статус привязки">⟳</button>
+                  </div>
+                </label>
+              )}
+              {channel === 'max' && (
+                <div className="a-grpcard-warn">
+                  ⚠️ В MAX сначала сделай бота администратором группы — иначе он не видит команду /bind.
+                </div>
+              )}
+              <span className="a-muted" style={{ fontSize: '0.78rem' }}>
+                {aff}, добавь бота{bot ? ` @${bot}` : ''} в группу заказчика и отправь там эту команду — бот ответит «✅ Привязано».
+              </span>
+            </>
+          )}
+
+          <MessengerGuide scenarios={['group']} channels={[channel]} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Раздел «Групповой чат для отчётов»: по карточке на мессенджер (MAX, затем Telegram).
+export function ClientRecipients({ clientId }) {
+  const { user } = useAuth()
+  const aff = affectionate(user?.first_name)
   return (
     <>
       <div className="a-section-title">Групповой чат для отчётов</div>
       <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 8 }}>
-        {aff}, здесь задаются параметры группового чата заказчика — туда уходит отчёт, когда
-        подтверждаешь заявку. Если нужно, чтобы отчёты приходили конкретным лицам — перейди в
-        «Доверенные лица». Выбери канал и подключи группу.
+        {aff}, здесь подключается групповой чат заказчика — туда уходит отчёт, когда подтверждаешь
+        заявку. Включи нужный мессенджер галочкой «Использовать» и привяжи группу. Если отчёты должны
+        приходить конкретным лицам — это в «Доверенных лицах».
       </div>
-      <MessengerGuide scenarios={['group']} />
-      {visible.length === 0 && (
-        <div className="a-muted" style={{ fontSize: '0.82rem', marginBottom: 8 }}>Группа ещё не подключена — добавьте ниже.</div>
-      )}
-      {visible.map((r) => {
-        const [label, color] = STATUS[r.status] || ['', '#92a2d4']
-        return (
-          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
-            <span title={r.channel === 'max' ? 'MAX' : 'Telegram'}>{CH_ICON[r.channel || 'telegram']}</span>
-            <span>{KIND_ICON[r.kind]}</span>
-            <span style={{ flex: 1, color: '#e8ecff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {r.title || (r.kind === 'group' ? 'Группа' : 'Личный чат')}
-            </span>
-            <span style={{ fontSize: '0.76rem', color, whiteSpace: 'nowrap' }}>{label}</span>
-            <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => remove(r.id)} title="Убрать">✕</button>
-          </div>
-        )
-      })}
-
-      <div style={{ display: 'flex', gap: 6, marginTop: 10, alignItems: 'center' }}>
-        <span className="a-muted" style={{ fontSize: '0.76rem' }}>Канал:</span>
-        {['telegram', 'max'].map((ch) => (
-          <button key={ch} type="button"
-            className={`a-btn a-btn--sm ${channel === ch ? 'a-btn--primary' : 'a-btn--ghost'}`}
-            onClick={() => { setChannel(ch); setInvite(null) }}>
-            {CH_ICON[ch]} {ch === 'max' ? 'MAX' : 'Telegram'}
-          </button>
-        ))}
+      <div className="a-msgr-cards">
+        <GroupCard clientId={clientId} channel="max" label="MAX" Icon={MaxIcon} />
+        <GroupCard clientId={clientId} channel="telegram" label="Telegram" Icon={TelegramIcon} />
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-        <button className="a-btn a-btn--ghost a-btn--sm" onClick={addGroup}>+ Подключить группу</button>
-      </div>
-
-      {invite?.kind === 'group' && (
-        <div className="a-muted" style={{ fontSize: '0.8rem', marginTop: 10 }}>
-          {aff}, по группе так: добавь нашего бота {invite.bot ? `@${invite.bot}` : '(клиентский бот)'} в
-          группу заказчика и отправь там вот эту команду — бот ответит «✅ Привязано».
-          {/* Поле + кнопки одной высоты: Копировать, затем Обновить статус привязки. */}
-          <div className="a-fieldrow" style={{ marginTop: 4 }}>
-            <input className="a-input" readOnly value={invite.command} style={{ fontSize: '0.78rem' }} />
-            <button className="a-btn a-btn--primary a-iconbtn" onClick={() => copy(invite.command)}>Копировать</button>
-            <button className="a-btn a-btn--ghost a-iconbtn" onClick={load} title="Обновить статус привязки">⟳ Обновить</button>
-          </div>
-          {invite.channel === 'max' && (
-            <div style={{ marginTop: 6, color: '#f4a840' }}>
-              ⚠️ В MAX сначала сделай бота администратором группы (настройки группы → участники →
-              бот → «Сделать администратором») — иначе бот не видит сообщения и /bind не сработает.
-            </div>
-          )}
-          <div style={{ marginTop: 6, color: '#f4a840' }}>
-            ⚠️ Важно: в группе отчёт видят ВСЕ участники. Подключай группу, только если там сидит
-            закрытая команда заказчика. Есть посторонние — лучше личный чат.
-          </div>
-        </div>
-      )}
     </>
   )
 }

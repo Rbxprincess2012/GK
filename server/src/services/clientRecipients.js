@@ -33,6 +33,21 @@ export async function bindByCode(verifyCode, { chat_id, kind, title, channel = '
 
 export const listForClient = (clientId) => db('client_recipients').where({ client_id: clientId }).orderBy('id')
 
+// Текущая группа-получатель канала (не revoked) — для отрисовки карточки и идемпотентного онбординга.
+export function groupRecipient(clientId, channel = 'telegram') {
+  return db('client_recipients')
+    .where({ client_id: clientId, kind: 'group', channel })
+    .whereNot('status', 'revoked')
+    .orderBy('id', 'desc')
+    .first()
+}
+
+// Идемпотентно вернуть приглашение группы: активную/ожидающую строку переиспользуем (с её кодом),
+// иначе создаём новый pending-код. Чтобы повторное «Использовать» не плодило дубликаты.
+export async function ensureGroupInvite(clientId, channel = 'telegram') {
+  return (await groupRecipient(clientId, channel)) || issueInvite(clientId, 'group', channel)
+}
+
 export async function revoke(id) {
   const [row] = await db('client_recipients').where({ id }).update({ status: 'revoked', updated_at: db.fn.now() }).returning('*')
   return row

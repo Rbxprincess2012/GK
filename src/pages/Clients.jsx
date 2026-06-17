@@ -538,8 +538,8 @@ export default function Clients() {
               <input className="a-input" value={bankQuery} placeholder="044525225 или «Сбербанк»"
                 onChange={(e) => setBankQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pullBank() } }} />
-              <button type="button" className="a-btn a-btn--soft a-iconbtn" onClick={pullBank} disabled={pullingBank}
-                title="Подтянуть банк, БИК и корр. счёт через DaData">{pullingBank ? '…' : '↧ Найти'}</button>
+              <button type="button" className="a-btn a-btn--soft" onClick={pullBank} disabled={pullingBank}
+                title="Подтянуть банк, БИК и корр. счёт через DaData" style={{ whiteSpace: 'nowrap' }}>{pullingBank ? '…' : '↧ Найти'}</button>
             </div>
           </label>
           <label className="a-field"><span>Банк</span>

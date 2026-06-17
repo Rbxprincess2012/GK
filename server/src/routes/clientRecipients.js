@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { requireRole } from '../middleware/authUser.js'
-import { issueInvite, listForClient, revoke } from '../services/clientRecipients.js'
+import { issueInvite, listForClient, revoke, groupRecipient, ensureGroupInvite } from '../services/clientRecipients.js'
 import { getClientBotUsername, getMaxClientBotUsername } from '../services/botConfig.js'
 
 const r = Router()
@@ -12,6 +12,9 @@ const usernameFor = (channel) => (channel === 'max' ? getMaxClientBotUsername() 
 const dmLink = (channel, username, code) => (username
   ? (channel === 'max' ? `https://max.ru/${username}?start=${code}` : `https://t.me/${username}?start=${code}`)
   : null)
+// Команда привязки группы. В Telegram (privacy-mode) нужна с явным @username; в MAX бот видит
+// сообщения только как админ — формат с @ безвреден (наш парсер срезает @bot).
+const bindCommand = (u, code) => (u ? `/bind@${u} ${code}` : `/bind ${code}`)
 
 r.get('/clients/:id/recipients', async (req, res, next) => {
   try { res.json(await listForClient(Number(req.params.id))) } catch (e) { next(e) }
@@ -27,16 +30,35 @@ r.post('/clients/:id/recipients/dm', async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
-// Группа: выдаём код и команду — менеджер добавляет бота в группу и шлёт /bind <code>.
+// Текущее состояние групповой привязки канала (для карточки MAX/Telegram).
+r.get('/clients/:id/recipients/group', async (req, res, next) => {
+  try {
+    const channel = channelOf(req)
+    const u = await usernameFor(channel)
+    const row = await groupRecipient(Number(req.params.id), channel)
+    res.json({
+      id: row?.id ?? null,
+      status: row?.status ?? null,
+      title: row?.title ?? null,
+      bot_username: u,
+      bind_command: row?.status === 'pending' ? bindCommand(u, row.verify_code) : null,
+    })
+  } catch (e) { next(e) }
+})
+
+// Группа: идемпотентно гарантируем код и отдаём команду /bind <code> (повторный вызов не плодит дубли).
 r.post('/clients/:id/recipients/group', async (req, res, next) => {
   try {
     const channel = channelOf(req)
-    const row = await issueInvite(Number(req.params.id), 'group', channel)
+    const row = await ensureGroupInvite(Number(req.params.id), channel)
     const u = await usernameFor(channel)
-    // В группе бот с включённым privacy-mode получает команду только с явным @username.
-    // Поэтому отдаём «/bind@bot <code>» — иначе /bind в группе «не подхватывается».
-    const bind_command = u ? `/bind@${u} ${row.verify_code}` : `/bind ${row.verify_code}`
-    res.status(201).json({ ...row, bot_username: u, bind_command })
+    res.status(201).json({
+      id: row.id,
+      status: row.status,
+      title: row.title ?? null,
+      bot_username: u,
+      bind_command: row.status === 'pending' ? bindCommand(u, row.verify_code) : null,
+    })
   } catch (e) { next(e) }
 })
 

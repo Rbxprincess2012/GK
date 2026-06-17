@@ -1111,6 +1111,25 @@ textarea.a-input,
 .a-msgr-invite { display: flex; gap: 6px; }
 .a-msgr-invite .a-input { flex: 1; }
 
+/* ── Групповой чат для отчётов: карточка-канал (MAX / Telegram) ─────────────── */
+/* Канальный акцент слева; выключенная карточка приглушена. */
+.a-grpcard { border-left: 2px solid transparent; transition: border-color .15s, opacity .15s; }
+.a-grpcard--max { border-left-color: rgba(91,124,255,0.55); }
+.a-grpcard--telegram { border-left-color: rgba(42,171,238,0.55); }
+.a-grpcard--off { opacity: 0.72; }
+.a-grpcard--off .a-msgr-card-head { margin-bottom: 0; }
+.a-grpcard-head-right { display: inline-flex; align-items: center; gap: 10px; }
+/* Чекбокс «Использовать» — выровнен по базовой линии заголовка. */
+.a-grpcard-use { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #c4ccea; cursor: pointer; user-select: none; }
+.a-grpcard-use input { width: 15px; height: 15px; cursor: pointer; accent-color: #f48f1b; }
+.a-grpcard-off-hint { font-size: 0.78rem; color: #92a2d4; margin-top: 6px; }
+.a-grpcard-warn { font-size: 0.78rem; color: #f4a840; }
+.a-grpcard-bound { font-size: 0.8rem; color: #e8ecff; }
+/* Поле = подпись над строкой «инпут + кнопки» (.a-fieldrow держит единую высоту 40px). */
+.a-grpcard-field { display: flex; flex-direction: column; gap: 4px; }
+.a-grpcard-field-label { font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #7c8db5; }
+.a-grpcard-field .a-input { font-size: 0.82rem; }
+
 /* ── Карточки заказчиков ──────────────────────────────────────────────────── */
 .a-client-list { display: flex; flex-direction: column; gap: 10px; }
 
