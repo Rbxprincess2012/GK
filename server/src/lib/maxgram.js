@@ -67,6 +67,10 @@ function normalizeUpdate(u) {
     case 'bot_started':
       // chat_id и payload — ПЛОСКИЕ поля верхнего уровня (не внутри message).
       return { kind: 'start', chat: { id: u.chat_id, type: 'dialog' }, from: userOf(u.user), payload: u.payload || '' }
+    case 'bot_added':
+      // Бота добавили в чат/канал. chat_id плоский; user — кто добавил; is_channel — канал ли это.
+      // В MAX чат_id группы достаётся ТОЛЬКО из апдейтов (нет REST-списка) — это точка онбординга.
+      return { kind: 'bot_added', chat: { id: u.chat_id, type: u.is_channel ? 'channel' : 'chat' }, from: userOf(u.user) }
     case 'message_callback': {
       const cb = u.callback || {}
       return {
@@ -87,6 +91,7 @@ export class Bot {
     this._commands = new Map()
     this._callbackHandlers = []
     this._messageHandlers = []
+    this._botAddedHandlers = []
     this._middlewares = []
     this._beforeSend = []
     this._errorHandler = null
@@ -98,6 +103,7 @@ export class Bot {
   on(event, handler) {
     if (event === 'callback_query:data') this._callbackHandlers.push(handler)
     else if (event === 'message') this._messageHandlers.push(handler)
+    else if (event === 'bot_added') this._botAddedHandlers.push(handler)
     return this
   }
   use(mw) { this._middlewares.push(mw); return this }
@@ -155,6 +161,10 @@ export class Bot {
     }
     if (norm.kind === 'callback') {
       for (const h of this._callbackHandlers) await h(ctx)
+      return
+    }
+    if (norm.kind === 'bot_added') {
+      for (const h of this._botAddedHandlers) await h(ctx)
       return
     }
     // message_created

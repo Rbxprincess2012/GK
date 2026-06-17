@@ -82,6 +82,12 @@ export function ClientRecipients({ clientId }) {
             <button className="a-btn a-btn--primary a-iconbtn" onClick={() => copy(invite.command)}>Копировать</button>
             <button className="a-btn a-btn--ghost a-iconbtn" onClick={load} title="Обновить статус привязки">⟳ Обновить</button>
           </div>
+          {invite.channel === 'max' && (
+            <div style={{ marginTop: 6, color: '#f4a840' }}>
+              ⚠️ В MAX сначала сделай бота администратором группы (настройки группы → участники →
+              бот → «Сделать администратором») — иначе бот не видит сообщения и /bind не сработает.
+            </div>
+          )}
           <div style={{ marginTop: 6, color: '#f4a840' }}>
             ⚠️ Важно: в группе отчёт видят ВСЕ участники. Подключай группу, только если там сидит
             закрытая команда заказчика. Есть посторонние — лучше личный чат.
