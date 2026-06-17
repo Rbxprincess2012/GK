@@ -1,10 +1,11 @@
 import { z } from 'zod'
 
-// Пустую строку считаем «не указано» — поле необязательное, проверку формата пропускаем.
-const optionalStr = z.string().optional()
-// Счёт (расч./корр.) — ровно 20 цифр, если указан; иначе пусто.
-const account = z.union([z.literal(''), z.string().regex(/^\d{20}$/, 'Счёт должен содержать 20 цифр')]).optional()
-const optionalEmail = z.union([z.literal(''), z.string().email('Некорректный адрес почты')]).optional()
+// Пустую строку и null считаем «не указано» — поле необязательное, формат не проверяем.
+// null приходит из БД у незаполненных столбцов при редактировании существующего клиента.
+const optionalStr = z.string().nullable().optional()
+// Счёт (расч./корр.) — ровно 20 цифр, если указан; иначе пусто/не задано.
+const account = z.union([z.literal(''), z.string().regex(/^\d{20}$/, 'Счёт должен содержать 20 цифр')]).nullable().optional()
+const optionalEmail = z.union([z.literal(''), z.string().email('Некорректный адрес почты')]).nullable().optional()
 
 const base = {
   type: z.enum(['ooo', 'ip']),
@@ -21,8 +22,8 @@ const base = {
   group_id: z.number().int().nullable().optional(),
   email: optionalEmail,
   phone: optionalStr,
-  default_payment_method: z.enum(['cashless', 'cash']).optional(),
-  requires_photo: z.boolean().optional(),
+  default_payment_method: z.enum(['cashless', 'cash']).nullable().optional(),
+  requires_photo: z.boolean().nullable().optional(),
   // Адреса общих чатов клиента по мессенджерам (ручной ввод) — куда слать отчёты.
   chats: z.object({
     telegram: z.string().nullable().optional(),
