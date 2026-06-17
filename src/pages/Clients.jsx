@@ -140,17 +140,22 @@ export default function Clients() {
     payload.default_payment_method = form.default_payment_method
     payload.group_id = groupId
     try {
-      if (editing.id) await updateClient(editing.id, payload)
-      else {
+      if (editing.id) {
+        await updateClient(editing.id, payload)
+        toast.success('Сохранено')
+      } else {
         const created = await addClient(payload)
         if (created?.id) {
           // Сразу раскрываем нового клиента (и его группу) — чтобы была видна кнопка «+ Объект».
           if (created.group_id) setOpenGroups((p) => new Set(p).add(created.group_id))
           setExpanded(created.id)
           fetchObjects(created.id)
+          // НЕ закрываем окно: теперь у клиента есть id → прямо здесь появятся карточки
+          // получателей (MAX/Telegram) без повторного открытия модалки. (как у объектов)
+          setEditing(created)
+          toast.success('Клиент сохранён — ниже подключите группу для отчётов')
         }
       }
-      toast.success('Сохранено'); closeClient()
     } catch (e) {
       const d = e?.response?.data
       let msg = 'Ошибка сохранения'
@@ -525,9 +530,10 @@ export default function Clients() {
             : <>
                 <div className="a-section-title">Групповой чат для отчётов</div>
                 <div className="a-note">
-                  Здесь задаются параметры группового чата заказчика. Сохраните клиента — появится
-                  команда для подключения группы. Чтобы отчёты приходили конкретным лицам, перейдите
-                  в «Доверенные лица».
+                  Заполните данные клиента и нажмите «Сохранить» внизу — окно НЕ закроется, прямо
+                  здесь появятся карточки MAX и Telegram для подключения группы. (Команда привязки
+                  привязана к клиенту, поэтому доступна после первого сохранения.) Чтобы отчёты
+                  приходили конкретным лицам — раздел «Доверенные лица».
                 </div>
               </>}
 
