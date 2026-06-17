@@ -100,16 +100,12 @@ describe('maxgram — маппинг апдейтов и клавиатура', 
     expect(body.attachments[0]).toEqual({ type: 'inline_keyboard', payload: { buttons: [[{ type: 'callback', text: 'Yes', payload: 'y' }]] } })
   })
 
-  it('bot_added → клиентский бот просит назначить администратором и прислать /bind', async () => {
+  it('bot_added в клиентском боте — НЕ шлёт авто-сообщение (менеджер добавляет молча)', async () => {
     const { calls, fetchImpl } = recorder()
     const bot = createMaxClientBot('T')
     bot.api.fetchImpl = fetchImpl // бот создаётся без инъекции — подменяем fetch у api
     await bot._handle({ update_type: 'bot_added', chat_id: 70, user: { user_id: 7, name: 'A' }, is_channel: false })
-    const send = calls.find((c) => c.url.includes('/messages'))
-    expect(send.url).toContain('chat_id=70')
-    const body = JSON.parse(send.opts.body)
-    expect(body.text).toMatch(/администратор/i)
-    expect(body.text).toContain('/bind')
+    expect(calls.find((c) => c.url.includes('/messages'))).toBeUndefined()
   })
 })
 
