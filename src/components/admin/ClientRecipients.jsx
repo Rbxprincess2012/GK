@@ -66,16 +66,16 @@ function GroupCard({ clientId, channel, label, Icon }) {
 
           {bot && (
             <label className="a-grpcard-field">
-              <span className="a-grpcard-field-label">Бот</span>
+              <span className="a-grpcard-field-label">Ссылка на бота</span>
               <div className="a-fieldrow">
-                <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
-                <a className="a-btn a-btn--primary" href={botUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Открыть бота</a>
-                <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
+                <input className="a-input" readOnly value={botUrl} onFocus={(e) => e.target.select()} />
+                <a className="a-btn a-btn--primary" href={botUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Открыть</a>
+                <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(botUrl)}>Копировать</button>
               </div>
               <span className="a-grpcard-hint">
                 {channel === 'max'
-                  ? 'Скопируй имя бота (кнопка «Копировать»). В группе заказчика → «Добавить участника» → вставь имя → выбери бота → назначь администратором. Если бот не появляется в списке — в кабинете MAX у этого бота включи «разрешить добавление в группы» и проверь, что профиль организации верифицирован. («Открыть бота» — просто проверить, что бот живой.)'
-                  : 'Нажми «Открыть бота» и добавь его в группу заказчика — или найди по имени в поиске Telegram.'}
+                  ? '1) Открой ссылку (или перешли менеджеру) и нажми у бота «Запустить»/Старт — он попадёт в список твоих чатов. 2) В группе заказчика «Добавить участника» → выбери бота из списка (искать по id не нужно). 3) Назначь его администратором и отправь команду привязки ниже.'
+                  : '1) Открой ссылку (или перешли менеджеру) и нажми «Запустить». 2) Добавь бота в группу заказчика. 3) Отправь команду привязки ниже.'}
               </span>
             </label>
           )}
