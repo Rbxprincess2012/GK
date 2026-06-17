@@ -12,8 +12,6 @@ import { TelegramIcon, MaxIcon } from '@/components/admin/PhoneMessengerField'
 
 function GroupCard({ clientId, channel, label, Icon }) {
   const toast = useToast()
-  const { user } = useAuth()
-  const aff = affectionate(user?.first_name)
   const [info, setInfo] = useState(null) // { id, status, title, bot_username, bind_command }
   const [busy, setBusy] = useState(false)
 
@@ -72,6 +70,11 @@ function GroupCard({ clientId, channel, label, Icon }) {
                 <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
                 <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
               </div>
+              <span className="a-grpcard-hint">
+                {channel === 'max'
+                  ? 'Имя нашего бота. Найди его по этому имени в поиске MAX, добавь в группу заказчика и назначь администратором группы.'
+                  : 'Имя нашего бота. Найди его по этому имени в поиске Telegram и добавь в группу заказчика.'}
+              </span>
             </label>
           )}
 
@@ -79,28 +82,26 @@ function GroupCard({ clientId, channel, label, Icon }) {
             <span className="a-grpcard-bound">✅ Привязано к группе «{info.title || 'без названия'}». Отчёты по заявкам заказчика уходят туда.</span>
           ) : (
             <>
-              {info?.bind_command && (
-                <label className="a-grpcard-field">
-                  <span className="a-grpcard-field-label">Команда привязки</span>
-                  <div className="a-fieldrow">
-                    <input className="a-input" readOnly value={info.bind_command} onFocus={(e) => e.target.select()} />
-                    <button type="button" className="a-btn a-btn--primary" onClick={() => copy(info.bind_command)}>Копировать</button>
-                    <button type="button" className="a-iconbtn" onClick={load} title="Обновить статус привязки">⟳</button>
-                  </div>
-                </label>
-              )}
               {channel === 'max' && (
                 <div className="a-grpcard-warn">
                   ⚠️ В MAX сначала сделай бота администратором группы — иначе он не видит команду /bind.
                 </div>
               )}
-              <span className="a-muted" style={{ fontSize: '0.78rem' }}>
-                {aff}, добавь бота{bot ? ` @${bot}` : ''} в группу заказчика и отправь там эту команду — бот ответит «✅ Привязано».
-              </span>
+              {info?.bind_command && (
+                <label className="a-grpcard-field">
+                  <span className="a-grpcard-field-label">Команда привязки</span>
+                  <div className="a-fieldrow">
+                    <input className="a-input" readOnly value={info.bind_command} onFocus={(e) => e.target.select()} />
+                    <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(info.bind_command)}>Копировать</button>
+                    <button type="button" className="a-iconbtn" onClick={load} title="Обновить статус привязки">⟳</button>
+                  </div>
+                  <span className="a-grpcard-hint">
+                    Отправь эту команду обычным сообщением в самой группе (где уже добавлен бот) — он ответит «✅ Привязано».
+                  </span>
+                </label>
+              )}
             </>
           )}
-
-          <MessengerGuide scenarios={['group']} channels={[channel]} />
         </div>
       )}
     </div>
@@ -120,8 +121,14 @@ export function ClientRecipients({ clientId }) {
         приходить конкретным лицам — это в «Доверенных лицах».
       </div>
       <div className="a-msgr-cards">
-        <GroupCard clientId={clientId} channel="max" label="MAX" Icon={MaxIcon} />
-        <GroupCard clientId={clientId} channel="telegram" label="Telegram" Icon={TelegramIcon} />
+        <div className="a-grpchannel">
+          <GroupCard clientId={clientId} channel="max" label="MAX" Icon={MaxIcon} />
+          <MessengerGuide scenarios={['group']} channels={['max']} open />
+        </div>
+        <div className="a-grpchannel">
+          <GroupCard clientId={clientId} channel="telegram" label="Telegram" Icon={TelegramIcon} />
+          <MessengerGuide scenarios={['group']} channels={['telegram']} open />
+        </div>
       </div>
     </>
   )

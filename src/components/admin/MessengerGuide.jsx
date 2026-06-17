@@ -55,10 +55,10 @@ function StepBlock({ icon, title, steps }) {
   )
 }
 
-export function MessengerGuide({ scenarios = ['dm'], channels = ['telegram', 'max'] }) {
+export function MessengerGuide({ scenarios = ['dm'], channels = ['telegram', 'max'], open = false }) {
   const CH = { telegram: ['✈️', 'Telegram'], max: ['🟦', 'MAX'] }
   return (
-    <details className="a-guide">
+    <details className="a-guide" open={open}>
       <summary>📖 Инструкция: как подключить (пошагово)</summary>
       <div className="a-guide-body">
         {scenarios.includes('dm') && (

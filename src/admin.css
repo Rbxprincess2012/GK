@@ -1129,6 +1129,10 @@ textarea.a-input,
 .a-grpcard-field { display: flex; flex-direction: column; gap: 4px; }
 .a-grpcard-field-label { font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #7c8db5; }
 .a-grpcard-field .a-input { font-size: 0.82rem; }
+/* Мини-подсказка под полем: что делать со ссылкой/командой. */
+.a-grpcard-hint { font-size: 0.74rem; line-height: 1.35; color: #8493bd; }
+/* Канал = карточка + полная инструкция под ней. */
+.a-grpchannel { display: flex; flex-direction: column; gap: 8px; }
 
 /* ── Карточки заказчиков ──────────────────────────────────────────────────── */
 .a-client-list { display: flex; flex-direction: column; gap: 10px; }
