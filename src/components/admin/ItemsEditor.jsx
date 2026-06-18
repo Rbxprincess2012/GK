@@ -66,7 +66,7 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
             onChange={(e) => set(i, { container_type_id: e.target.value ? Number(e.target.value) : null })}
             title={needsSize(it.action) ? 'Размер контейнера — по нему подбирается машина' : 'Размер не нужен для «Забрать»'}>
             <option value="">—</option>
-            {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${ct.volume} м³` : ct.name}</option>)}
+            {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${Number(ct.volume)} м³` : ct.name}</option>)}
           </select>
           <input className="a-input" value={it.container_numbers ?? ''} disabled={!needsContainerNo(it.action)}
             onChange={(e) => set(i, { container_numbers: e.target.value })}

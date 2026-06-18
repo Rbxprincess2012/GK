@@ -38,6 +38,19 @@ export default function Containers() {
 
   const typeName = (id) => types.find((t) => t.id === id)?.name || '—'
 
+  // Понятное сообщение об ошибке сохранения: 401/403 (истёкшая сессия), конфликт, валидация.
+  const saveErr = (e, conflictMsg) => {
+    const st = e?.response?.status
+    if (st === 401 || st === 403) return 'Сессия истекла — обновите страницу (F5) и войдите заново'
+    const d = e?.response?.data
+    if (d?.error === 'conflict') return conflictMsg
+    if (d?.error === 'validation' && Array.isArray(d.issues)) {
+      const m = [...new Set(d.issues.map((i) => i.message).filter(Boolean))]
+      if (m.length) return m.join('. ')
+    }
+    return 'Ошибка сохранения'
+  }
+
   // ── контейнеры ──
   const openC = (c) => { setCForm(c ? { ...emptyC, ...c, object_id: c.object_id ?? '' } : { ...emptyC, type_id: types[0]?.id ?? '' }); setCEdit(c || {}) }
   const saveC = async () => {
@@ -54,7 +67,7 @@ export default function Containers() {
       await fetchContainers()
       toast.success('Сохранено'); setCEdit(null)
     } catch (e) {
-      toast.error(e?.response?.data?.error === 'conflict' ? 'Номер уже существует' : 'Ошибка сохранения')
+      toast.error(saveErr(e, 'Номер уже существует'))
     }
   }
   const delC = async (c) => {
@@ -71,7 +84,7 @@ export default function Containers() {
       else await addType(payload)
       toast.success('Сохранено'); setTEdit(null)
     } catch (e) {
-      toast.error(e?.response?.data?.error === 'conflict' ? 'Такой тип уже есть' : 'Ошибка сохранения')
+      toast.error(saveErr(e, 'Такой тип уже есть'))
     }
   }
   const delT = async (t) => {
