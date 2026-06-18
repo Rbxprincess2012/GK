@@ -192,7 +192,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
             </select>
           </label>
           {sections.length > 0 && (
-            <label className="a-field" style={{ flex: '0 0 auto', width: 120 }}><span>Участок</span>
+            <label className="a-field" style={{ flex: '0 0 auto', width: 150 }}><span>Участок</span>
               <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
