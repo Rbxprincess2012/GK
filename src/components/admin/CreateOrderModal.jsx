@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useClientsStore } from '@/store/clientsStore'
 import { useOrdersStore } from '@/store/ordersStore'
 import { useContainersStore } from '@/store/containersStore'
@@ -9,7 +9,6 @@ import { DateField } from '@/components/admin/DateField'
 import api from '@/lib/api'
 
 const ACTIONS = [['place', 'Установить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
-const needsSize = (action) => action === 'place' || action === 'replace'
 const clientLabel = (c) => c.legal_name || `Клиент #${c.id}`
 // Лейбл объекта: неформальное имя без дубля заказчика. Объекты часто названы
 // «<Заказчик> · <Объект>» — заказчик уже выбран рядом, поэтому срезаем его префикс
@@ -31,12 +30,10 @@ const objLabel = (o, clientNames = []) => {
 }
 
 const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_type_id: '', container_numbers: '' })
-// Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
-const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 
 // Ручное создание заявки менеджером (статус new → дальше распределяется как обычно).
 export function CreateOrderModal({ onClose, onCreated }) {
-  const { clients, fetchClients, objectsByClient, fetchObjects, trustedByClient, fetchTrusted } = useClientsStore()
+  const { clients, fetchClients, objectsByClient, fetchObjects } = useClientsStore()
   const { addOrder } = useOrdersStore()
   const { types: contTypes, fetchTypes } = useContainersStore()
   const toast = useToast()
@@ -51,19 +48,17 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const [desiredTime, setDesiredTime] = useState('')
   const [payment, setPayment] = useState('cashless')
   const [amount, setAmount] = useState('')
-  const [trustedId, setTrustedId] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { fetchClients(); fetchTypes() }, [fetchClients, fetchTypes])
   useEffect(() => { api.get('/vehicle-types', { params: { active: 1 } }).then(({ data }) => setVtypes(data)).catch(() => {}) }, [])
 
-  // Смена клиента → грузим его объекты и доверенных лиц, сбрасываем зависимые поля.
+  // Смена клиента → грузим его объекты, сбрасываем зависимые поля.
   const changeClient = (id) => {
-    setClientId(id); setObjectId(''); setTrustedId('')
+    setClientId(id); setObjectId('')
     if (!id) return
     fetchObjects(Number(id))
-    fetchTrusted(Number(id))
     const c = clients.find((x) => x.id === Number(id))
     if (c?.default_payment_method) setPayment(c.default_payment_method)
   }
@@ -74,7 +69,6 @@ export function CreateOrderModal({ onClose, onCreated }) {
     [clients],
   )
   const objects = useMemo(() => objectsByClient[Number(clientId)] || [], [objectsByClient, clientId])
-  const persons = trustedByClient[Number(clientId)] || []
   const selectedClient = clients.find((x) => x.id === Number(clientId))
   const clientNames = [selectedClient?.legal_name]
   const currentObject = objects.find((o) => o.id === Number(objectId))
@@ -86,22 +80,6 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const sizeOf = (it) => (it.container_type_id !== '' ? it.container_type_id : (defaultTypeId !== '' ? String(defaultTypeId) : ''))
 
   const changeObject = (id) => setObjectId(id)
-
-  // Дефолтное доверенное лицо при выборе объекта — реактивно, а не в onChange:
-  // объекты с trusted_persons и пул лиц грузятся асинхронно, и императивная
-  // установка в момент клика срабатывала до прихода данных (отсюда прочерк).
-  // Берём лицо «на весь объект» (section_id=null), иначе первое привязанное.
-  const prevObjRef = useRef('')
-  useEffect(() => {
-    if (!objectId) { prevObjRef.current = ''; return }
-    const obj = objects.find((o) => o.id === Number(objectId))
-    if (!obj) return // объекты ещё не догрузились — дождёмся следующего прогона
-    if (prevObjRef.current === objectId) return // объект не менялся — не трогаем выбор
-    prevObjRef.current = objectId
-    const tps = obj.trusted_persons || []
-    const def = tps.find((p) => p.section_id == null) || tps[0]
-    setTrustedId(def ? String(def.id) : '')
-  }, [objectId, objects])
 
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   const addRow = () => setItems((arr) => [...arr, newItem()])
@@ -120,8 +98,10 @@ export function CreateOrderModal({ onClose, onCreated }) {
         action: it.action,
         section_id: it.section_id === '' ? null : Number(it.section_id),
         quantity: Number(it.quantity),
-        container_type_id: needsSize(it.action) && sizeOf(it) !== '' ? Number(sizeOf(it)) : null,
-        container_numbers: needsContainerNo(it.action) ? (it.container_numbers?.trim() || null) : null,
+        // Набор полей не зависит от действия: отправляем то, что заполнил менеджер
+        // (размер подставляется стандартным; номер уходит как есть, даже на «Установить»).
+        container_type_id: sizeOf(it) !== '' ? Number(sizeOf(it)) : null,
+        container_numbers: it.container_numbers?.trim() || null,
       }))
     const payload = {
       object_id: Number(objectId),
@@ -129,7 +109,6 @@ export function CreateOrderModal({ onClose, onCreated }) {
       desired_time: desiredTime || undefined,
       payment_method: payment,
       amount: payment === 'cash' && amount !== '' ? Number(amount) : null,
-      trusted_person_id: trustedId ? Number(trustedId) : null,
       note: note.trim() || undefined,
       ...(isBulk
         ? { service_type: service, grapple_runs: Math.max(1, Number(grappleRuns) || 1) }
@@ -208,23 +187,19 @@ export function CreateOrderModal({ onClose, onCreated }) {
               </select>
             </label>
           )}
-          {needsSize(it.action) && (
-            <label className="a-field" style={{ flex: '0 0 auto', width: 100 }}><span>Размер</span>
-              <select className="a-select" value={sizeOf(it)}
-                onChange={(e) => setItem(i, { container_type_id: e.target.value })}
-                title="По размеру подбирается машина">
-                <option value="">— размер —</option>
-                {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${Number(ct.volume)} м³` : ct.name}</option>)}
-              </select>
-            </label>
-          )}
-          {needsContainerNo(it.action) && (
-            <label className="a-field" style={{ flex: '0 0 auto', width: 120 }}><span>№ контейнера</span>
-              <input className="a-input" value={it.container_numbers}
-                onChange={(e) => setItem(i, { container_numbers: e.target.value })}
-                placeholder="напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
-            </label>
-          )}
+          <label className="a-field" style={{ flex: '0 0 auto', width: 100 }}><span>Размер</span>
+            <select className="a-select" value={sizeOf(it)}
+              onChange={(e) => setItem(i, { container_type_id: e.target.value })}
+              title="По размеру подбирается машина">
+              <option value="">— размер —</option>
+              {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${Number(ct.volume)} м³` : ct.name}</option>)}
+            </select>
+          </label>
+          <label className="a-field" style={{ flex: '0 0 auto', width: 120 }}><span>№ контейнера</span>
+            <input className="a-input" value={it.container_numbers}
+              onChange={(e) => setItem(i, { container_numbers: e.target.value })}
+              placeholder="напр. 12, 15" title="Номер(а) контейнера" />
+          </label>
           <label className="a-field" style={{ flex: '0 0 auto', width: 72 }}><span>Кол-во</span>
             <input className="a-input" type="number" min={1} value={it.quantity}
               onChange={(e) => setItem(i, { quantity: e.target.value })} />
@@ -259,12 +234,8 @@ export function CreateOrderModal({ onClose, onCreated }) {
           </label>
         )}
       </div>
-      <label className="a-field"><span>Доверенное лицо</span>
-        <select className="a-select" value={trustedId} onChange={(e) => setTrustedId(e.target.value)} disabled={!clientId}>
-          <option value="">— не указано —</option>
-          {persons.map((p) => <option key={p.id} value={p.id}>{p.name}{p.phone ? ` · ${p.phone}` : ''}</option>)}
-        </select>
-      </label>
+      {/* Доверенное лицо в заявке не выбираем: оно прикреплено к объекту/участку на уровне
+          клиента — оттуда берётся и контакт для водителя, и адресаты отчётов. */}
       <label className="a-field"><span>Комментарий</span>
         <textarea className="a-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Детали, код от ворот, контакт на месте…" />
       </label>
