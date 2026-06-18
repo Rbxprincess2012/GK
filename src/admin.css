@@ -810,8 +810,8 @@ textarea.a-input,
 .a-items { display: flex; flex-direction: column; gap: 6px; overflow-x: auto; }
 /* Строки позиций — фиксированный грид (ширины по самому длинному слову), чтобы строки и
    модалка не «прыгали». Поля всегда на месте; неприменимые — disabled (см. ItemsEditor). */
-.a-items-grid { display: grid; gap: 6px; align-items: center; grid-template-columns: minmax(110px,1fr) minmax(95px,0.8fr) minmax(120px,1.3fr) 64px 28px; }
-.a-items-grid.has-sections { grid-template-columns: minmax(110px,1fr) minmax(130px,1.1fr) minmax(95px,0.8fr) minmax(120px,1.3fr) 64px 28px; }
+.a-items-grid { display: grid; gap: 10px; align-items: center; grid-template-columns: minmax(110px,1fr) minmax(95px,0.8fr) minmax(120px,1.3fr) 64px 40px; }
+.a-items-grid.has-sections { grid-template-columns: minmax(110px,1fr) minmax(130px,1.1fr) minmax(95px,0.8fr) minmax(120px,1.3fr) 64px 40px; }
 .a-items-grid > .a-select, .a-items-grid > .a-input { width: 100%; min-width: 0; box-sizing: border-box; }
 .a-items-grid > .a-select:disabled, .a-items-grid > .a-input:disabled { opacity: 0.4; cursor: not-allowed; }
 .a-items-grid > .a-x { justify-self: center; }
