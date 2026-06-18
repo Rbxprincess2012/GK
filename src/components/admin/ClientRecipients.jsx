@@ -65,28 +65,37 @@ function GroupCard({ clientId, channel, label, Icon }) {
           )}
 
           {bot && (
-            <label className="a-grpcard-field">
-              <span className="a-grpcard-field-label">Имя нашего бота</span>
-              <div className="a-fieldrow">
-                <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
-                <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
-              </div>
+            <>
+              <label className="a-grpcard-field">
+                <span className="a-grpcard-field-label">Имя нашего бота</span>
+                <div className="a-fieldrow">
+                  <input className="a-input" readOnly value={`@${bot}`} onFocus={(e) => e.target.select()} />
+                  <button type="button" className="a-btn a-btn--ghost" onClick={() => copy(`@${bot}`)}>Копировать</button>
+                </div>
+              </label>
               {channel === 'max' ? (
-                <ol className="a-grpcard-steps">
-                  <li>Нажми возле имени бота кнопку «Копировать».</li>
-                  <li>Отправь себе{managerName ? `, ${managerName},` : ''} в MAX то, что скопировал(а).</li>
-                  <li>Нажми «Начать». После этого бот появится в твоих контактах.</li>
-                  <li>Перейди в группу с нашим клиентом.</li>
-                  <li>Нажми на название группы сверху, ниже выбери «Добавить участников».</li>
-                  <li>В поле сверху «Найти по имени» снова вставь скопированное ранее имя бота.</li>
-                  <li>Нажми на него, потом кнопку «Добавить».</li>
-                  <li>Жми «Администраторы» → «Добавить администратора» → «Putevo_CLIENT».</li>
-                  <li>Кнопка «Назначить администратором». Назад – Назад.</li>
-                  <li>Скопируй «Команду привязки» ниже и отправь её сообщением в эту группу — бот ответит «✅ Привязано».</li>
-                  <li>Готово! Теперь наш бот будет отправлять отчёты по заказам в эту группу.</li>
-                </ol>
+                <div className="a-grpcard-guide">
+                  <div className="a-grpcard-subhead">Менеджер единоразово сохраняет наш бот себе в контакты MAX:</div>
+                  <ol className="a-grpcard-steps">
+                    <li>Нажми возле имени бота кнопку «Копировать».</li>
+                    <li>Отправь себе{managerName ? `, ${managerName},` : ''} в MAX то, что скопировал(а).</li>
+                    <li>Нажми «Начать». После этого бот появится в твоих контактах.</li>
+                  </ol>
+                  <div className="a-grpcard-subhead">Чтобы в группу с клиентом начали приходить отчёты:</div>
+                  <ol className="a-grpcard-steps">
+                    <li>Перейди в группу с нашим клиентом.</li>
+                    <li>Нажми на название группы сверху, ниже выбери «Добавить участников».</li>
+                    <li>В поле сверху «Найти по имени» снова вставь скопированное ранее имя бота.</li>
+                    <li>Нажми на него, потом кнопку «Добавить».</li>
+                    <li>Жми «Администраторы» → «Добавить администратора» → «Putevo_CLIENT».</li>
+                    <li>Кнопка «Назначить администратором». Назад – Назад.</li>
+                    <li>Скопируй «Команду привязки» ниже и отправь её сообщением в эту группу — бот ответит «✅ Привязано».</li>
+                    <li>Готово! Теперь наш бот будет отправлять отчёты по заказам в эту группу.</li>
+                  </ol>
+                </div>
               ) : (
-                <ol className="a-grpcard-steps">
+                <div className="a-grpcard-guide">
+                  <ol className="a-grpcard-steps">
                   <li>Нажми возле имени бота кнопку «Копировать».</li>
                   <li>Открой Telegram и зайди в группу с нашим клиентом (или создай её и добавь людей заказчика).</li>
                   <li>Нажми на название группы сверху, выбери «Добавить участников».</li>
@@ -94,9 +103,10 @@ function GroupCard({ clientId, channel, label, Icon }) {
                   <li>Если Telegram предупредит, что это бот — подтверди. Права администратора не нужны.</li>
                   <li>Скопируй «Команду привязки» ниже и отправь её сообщением в эту группу — бот ответит «✅ Привязано».</li>
                   <li>Готово! Теперь наш бот будет отправлять отчёты по заказам в эту группу.</li>
-                </ol>
+                  </ol>
+                </div>
               )}
-            </label>
+            </>
           )}
 
           {status === 'active' ? (

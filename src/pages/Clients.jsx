@@ -27,6 +27,10 @@ const splitName = (name) => {
   return i < 0 ? { last_name: s, first_name: '' } : { last_name: s.slice(0, i), first_name: s.slice(i + 1).trim() }
 }
 
+// Тип клиента (ООО/ИП) определяем по названию — отдельное поле не нужно,
+// DaData и так отдаёт короткое имя с правовой формой («ООО …» / «ИП …»).
+const deriveType = (name) => /^\s*(ИП|ИНДИВИДУАЛЬНЫЙ\s+ПРЕДПРИНИМАТЕЛЬ)\b/i.test(name || '') ? 'ip' : 'ooo'
+
 // Буква для «аватара» компании — из имени без правовой формы и кавычек.
 function clientInitial(c) {
   const base = (c.legal_name || '')
@@ -135,7 +139,7 @@ export default function Clients() {
     delete payload.id; delete payload.created_at // строго-валидатор не примет служебные ключи
     Object.keys(payload).forEach((k) => { if (payload[k] === '') delete payload[k] })
     payload.chats = form.chats || {}
-    payload.type = form.type
+    payload.type = deriveType(form.legal_name)
     payload.legal_name = form.legal_name
     payload.default_payment_method = form.default_payment_method
     payload.group_id = groupId
@@ -262,7 +266,8 @@ export default function Clients() {
       const { data } = await api.post('/settings/dadata/party', { query })
       setForm((f) => ({
         ...f,
-        legal_name: data.legal_name || f.legal_name,
+        // Короткое название с правовой формой («ООО "АЛВА"»), а не полное «ОБЩЕСТВО С…».
+        legal_name: data.company_name || data.legal_name || f.legal_name,
         inn: data.inn || f.inn,
         kpp: data.kpp || f.kpp,
         ogrn: data.ogrn || f.ogrn,
@@ -479,33 +484,29 @@ export default function Clients() {
               <input className="a-input" value={form.newGroupName || ''} onChange={(e) => setForm({ ...form, newGroupName: e.target.value })} placeholder="ГК «Догма»" autoFocus />
             </label>
           )}
-          <div className="a-field-row">
-            <label className="a-field"><span>Тип</span>
-              <select className="a-select" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                <option value="ooo">ООО</option><option value="ip">ИП</option>
-              </select>
-            </label>
-            <label className="a-field"><span>Оплата по умолчанию <b style={{ color: '#ff4655' }}>*</b></span>
-              <select className="a-select" value={form.default_payment_method} onChange={(e) => setForm({ ...form, default_payment_method: e.target.value })}>
-                <option value="cashless">Безнал</option><option value="cash">Нал</option>
-              </select>
-            </label>
-          </div>
-          <label className="a-field"><span>Наименование юридического лица <b style={{ color: '#ff4655' }}>*</b></span>
-            <input className="a-input" value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} placeholder="ООО «Пример»" />
-          </label>
+          {/* ИНН выше названия: вводим ИНН → «По ИНН» подтягивает короткое название и реквизиты.
+              Тип (ООО/ИП) отдельным полем не нужен — определяем по названию автоматически. */}
           <div className="a-field-row" style={{ alignItems: 'flex-end' }}>
             <label className="a-field"><span>ИНН <b style={{ color: '#ff4655' }}>*</b></span>
-              <input className="a-input" value={form.inn} onChange={(e) => setForm({ ...form, inn: e.target.value })} />
+              <input className="a-input" value={form.inn} onChange={(e) => setForm({ ...form, inn: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pullClientByInn() } }} />
             </label>
             <label className="a-field"><span>КПП</span>
               <input className="a-input" value={form.kpp} onChange={(e) => setForm({ ...form, kpp: e.target.value })} />
             </label>
             <button type="button" className="a-btn a-btn--soft" style={{ flex: '0 0 auto', whiteSpace: 'nowrap', height: 40, boxSizing: 'border-box' }}
-              onClick={pullClientByInn} disabled={pullingInn} title="Заполнить реквизиты по ИНН через DaData">
+              onClick={pullClientByInn} disabled={pullingInn} title="Заполнить название и реквизиты по ИНН через DaData">
               {pullingInn ? '…' : '↧ По ИНН'}
             </button>
           </div>
+          <label className="a-field"><span>Наименование юридического лица <b style={{ color: '#ff4655' }}>*</b></span>
+            <input className="a-input" value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} placeholder="ООО «Пример»" />
+          </label>
+          <label className="a-field"><span>Оплата по умолчанию <b style={{ color: '#ff4655' }}>*</b></span>
+            <select className="a-select" value={form.default_payment_method} onChange={(e) => setForm({ ...form, default_payment_method: e.target.value })}>
+              <option value="cashless">Безнал</option><option value="cash">Нал</option>
+            </select>
+          </label>
           {/* ОГРН — на всю ширину, чтобы помещалась вся запись (13–15 цифр). */}
           <label className="a-field"><span>ОГРН</span>
             <input className="a-input" value={form.ogrn} onChange={(e) => setForm({ ...form, ogrn: e.target.value })} />
@@ -530,9 +531,9 @@ export default function Clients() {
             : <>
                 <div className="a-section-title">Групповой чат для отчётов</div>
                 <div className="a-note">
-                  Заполните данные клиента и нажмите «Сохранить» внизу — окно НЕ закроется, прямо
-                  здесь появятся карточки MAX и Telegram для подключения группы. (Команда привязки
-                  привязана к клиенту, поэтому доступна после первого сохранения.) Чтобы отчёты
+                  Здесь подключается групповой чат заказчика — туда уходит отчёт, когда подтверждаешь
+                  заявку. <b>Настройки мессенджеров (MAX и Telegram) появятся прямо здесь после сохранения
+                  клиента</b>: заполни данные и нажми «Сохранить» внизу — окно не закроется. Чтобы отчёты
                   приходили конкретным лицам — раздел «Доверенные лица».
                 </div>
               </>}
