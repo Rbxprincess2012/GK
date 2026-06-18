@@ -140,7 +140,6 @@ export function ClientRecipients({ clientId }) {
   const aff = affectionate(user?.first_name)
   return (
     <>
-      <div className="a-section-title">Групповой чат для отчётов</div>
       <div className="a-muted" style={{ fontSize: '0.78rem', marginBottom: 8 }}>
         {aff}, здесь подключается групповой чат заказчика — туда уходит отчёт, когда подтверждаешь
         заявку. Включи нужный мессенджер галочкой «Использовать» и привяжи группу. Если отчёты должны

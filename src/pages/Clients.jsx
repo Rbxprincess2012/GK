@@ -79,6 +79,7 @@ export default function Clients() {
   const [groupForm, setGroupForm] = useState({ name: '', note: '' })
   const [personsModal, setPersonsModal] = useState(null) // ГК для управления списком лиц
   const [clientPersonsModal, setClientPersonsModal] = useState(null) // клиент вне ГК — свой список лиц
+  const [msgrModal, setMsgrModal] = useState(null) // настройки мессенджеров клиента (отдельным окном)
 
   useEffect(() => { fetchClients(); fetchGroups() }, [fetchClients, fetchGroups])
   const [searchParams, setSearchParams] = useSearchParams()
@@ -526,17 +527,25 @@ export default function Clients() {
               <input className="a-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </label>
           </div>
-          {editing.id
-            ? <ClientRecipients clientId={editing.id} />
-            : <>
-                <div className="a-section-title">Групповой чат для отчётов</div>
-                <div className="a-note">
-                  Здесь подключается групповой чат заказчика — туда уходит отчёт, когда подтверждаешь
-                  заявку. <b>Настройки мессенджеров (MAX и Telegram) появятся прямо здесь после сохранения
-                  клиента</b>: заполни данные и нажми «Сохранить» внизу — окно не закроется. Чтобы отчёты
-                  приходили конкретным лицам — раздел «Доверенные лица».
-                </div>
-              </>}
+          <div className="a-section-title">Групповой чат для отчётов</div>
+          {editing.id ? (
+            <>
+              <div className="a-note" style={{ marginBottom: 8 }}>
+                Подключение мессенджеров заказчика (MAX, Telegram) для отчётов — отдельным окном.
+                Статусы сохраняются сразу при включении. Чтобы отчёты приходили конкретным лицам —
+                раздел «Доверенные лица».
+              </div>
+              <button type="button" className="a-btn a-btn--soft" style={{ width: '100%' }}
+                onClick={() => setMsgrModal(editing)}>✉️ Настроить мессенджеры для отчётов</button>
+            </>
+          ) : (
+            <div className="a-note">
+              Здесь подключается групповой чат заказчика — туда уходит отчёт, когда подтверждаешь
+              заявку. <b>Настройка мессенджеров (MAX и Telegram) станет доступна после сохранения
+              клиента</b>: заполни данные и нажми «Сохранить» внизу — окно не закроется. Чтобы отчёты
+              приходили конкретным лицам — раздел «Доверенные лица».
+            </div>
+          )}
 
           <div className="a-section-title">Банковские реквизиты</div>
           {/* Автозаполнение по БИК или названию банка через DaData (одно поле). */}
@@ -563,6 +572,18 @@ export default function Clients() {
           <label className="a-field"><span>Корр. счёт</span>
             <input className="a-input" value={form.corr_account} onChange={(e) => setForm({ ...form, corr_account: e.target.value })} />
           </label>
+        </Modal>
+      )}
+
+      {/* ── Модалка мессенджеров для отчётов (отдельным окном поверх карточки клиента) ── */}
+      {msgrModal && (
+        <Modal
+          title={`Мессенджеры для отчётов — ${msgrModal.legal_name}`}
+          onClose={() => setMsgrModal(null)}
+          width={560}
+          footer={<button className="a-btn a-btn--primary" onClick={() => setMsgrModal(null)}>Применить</button>}
+        >
+          <ClientRecipients clientId={msgrModal.id} />
         </Modal>
       )}
 
