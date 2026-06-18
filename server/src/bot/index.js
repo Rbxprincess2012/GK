@@ -190,7 +190,7 @@ async function sendMenu(ctx, greeting = '') {
       .select('v.gov_number', 'v.model').first()
     if (sh?.gov_number) veh = `\n🚐 ${vehLabel(sh)}`
   }
-  const status = onShift ? `🟢 Вы на смене.${veh}` : '⚪ Вы не на смене.'
+  const status = onShift ? `✅ Вы на смене.${veh}` : '⬜ Вы не на смене.'
   await ctx.reply(greeting ? `${greeting}\n\n${status}` : status, { reply_markup: menuKeyboard(onShift) })
 }
 
@@ -214,7 +214,7 @@ async function renderScreen(ctx, token) {
     const orders = await ordersForDriver(driverId, { date: today(), statuses: ['in_progress'] })
     if (!orders.length) return ctx.reply('Заявок в работе пока нет. Менеджер ещё не отправил их в работу.')
     const onShift = await isOnShift(driverId)
-    if (!onShift) await ctx.reply('⚪ Вы не на смене — сейчас только просмотр. Выйдите на смену в меню, чтобы отмечать работу.')
+    if (!onShift) await ctx.reply('⬜ Вы не на смене — сейчас только просмотр. Выйдите на смену в меню, чтобы отмечать работу.')
     for (const o of orders) await sendOrderCard(ctx, o.id, onShift)
     return
   }

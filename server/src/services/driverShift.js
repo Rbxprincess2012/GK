@@ -10,6 +10,7 @@ export async function goOnShift(driverId, { date, vehicleId = null, odometerStar
   const row = await upsertShift({
     driver_id: driverId, date, shift_type: shiftType,
     status: 'present', vehicle_id: vehicleId, odometer_start: odometerStart,
+    odometer_end: null, // повторный выход в тот же день (после завершения) = новая смена — сбрасываем конец
   })
   if (vehicleId && odometerStart != null) {
     await db('vehicles').where({ id: vehicleId }).update({ mileage: odometerStart })

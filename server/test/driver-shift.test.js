@@ -41,4 +41,14 @@ describe('driverShift', () => {
     const d = await mkDriver()
     await expect(finishShift(d.id, { date: DATE, odometerEnd: 50 })).rejects.toThrow()
   })
+
+  it('повторный выход в тот же день после завершения сбрасывает odometer_end (снова «на смене»)', async () => {
+    const d = await mkDriver(); const v = await mkVehicle()
+    await goOnShift(d.id, { date: DATE, vehicleId: v.id, odometerStart: 1500 })
+    await finishShift(d.id, { date: DATE, odometerEnd: 1620 })
+    // снова вышел на смену в тот же день — odometer_end должен обнулиться, статус present
+    const row = await goOnShift(d.id, { date: DATE, vehicleId: v.id, odometerStart: 1700 })
+    expect(row.status).toBe('present')
+    expect(row.odometer_end).toBeNull()
+  })
 })
