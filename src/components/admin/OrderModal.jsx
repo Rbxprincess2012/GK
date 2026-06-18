@@ -222,7 +222,7 @@ export function OrderModal({ order, onClose, onChanged, initialMode = null }) {
           ? <span className="a-cash a-modal-pay">{cashLabel(o)}</span>
           : <span className="a-modal-pay a-inline-meta">Безнал</span>}
       </>}
-      onClose={onClose} width={520} footer={footer}
+      onClose={onClose} width={760} footer={footer}
     >
       {!mode && (
         <>
