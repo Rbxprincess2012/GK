@@ -4,10 +4,11 @@ import { ContainerJob } from '@/components/admin/ContainerJob'
 import { useContainersStore } from '@/store/containersStore'
 
 // Редактор позиций заявки: что сделать с контейнерами на объекте.
-// Каждая строка = вид работы (Поставить/Заменить/Забрать) + (участок) + размер контейнера + количество.
-// value: [{ action, quantity, section_id?, container_type_id? }]; onChange(next).
-// Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
-// Размер контейнера значим, когда привозим контейнер (Поставить/Заменить) — по нему подбирается машина.
+// Каждая строка = вид работы (Установить/Заменить/Забрать) + (участок) + размер + № + количество.
+// value: [{ action, quantity, section_id?, container_type_id?, container_numbers? }]; onChange(next).
+// Поля, неприменимые к действию, НЕ убираем, а дизейблим — чтобы строки/модалка не «прыгали»:
+//   • размер нужен при Установить/Заменить (по нему подбирается машина);
+//   • № контейнера нужен при Заменить/Забрать (забираем существующий).
 const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 const needsSize = (action) => action === 'place' || action === 'replace'
 
@@ -15,13 +16,23 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
   const { types: contTypes, fetchTypes } = useContainersStore()
   useEffect(() => { if (!contTypes.length) fetchTypes() }, [contTypes.length, fetchTypes])
   const hasSections = sections.length > 0
-  const set = (i, patch) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
-  const add = () => onChange([...items, { action: 'haul', quantity: 1, section_id: null, container_numbers: '' }])
+  // Стандартный размер: отмеченный в настройках (is_default), иначе первый из справочника.
+  const defaultTypeId = (contTypes.find((t) => t.is_default) || contTypes[0])?.id ?? null
+
+  // При смене действия на «нужен размер» подставляем стандартный, если ещё не выбран.
+  const set = (i, patch) => onChange(items.map((it, j) => {
+    if (j !== i) return it
+    const next = { ...it, ...patch }
+    if (patch.action && needsSize(patch.action) && !next.container_type_id) next.container_type_id = defaultTypeId
+    return next
+  }))
+  const add = () => onChange([...items, { action: 'haul', quantity: 1, section_id: null, container_numbers: '', container_type_id: defaultTypeId }])
   const del = (i) => onChange(items.filter((_, j) => j !== i))
 
   // Для предпросмотра подставляем имя участка по его id.
   const nameOf = (id) => sections.find((s) => s.id === Number(id))?.name || null
   const previewItems = items.map((it) => ({ ...it, section_name: nameOf(it.section_id) }))
+  const grid = 'a-items-grid' + (hasSections ? ' has-sections' : '')
 
   return (
     <div className="a-items">
@@ -30,8 +41,18 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
           Позиций нет — добавьте, что сделать с контейнерами (или опишите в комментарии).
         </div>
       )}
+      {items.length > 0 && (
+        <div className={`${grid} a-items-head`}>
+          <span>Действие</span>
+          {hasSections && <span>Участок</span>}
+          <span>Размер</span>
+          <span>№ контейнера</span>
+          <span>Кол-во</span>
+          <span />
+        </div>
+      )}
       {items.map((it, i) => (
-        <div className="a-item-row" key={i}>
+        <div className={grid} key={i}>
           <select className="a-select" value={it.action} onChange={(e) => set(i, { action: e.target.value })} title="Вид работы">
             {ACTIONS.map((a) => <option key={a} value={a}>{ACTION[a]}</option>)}
           </select>
@@ -41,25 +62,21 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
               {sections.map((s) => <option key={s.id} value={s.id}>📍 {s.name}</option>)}
             </select>
           )}
-          {needsSize(it.action) && (
-            <select className="a-select" style={{ width: 130 }} value={it.container_type_id ?? ''}
-              onChange={(e) => set(i, { container_type_id: e.target.value ? Number(e.target.value) : null })}
-              title="Размер контейнера — по нему подбирается машина">
-              <option value="">размер…</option>
-              {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.name}{ct.volume ? ` (${ct.volume} м³)` : ''}</option>)}
-            </select>
-          )}
-          {needsContainerNo(it.action) && (
-            <input className="a-input" style={{ width: 110 }} value={it.container_numbers ?? ''}
-              onChange={(e) => set(i, { container_numbers: e.target.value })}
-              placeholder="№ напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
-          )}
-          <input className="a-input" type="number" min="1" step="1" inputMode="numeric" style={{ width: 70 }}
+          <select className="a-select" value={it.container_type_id ?? ''} disabled={!needsSize(it.action)}
+            onChange={(e) => set(i, { container_type_id: e.target.value ? Number(e.target.value) : null })}
+            title={needsSize(it.action) ? 'Размер контейнера — по нему подбирается машина' : 'Размер не нужен для «Забрать»'}>
+            <option value="">—</option>
+            {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${ct.volume} м³` : ct.name}</option>)}
+          </select>
+          <input className="a-input" value={it.container_numbers ?? ''} disabled={!needsContainerNo(it.action)}
+            onChange={(e) => set(i, { container_numbers: e.target.value })}
+            placeholder="напр. 12, 15" title={needsContainerNo(it.action) ? 'Номер(а) контейнера, который забрать/заменить' : 'Номер не нужен для «Установить»'} />
+          <input className="a-input" type="number" min="1" step="1" inputMode="numeric"
             value={it.quantity} onChange={(e) => set(i, { quantity: Math.max(1, Number(e.target.value) || 1) })} title="Количество" />
           <button className="a-x" onClick={() => del(i)} title="Удалить позицию">✕</button>
         </div>
       ))}
-      <button className="a-btn a-btn--ghost a-btn--sm" onClick={add} style={{ marginTop: 4 }}>+ Позиция</button>
+      <button className="a-btn a-btn--ghost a-btn--sm" onClick={add} style={{ marginTop: 6 }}>+ Позиция</button>
       {items.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <div className="a-muted" style={{ fontSize: '0.74rem', marginBottom: 4 }}>Водитель увидит:</div>

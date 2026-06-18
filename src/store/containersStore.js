@@ -37,6 +37,12 @@ export const useContainersStore = create((set) => ({
     await api.delete(`/container-types/${id}`)
     set((s) => ({ types: s.types.filter((t) => t.id !== id) }))
   },
+  // Отметить тип «стандартным» (по умолчанию) — единственный на справочник.
+  setDefaultType: async (id) => {
+    const { data } = await api.post(`/container-types/${id}/default`)
+    set({ types: data })
+    return data
+  },
 
   addContainer: async (c) => {
     const { data } = await api.post('/containers', c)

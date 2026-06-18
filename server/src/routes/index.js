@@ -102,6 +102,17 @@ api.use('/trusted-persons', trustedPersons)
 api.use('/sections', crudRouter('sections', {
   createSchema: createSection, updateSchema: updateSection, allowedFilters: ['object_id'],
 }))
+// «Стандартный» размер: ставим is_default одному типу, снимаем у остальных (атомарно).
+// ДО crudRouter, иначе его /:id перехватит. Возвращаем весь список — для обновления стора.
+api.post('/container-types/:id/default', async (req, res, next) => {
+  try {
+    await db.transaction(async (trx) => {
+      await trx('container_types').update({ is_default: false })
+      await trx('container_types').where({ id: Number(req.params.id) }).update({ is_default: true })
+    })
+    res.json(await db('container_types').orderBy('id'))
+  } catch (e) { next(e) }
+})
 api.use('/container-types', crudRouter('container_types', {
   createSchema: createContainerType, updateSchema: updateContainerType,
 }))

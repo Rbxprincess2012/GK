@@ -23,7 +23,7 @@ export default function Containers() {
   const {
     containers, types, fetchContainers, fetchTypes,
     addContainer, updateContainer, removeContainer,
-    addType, updateType, removeType,
+    addType, updateType, removeType, setDefaultType,
   } = useContainersStore()
   const { objects, fetchAll } = useObjectsStore()
   const toast = useToast()
@@ -78,6 +78,12 @@ export default function Containers() {
     if (!(await toast.confirm(`Удалить тип «${t.name}»?`))) return
     try { await removeType(t.id); toast.success('Удалено') } catch { toast.error('Нельзя удалить (есть контейнеры)') }
   }
+  // Сделать размер стандартным (подставляется в заявке по умолчанию).
+  const makeDefaultT = async (t) => {
+    if (t.is_default) return
+    try { await setDefaultType(t.id); toast.success(`«${t.name}» — стандартный размер`) }
+    catch { toast.error('Не удалось') }
+  }
 
   return (
     <div className="a-page">
@@ -128,12 +134,18 @@ export default function Containers() {
       {tab === 'types' && (
         <div className="a-table-wrap">
           <table className="a-table">
-            <thead><tr><th>Название</th><th>Объём, м³</th><th></th></tr></thead>
+            <thead><tr><th>Название</th><th>Объём, м³</th><th>По умолч.</th><th></th></tr></thead>
             <tbody>
               {types.map((t) => (
                 <tr key={t.id}>
                   <td style={{ fontWeight: 600 }}>{t.name}</td>
                   <td className="a-muted">{t.volume ?? '—'}</td>
+                  <td>
+                    <button type="button" className="a-star" title={t.is_default ? 'Стандартный размер' : 'Сделать стандартным'}
+                      onClick={() => makeDefaultT(t)} style={{ color: t.is_default ? '#f4a840' : '#5b6790' }}>
+                      {t.is_default ? '★' : '☆'}
+                    </button>
+                  </td>
                   <td>
                     <div className="a-actions">
                       <button className="a-btn a-btn--ghost a-btn--sm" onClick={() => openT(t)}>✎</button>
@@ -142,7 +154,7 @@ export default function Containers() {
                   </td>
                 </tr>
               ))}
-              {types.length === 0 && <tr><td colSpan={3} className="a-loading">Типов нет — добавьте «Лодочку»</td></tr>}
+              {types.length === 0 && <tr><td colSpan={4} className="a-loading">Типов нет — добавьте «Лодочку»</td></tr>}
             </tbody>
           </table>
         </div>

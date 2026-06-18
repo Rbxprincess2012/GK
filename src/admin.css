@@ -766,9 +766,18 @@ textarea.a-input,
 .a-maplink:hover { color: #fff; border-bottom-color: #84a0ff; }
 
 /* ── Редактор позиций заявки (виды работ с контейнерами) ──────────────────── */
-.a-items { display: flex; flex-direction: column; gap: 8px; }
-.a-item-row { display: flex; align-items: center; gap: 6px; }
-.a-item-row .a-select { flex: 1 1 auto; min-width: 0; }
+.a-items { display: flex; flex-direction: column; gap: 6px; overflow-x: auto; }
+/* Строки позиций — фиксированный грид (ширины по самому длинному слову), чтобы строки и
+   модалка не «прыгали». Поля всегда на месте; неприменимые — disabled (см. ItemsEditor). */
+.a-items-grid { display: grid; gap: 6px; align-items: center; grid-template-columns: 118px 116px 132px 74px 28px; }
+.a-items-grid.has-sections { grid-template-columns: 118px 150px 116px 132px 74px 28px; }
+.a-items-grid > .a-select, .a-items-grid > .a-input { width: 100%; min-width: 0; box-sizing: border-box; }
+.a-items-grid > .a-select:disabled, .a-items-grid > .a-input:disabled { opacity: 0.4; cursor: not-allowed; }
+.a-items-grid > .a-x { justify-self: center; }
+.a-items-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; color: #7c8db5; }
+.a-items-head > span { padding-left: 2px; }
+/* Звезда «стандартный размер» в типах контейнеров */
+.a-star { background: none; border: none; cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 2px 6px; }
 
 /* ── Страница настроек ───────────────────────────────────────────────────── */
 /* Единый вертикальный ритм формы: одинаковый отступ между ЛЮБЫМИ соседними

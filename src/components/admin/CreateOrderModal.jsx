@@ -144,7 +144,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
     <Modal
       title="Новая заявка"
       onClose={onClose}
-      width={720}
+      width={820}
       footer={<>
         <button className="a-btn a-btn--ghost" onClick={onClose}>Отмена</button>
         <button className="a-btn a-btn--primary" onClick={save} disabled={!canSave}>Создать</button>
