@@ -147,18 +147,18 @@ export default function Clients() {
     try {
       if (editing.id) {
         await updateClient(editing.id, payload)
-        toast.success('Сохранено')
+        toast.success('Сохранено'); closeClient()
       } else {
         const created = await addClient(payload)
         if (created?.id) {
-          // Сразу раскрываем нового клиента (и его группу) — чтобы была видна кнопка «+ Объект».
+          // Раскрываем нового клиента (и его группу) — чтобы была видна кнопка «+ Объект».
           if (created.group_id) setOpenGroups((p) => new Set(p).add(created.group_id))
           setExpanded(created.id)
           fetchObjects(created.id)
-          // НЕ закрываем окно: теперь у клиента есть id → прямо здесь появятся карточки
-          // получателей (MAX/Telegram) без повторного открытия модалки. (как у объектов)
-          setEditing(created)
-          toast.success('Клиент сохранён — ниже подключите группу для отчётов')
+          // Мессенджеры теперь настраиваются отдельным окном (кнопка у клиента) — окно создания
+          // больше держать не нужно, закрываем.
+          closeClient()
+          toast.success('Клиент создан')
         }
       }
     } catch (e) {
