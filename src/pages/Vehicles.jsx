@@ -78,7 +78,7 @@ export default function Vehicles() {
   }
 
   const sizesLabel = (v) => (v.sizes || []).length
-    ? v.sizes.map((s) => `${s.volume ?? s.name}${s.is_default ? '★' : ''}`).join(', ')
+    ? v.sizes.map((s) => `${s.volume != null ? `${Number(s.volume)} м³` : s.name}${s.is_default ? '★' : ''}`).join(', ')
     : '—'
 
   return (
@@ -143,25 +143,27 @@ export default function Vehicles() {
 
           {carriesContainers ? (
             <>
-              <label className="a-field"><span>Возит размеры контейнеров (★ — основной)</span>
-                <div className="a-checks">
+              <label className="a-field"><span>Возит размеры контейнеров <span className="a-muted">(★ — основной)</span></span>
+                <div className="a-sizes">
                   {contTypes.map((ct) => {
                     const on = form.sizes.some((s) => s.container_type_id === ct.id)
                     const isDef = form.sizes.find((s) => s.container_type_id === ct.id)?.is_default
                     return (
-                      <span key={ct.id} className="a-check-row" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 14 }}>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span key={ct.id} className={'a-size' + (on ? ' on' : '') + (isDef ? ' def' : '')}>
+                        <label className="a-size-pick">
                           <input type="checkbox" checked={on} onChange={() => toggleSize(ct.id)} />
-                          {ct.name}{ct.volume ? ` (${ct.volume} м³)` : ''}
+                          <span className="a-size-name">{ct.name}{ct.volume != null ? ` · ${Number(ct.volume)} м³` : ''}</span>
                         </label>
                         {on && (
-                          <button type="button" className={'a-btn a-btn--sm ' + (isDef ? 'a-btn--primary' : 'a-btn--ghost')}
-                            onClick={() => setDefaultSize(ct.id)} title="Сделать основным размером">★</button>
+                          <button type="button" className={'a-size-star' + (isDef ? ' on' : '')}
+                            onClick={() => setDefaultSize(ct.id)} title={isDef ? 'Основной размер' : 'Сделать основным'}>
+                            {isDef ? '★' : '☆'}
+                          </button>
                         )}
                       </span>
                     )
                   })}
-                  {contTypes.length === 0 && <span className="a-muted">Сначала заведите типы контейнеров (раздел «Контейнеры»).</span>}
+                  {contTypes.length === 0 && <span className="a-muted">Сначала заведите размеры (раздел «Контейнеры»).</span>}
                 </div>
               </label>
               <label className="a-field"><span>Пустых за рейс</span>
