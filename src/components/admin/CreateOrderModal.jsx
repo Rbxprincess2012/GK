@@ -194,14 +194,14 @@ export function CreateOrderModal({ onClose, onCreated }) {
       <>
       <div className="a-section-title">Позиции</div>
       {items.map((it, i) => (
-        <div key={i} className="a-field-row a-posrow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <label className="a-field" style={{ minWidth: 140 }}><span>Действие</span>
+        <div key={i} className="a-posrow" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <label className="a-field" style={{ flex: '0 0 auto', width: 140 }}><span>Действие</span>
             <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
               {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
           {sections.length > 0 && (
-            <label className="a-field" style={{ minWidth: 140 }}><span>Участок</span>
+            <label className="a-field" style={{ flex: '0 0 auto', width: 120 }}><span>Участок</span>
               <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -209,7 +209,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
             </label>
           )}
           {needsSize(it.action) && (
-            <label className="a-field" style={{ minWidth: 150 }}><span>Размер</span>
+            <label className="a-field" style={{ flex: '0 0 auto', width: 100 }}><span>Размер</span>
               <select className="a-select" value={sizeOf(it)}
                 onChange={(e) => setItem(i, { container_type_id: e.target.value })}
                 title="По размеру подбирается машина">
@@ -219,17 +219,17 @@ export function CreateOrderModal({ onClose, onCreated }) {
             </label>
           )}
           {needsContainerNo(it.action) && (
-            <label className="a-field" style={{ minWidth: 150 }}><span>№ контейнера</span>
+            <label className="a-field" style={{ flex: '0 0 auto', width: 120 }}><span>№ контейнера</span>
               <input className="a-input" value={it.container_numbers}
                 onChange={(e) => setItem(i, { container_numbers: e.target.value })}
                 placeholder="напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
             </label>
           )}
-          <label className="a-field" style={{ flex: '0 0 auto', width: 90 }}><span>Кол-во</span>
+          <label className="a-field" style={{ flex: '0 0 auto', width: 72 }}><span>Кол-во</span>
             <input className="a-input" type="number" min={1} value={it.quantity}
               onChange={(e) => setItem(i, { quantity: e.target.value })} />
           </label>
-          <button type="button" className="a-x"
+          <button type="button" className="a-x" style={{ flex: '0 0 auto' }}
             onClick={() => delRow(i)} disabled={items.length === 1} title="Удалить позицию">✕</button>
         </div>
       ))}
