@@ -131,9 +131,8 @@ function menuKeyboard(onShift) {
   kb.text(`📋 Задачи на сегодня (${dmOf(today())})`, 'tasks').row()
   kb.text(`🗓 Задачи на завтра (${dmOf(tomorrow())})`, 'tomorrow').row()
   kb.text('📅 Задачи на дату…', 'datepick').row()
-  if (onShift) kb.text('🏁 Завершить смену', 'fin').row()
-  else kb.text('🚐 Вышел на смену', 'shift').row()
-  kb.text('🚪 Выйти', 'logout')
+  if (onShift) kb.text('🏁 Завершить смену', 'fin')
+  else kb.text('🚐 Вышел на смену', 'shift')
   return kb
 }
 
