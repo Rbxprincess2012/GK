@@ -40,12 +40,15 @@ function orderText(order) {
   const street = order.street_name
     ? (/^[а-яё]{1,6}\.\s/i.test(order.street_name) ? order.street_name : `ул. ${order.street_name}`)
     : null
-  const addr = [
-    order.city,
-    street,
-    order.object_house && `д. ${order.object_house}`,
-    order.object_building && `к. ${order.object_building}`,
-  ].filter(Boolean).join(', ') || order.address_raw || '—'
+  // Справочный адрес (город+улица+дом) собираем ТОЛЬКО при наличии улицы; без street_name
+  // (свободный адрес из DaData) берём полный address_raw, иначе теряем улицу → «Город, д. N».
+  const addr = (order.street_name
+    ? [order.city, street, order.object_house && `д. ${order.object_house}`, order.object_building && `к. ${order.object_building}`]
+      .filter(Boolean).join(', ')
+    : '')
+    || order.address_raw
+    || [order.city, order.object_house && `д. ${order.object_house}`].filter(Boolean).join(', ')
+    || '—'
   // Кликабельный адрес: при наличии координат — точка на карте, иначе — поиск по тексту адреса
   // (чтобы ссылка работала, даже если геокодер не определил координаты объекта).
   const map = (order.lat != null && order.lng != null)

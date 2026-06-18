@@ -43,11 +43,14 @@ function orderText(order) {
   const street = order.street_name
     ? (/^[а-яё]{1,6}\.\s/i.test(order.street_name) ? order.street_name : `ул. ${order.street_name}`)
     : null
-  const addr = [
-    order.city, street,
-    order.object_house && `д. ${order.object_house}`,
-    order.object_building && `к. ${order.object_building}`,
-  ].filter(Boolean).join(', ') || order.address_raw || '—'
+  // Справочный адрес (город+улица+дом) — только при наличии улицы; иначе полный address_raw.
+  const addr = (order.street_name
+    ? [order.city, street, order.object_house && `д. ${order.object_house}`, order.object_building && `к. ${order.object_building}`]
+      .filter(Boolean).join(', ')
+    : '')
+    || order.address_raw
+    || [order.city, order.object_house && `д. ${order.object_house}`].filter(Boolean).join(', ')
+    || '—'
   // Кликабельный адрес: координаты → точка на карте, иначе → поиск по тексту адреса.
   const map = (order.lat != null && order.lng != null)
     ? `https://yandex.ru/maps/?ll=${order.lng},${order.lat}&z=17&pt=${order.lng},${order.lat}`
