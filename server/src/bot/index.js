@@ -179,7 +179,9 @@ async function dateGridKeyboard(driverId, days = 14) {
   return kb
 }
 
-async function sendMenu(ctx) {
+// greeting — необязательное приветствие/прощание по имени; уходит ОДНИМ сообщением вместе
+// со строкой статуса и клавиатурой (а не отдельным reply), чтобы не плодить два сообщения.
+async function sendMenu(ctx, greeting = '') {
   ctx.session.nav = ['menu'] // меню — корень навигации
   const onShift = await isOnShift(ctx.session.driverId)
   let veh = ''
@@ -189,7 +191,8 @@ async function sendMenu(ctx) {
       .select('v.gov_number', 'v.model').first()
     if (sh?.gov_number) veh = `\n🚐 ${vehLabel(sh)}`
   }
-  await ctx.reply(onShift ? `🟢 Вы на смене.${veh}` : '⚪ Вы не на смене.', { reply_markup: menuKeyboard(onShift) })
+  const status = onShift ? `🟢 Вы на смене.${veh}` : '⚪ Вы не на смене.'
+  await ctx.reply(greeting ? `${greeting}\n\n${status}` : status, { reply_markup: menuKeyboard(onShift) })
 }
 
 async function sendOrderCard(ctx, orderId, onShift = true) {
@@ -358,8 +361,8 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     const drv = await resolveDriverByChat(chatId)
     if (!drv) return ctx.reply('Вы ещё не привязаны. Откройте личную ссылку, которую дал менеджер.')
     ctx.session.driverId = drv.id; ctx.session.authed = true; ctx.session.step = null
-    if (!(await isOnShift(drv.id))) await ctx.reply(startGreeting(drv.first_name || drv.name))
-    return sendMenu(ctx)
+    const onShift = await isOnShift(drv.id)
+    return sendMenu(ctx, onShift ? '' : startGreeting(drv.first_name || drv.name))
   })
 
   // ── Callback-кнопки ──
@@ -375,8 +378,8 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
     const driverId = ctx.session.driverId
 
     if (data === 'logout') {
-      ctx.session.authed = false; ctx.session.step = null
-      return ctx.reply('Вы вышли. Чтобы вернуться — отправьте /start.')
+      // Кнопка-заглушка: выход намеренно отключён (не разлогиниваем водителя).
+      return ctx.reply('Этот раздел пока в разработке.')
     }
     if (data === 'shift') {
       // Сначала выбор машины, потом пробег.
@@ -498,8 +501,7 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
       await goOnShift(driverId, { date: today(), vehicleId: ctx.session.data?.vehicleId ?? null, odometerStart: km })
       ctx.session.step = null
       const drv = await db('drivers').where({ id: driverId }).first()
-      await ctx.reply(shiftGreeting(drv?.first_name || drv?.name))
-      return sendMenu(ctx)
+      return sendMenu(ctx, shiftGreeting(drv?.first_name || drv?.name))
     }
     if (step === 'odo_end') {
       const km = parseInt(text, 10)
@@ -508,7 +510,7 @@ export function createBot(token = config.DRIVER_BOT_TOKEN) {
       catch { return ctx.reply('Вы не на смене.') }
       ctx.session.step = null
       const drvEnd = await db('drivers').where({ id: driverId }).first()
-      await ctx.reply(shiftFarewell(drvEnd?.first_name || drvEnd?.name)); return sendMenu(ctx)
+      return sendMenu(ctx, shiftFarewell(drvEnd?.first_name || drvEnd?.name))
     }
     // «Другое»: первое сообщение — текст причины (комментарий участка); затем переходим к пруфу.
     if (step === 'fail_reason') {

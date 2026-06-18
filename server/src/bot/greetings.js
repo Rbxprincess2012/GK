@@ -19,11 +19,11 @@ const SHIFT_GREETINGS = [
   '{name}, доброго дня и лёгкой смены! Пусть маршруты будут короткими, а настроение — отличным.',
 ]
 
-// Готовое сообщение: случайное приветствие по имени + индикатор заступления с новой строки.
+// Только приветствие по имени (строку статуса «🟢 Вы на смене» добавит меню — одним сообщением).
 export function shiftGreeting(name) {
   const who = (name || '').trim() || 'коллега'
   const tpl = SHIFT_GREETINGS[Math.floor(Math.random() * SHIFT_GREETINGS.length)]
-  return `${tpl.replaceAll('{name}', who)}\n\n🟢 Вы заступили на смену.`
+  return tpl.replaceAll('{name}', who)
 }
 
 // Тёплые прощания водителю при завершении смены. {name} — имя водителя (first_name).
@@ -40,11 +40,11 @@ const SHIFT_FAREWELLS = [
   'Спасибо за смену, {name}! Пусть вечер будет спокойным, а отдых — полным.',
 ]
 
-// Готовое сообщение: случайное прощание по имени + индикатор завершения смены.
+// Только прощание по имени (строку статуса «⚪ Вы не на смене» добавит меню — одним сообщением).
 export function shiftFarewell(name) {
   const who = (name || '').trim() || 'коллега'
   const tpl = SHIFT_FAREWELLS[Math.floor(Math.random() * SHIFT_FAREWELLS.length)]
-  return `${tpl.replaceAll('{name}', who)}\n\n🏁 Смена завершена.`
+  return tpl.replaceAll('{name}', who)
 }
 
 // Приветствие при заходе в бота (/start), когда водитель НЕ на смене — по имени, тёплое.
