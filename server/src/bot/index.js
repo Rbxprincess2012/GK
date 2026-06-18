@@ -304,7 +304,6 @@ async function ingestProof(message, { orderId, subtaskId, driverId }) {
 }
 
 const navRows = () => ([
-  [{ text: '↩️ Шаг назад', callback_data: 'back' }],
   [{ text: '⬅️ Главное меню', callback_data: 'menu' }],
 ])
 
@@ -318,15 +317,16 @@ function splitSentences(text) {
 export function createBot(token = config.DRIVER_BOT_TOKEN) {
   const bot = new Bot(token)
 
-  // На любом сообщении — кнопки «Шаг назад» + «Главное меню». Само меню (содержит «Выйти»)
-  // пропускаем, чтобы не дублировать; повторно тоже не добавляем.
+  // На сообщениях внутри разделов добавляем кнопку «Главное меню». Корневое меню (кнопка
+  // 'tasks') и экраны со своей навигацией пропускаем, чтобы не дублировать.
   bot.api.config.use((prev, method, payload, signal) => {
     if (method === 'sendMessage') {
       // Читабельность: многопредложные простые подсказки — по строке на предложение.
       if (!payload.parse_mode && typeof payload.text === 'string') payload.text = splitSentences(payload.text)
       const rm = payload.reply_markup
       const rows = rm && Array.isArray(rm.inline_keyboard) ? rm.inline_keyboard : null
-      const hasNav = rows?.some((r) => r.some((b) => ['menu', 'logout', 'back'].includes(b.callback_data)))
+      // 'tasks' — признак корневого меню: к нему nav-кнопки не добавляем (мы и так в меню).
+      const hasNav = rows?.some((r) => r.some((b) => ['menu', 'logout', 'back', 'tasks'].includes(b.callback_data)))
       if (!hasNav) {
         if (rows) rows.push(...navRows())
         else payload.reply_markup = { inline_keyboard: navRows() }

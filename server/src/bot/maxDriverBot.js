@@ -287,7 +287,8 @@ async function ingestProof(message, { orderId, subtaskId, driverId }) {
 }
 
 // ── nav-кнопки (Шаг назад / Главное меню) на исходящие, кроме экранов с собственной навигацией ──
-const NAV_IDS = ['menu', 'logout', 'back']
+// 'tasks' — признак корневого меню: к нему nav-кнопки не добавляем (мы и так в меню).
+const NAV_IDS = ['menu', 'logout', 'back', 'tasks']
 function kbRows(kb) {
   if (!kb) return []
   if (kb instanceof InlineKeyboard) return kb.toButtons()
@@ -299,7 +300,6 @@ function withNav(kb) {
   const out = new InlineKeyboard()
   out.rows = []
   for (const row of kbRows(kb)) out.rows.push(row.map((b) => ({ type: 'callback', text: b.text, payload: String(b.payload) })))
-  out.rows.push([{ type: 'callback', text: '↩️ Шаг назад', payload: 'back' }])
   out.rows.push([{ type: 'callback', text: '⬅️ Главное меню', payload: 'menu' }])
   return out
 }
