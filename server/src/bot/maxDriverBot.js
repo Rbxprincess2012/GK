@@ -3,7 +3,7 @@ import { db } from '../db.js'
 import { pgStorageFor } from './sessionStore.js'
 import { bindByCode, resolveDriverByChat } from '../services/driverAuth.js'
 import { goOnShift, finishShift } from '../services/driverShift.js'
-import { shiftGreeting } from './greetings.js'
+import { shiftGreeting, shiftFarewell, startGreeting } from './greetings.js'
 import { ordersForDriver, orderCardForDriver } from '../services/driverScope.js'
 import { markSubtask, commitOrderByDriver } from '../services/subtasks.js'
 import { putFromMax } from '../services/mediaStore.js'
@@ -339,6 +339,7 @@ export function createMaxDriverBot(token) {
     const drv = await resolveDriverByChat(chatId, CHANNEL)
     if (!drv) return ctx.reply('Вы ещё не привязаны. Откройте личную ссылку, которую дал менеджер.')
     ctx.session.driverId = drv.id; ctx.session.authed = true; ctx.session.step = null
+    if (!(await isOnShift(drv.id))) await ctx.reply(startGreeting(drv.first_name || drv.name))
     return sendMenu(ctx)
   })
 
@@ -475,7 +476,9 @@ export function createMaxDriverBot(token) {
       if (!Number.isFinite(km)) return ctx.reply('Введите число (км):')
       try { await finishShift(driverId, { date: today(), odometerEnd: km }) }
       catch { return ctx.reply('Вы не на смене.') }
-      ctx.session.step = null; await ctx.reply('🏁 Смена завершена. Хорошего отдыха!'); return sendMenu(ctx)
+      ctx.session.step = null
+      const drvEnd = await db('drivers').where({ id: driverId }).first()
+      await ctx.reply(shiftFarewell(drvEnd?.first_name || drvEnd?.name)); return sendMenu(ctx)
     }
     // «Другое»: первое сообщение — текст причины (комментарий участка); затем переходим к пруфу.
     if (step === 'fail_reason') {
