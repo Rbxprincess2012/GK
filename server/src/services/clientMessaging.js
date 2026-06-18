@@ -69,9 +69,17 @@ function fmtDateTime(d) {
   }).format(dt)
 }
 
-function addressOf(o) {
-  return [o.city, o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`]
-    .filter(Boolean).join(', ') || o.address_raw || (o.informal_name || '—')
+// Адрес объекта для сообщения клиенту. Собираем из справочника (город+улица+дом) ТОЛЬКО при
+// наличии улицы; без street_name (свободный адрес из DaData) берём полный address_raw, иначе
+// огрызок «Город, д. N» теряет улицу. Фолбэк — город+дом или неформальное имя.
+export function addressOf(o) {
+  if (o.street_name) {
+    return [o.city, o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`]
+      .filter(Boolean).join(', ')
+  }
+  return o.address_raw
+    || [o.city, o.house && `д. ${o.house}`].filter(Boolean).join(', ')
+    || o.informal_name || '—'
 }
 
 function amountOf(o) {

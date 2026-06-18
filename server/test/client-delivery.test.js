@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { db } from '../src/db.js'
 import { resetDb } from './reset.js'
 import { sendReportToClient } from '../src/services/clientDelivery.js'
-import { sendInWorkNotice } from '../src/services/clientMessaging.js'
+import { sendInWorkNotice, addressOf } from '../src/services/clientMessaging.js'
 import { issuePersonInvite, bindPersonByCode } from '../src/services/trustedPersonChannels.js'
 
 beforeEach(resetDb)
@@ -16,6 +16,21 @@ async function fixture() {
   await db('client_recipients').insert({ client_id: cl.id, kind: 'dm', chat_id: 222, status: 'pending' })
   return { cl, order, active }
 }
+
+describe('addressOf — адрес объекта в сообщении клиенту', () => {
+  it('из справочника: город + улица + дом', () => {
+    expect(addressOf({ city: 'Краснодар', street_name: 'ул Красная', house: '1' }))
+      .toBe('Краснодар, ул Красная, д. 1')
+  })
+  it('свободный адрес DaData (нет street_name): берём полный address_raw, не «город, д. N»', () => {
+    expect(addressOf({ city: 'Краснодар', house: '14', address_raw: 'г Краснодар, ул Монтажников, д 14' }))
+      .toBe('г Краснодар, ул Монтажников, д 14')
+  })
+  it('фолбэк на город+дом, затем на неформальное имя', () => {
+    expect(addressOf({ city: 'Краснодар', house: '14' })).toBe('Краснодар, д. 14')
+    expect(addressOf({ informal_name: 'Завод' })).toBe('Завод')
+  })
+})
 
 describe('clientDelivery — рассылка отчёта', () => {
   it('шлёт только active, считает sent, проставляет last_sent_at', async () => {
