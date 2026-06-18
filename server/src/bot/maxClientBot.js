@@ -36,13 +36,22 @@ export function createMaxClientBot(token) {
     if (!code) return ctx.reply('Укажите код: /bind <код от менеджера>.')
     // MAX: личный диалог — chat_type 'dialog'; всё иное (chat/channel) считаем группой.
     const isGroup = ctx.chat?.type && ctx.chat.type !== 'dialog'
-    const r = await bindByCode(code, {
-      chat_id: ctx.chat.id,
-      kind: isGroup ? 'group' : 'dm',
-      title: isGroup ? (ctx.chat.title || 'Группа') : personTitle(ctx.from),
-      channel: 'max',
-    })
-    return ctx.reply(r ? '✅ Привязано — сюда будут приходить отчёты о выполнении.' : 'Код недействителен или уже использован.')
+    try {
+      const r = await bindByCode(code, {
+        chat_id: ctx.chat.id,
+        kind: isGroup ? 'group' : 'dm',
+        title: isGroup ? (ctx.chat.title || 'Группа') : personTitle(ctx.from),
+        channel: 'max',
+      })
+      if (r?.id) return ctx.reply('✅ Привязано — сюда будут приходить отчёты о выполнении.')
+      if (r?.error === 'chat_taken') {
+        return ctx.reply(`Эта группа уже привязана к другому клиенту${r.title ? ` («${r.title}»)` : ''}. Используйте отдельную группу для этого заказчика (или отвяжите её у прежнего в админке).`)
+      }
+      return ctx.reply('Код недействителен или уже использован.')
+    } catch (e) {
+      console.error('[max-client-bot] bind error:', e)
+      return ctx.reply('Не удалось привязать — попробуйте ещё раз или сообщите менеджеру.')
+    }
   })
 
   return bot

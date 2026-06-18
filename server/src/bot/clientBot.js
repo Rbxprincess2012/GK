@@ -34,12 +34,21 @@ export function createClientBot(token) {
     const code = (ctx.match || '').trim()
     if (!code) return ctx.reply('Укажите код: /bind <код от менеджера>.')
     const isGroup = ctx.chat.type === 'group' || ctx.chat.type === 'supergroup'
-    const r = await bindByCode(code, {
-      chat_id: ctx.chat.id,
-      kind: isGroup ? 'group' : 'dm',
-      title: isGroup ? ctx.chat.title : personTitle(ctx.from),
-    })
-    return ctx.reply(r ? '✅ Привязано — сюда будут приходить отчёты о выполнении.' : 'Код недействителен или уже использован.')
+    try {
+      const r = await bindByCode(code, {
+        chat_id: ctx.chat.id,
+        kind: isGroup ? 'group' : 'dm',
+        title: isGroup ? ctx.chat.title : personTitle(ctx.from),
+      })
+      if (r?.id) return ctx.reply('✅ Привязано — сюда будут приходить отчёты о выполнении.')
+      if (r?.error === 'chat_taken') {
+        return ctx.reply(`Эта группа уже привязана к другому клиенту${r.title ? ` («${r.title}»)` : ''}. Используйте отдельную группу для этого заказчика (или отвяжите её у прежнего в админке).`)
+      }
+      return ctx.reply('Код недействителен или уже использован.')
+    } catch (e) {
+      console.error('[client-bot] bind error:', e)
+      return ctx.reply('Не удалось привязать — попробуйте ещё раз или сообщите менеджеру.')
+    }
   })
 
   return bot

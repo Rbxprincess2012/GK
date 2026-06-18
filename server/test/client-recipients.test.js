@@ -46,6 +46,30 @@ describe('clientRecipients — онбординг-модель', () => {
     expect(await bindByCode('000000', { chat_id: 1, kind: 'dm', title: 'X' })).toBeNull()
   })
 
+  it('bindByCode: чат другого активного клиента → { error: chat_taken }, без 500', async () => {
+    const a = await mkClient()
+    const b = await db('clients').insert({ type: 'ooo', legal_name: 'ООО Вторая', default_payment_method: 'cash' }).returning('*').then(([x]) => x)
+    const ra = await issueInvite(a.id, 'group')
+    const bound = await bindByCode(ra.verify_code, { chat_id: -999, kind: 'group', title: 'Нефтехим' })
+    expect(bound.status).toBe('active')
+    const rb = await issueInvite(b.id, 'group')
+    const res = await bindByCode(rb.verify_code, { chat_id: -999, kind: 'group', title: 'АЛВА' })
+    expect(res).toEqual({ error: 'chat_taken', title: 'Нефтехим' })
+    // привязка Нефтехима не пострадала
+    expect((await db('client_recipients').where({ id: ra.id }).first()).status).toBe('active')
+  })
+
+  it('bindByCode: ту же группу можно привязать заново после revoke (индекс освобождён)', async () => {
+    const cl = await mkClient()
+    const r1 = await issueInvite(cl.id, 'group')
+    const b1 = await bindByCode(r1.verify_code, { chat_id: -777, kind: 'group', title: 'Группа' })
+    await revoke(b1.id)
+    const r2 = await issueInvite(cl.id, 'group')
+    const b2 = await bindByCode(r2.verify_code, { chat_id: -777, kind: 'group', title: 'Группа снова' })
+    expect(b2.status).toBe('active')
+    expect(String(b2.chat_id)).toBe('-777')
+  })
+
   it('revoke → status=revoked; listForClient отдаёт по клиенту', async () => {
     const cl = await mkClient()
     const r = await issueInvite(cl.id, 'group')

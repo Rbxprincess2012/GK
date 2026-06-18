@@ -17,18 +17,39 @@ export async function issueInvite(clientId, kind, channel = 'telegram') {
 }
 
 // Привязать чат по коду: pending → active, проставить chat_id/title/channel, погасить код.
-// null — если код не найден/уже погашен/не совпал kind.
+// Результат:
+//   • row              — успех (active);
+//   • null             — код не найден/погашен/просрочен/не совпал kind;
+//   • { error: 'chat_taken', title } — этот чат уже привязан к ДРУГОМУ клиенту (активно).
+// Чат уникален по (channel, chat_id): одна группа = один получатель. «Мусорные» строки
+// (revoked или прежняя привязка ТОГО ЖЕ клиента) освобождаем и переезжаем — иначе уникальный
+// индекс роняет привязку 500-й (раньше бот молча падал).
 export async function bindByCode(verifyCode, { chat_id, kind, title, channel = 'telegram' }) {
-  const r = await db('client_recipients')
-    .where({ verify_code: verifyCode, status: 'pending' })
-    .where('verify_expires_at', '>', db.fn.now()) // просроченный код не привязываем
-    .first()
-  if (!r || r.kind !== kind) return null
-  const [row] = await db('client_recipients').where({ id: r.id }).update({
-    chat_id, title: title || null, channel, status: 'active',
-    verify_code: null, verify_expires_at: null, updated_at: db.fn.now(),
-  }).returning('*')
-  return row
+  return db.transaction(async (trx) => {
+    const r = await trx('client_recipients')
+      .where({ verify_code: verifyCode, status: 'pending' })
+      .where('verify_expires_at', '>', trx.fn.now()) // просроченный код не привязываем
+      .first()
+    if (!r || r.kind !== kind) return null
+
+    const occupant = await trx('client_recipients')
+      .where({ channel, chat_id }).whereNot('id', r.id).first()
+    if (occupant) {
+      // Активная привязка другого клиента — не уводим чужую группу, отказываем понятно.
+      if (occupant.status === 'active' && occupant.client_id !== r.client_id) {
+        return { error: 'chat_taken', title: occupant.title || null }
+      }
+      // Иначе освобождаем место (revoked-мусор / прежняя привязка того же клиента).
+      await trx('client_recipients').where({ id: occupant.id })
+        .update({ chat_id: null, status: 'revoked', updated_at: trx.fn.now() })
+    }
+
+    const [row] = await trx('client_recipients').where({ id: r.id }).update({
+      chat_id, title: title || null, channel, status: 'active',
+      verify_code: null, verify_expires_at: null, updated_at: trx.fn.now(),
+    }).returning('*')
+    return row
+  })
 }
 
 export const listForClient = (clientId) => db('client_recipients').where({ client_id: clientId }).orderBy('id')
@@ -48,7 +69,9 @@ export async function ensureGroupInvite(clientId, channel = 'telegram') {
   return (await groupRecipient(clientId, channel)) || issueInvite(clientId, 'group', channel)
 }
 
+// Отозвать привязку. chat_id зануляем, чтобы отозванная строка не держала уникальный индекс
+// (channel, chat_id) — иначе ту же группу нельзя привязать заново.
 export async function revoke(id) {
-  const [row] = await db('client_recipients').where({ id }).update({ status: 'revoked', updated_at: db.fn.now() }).returning('*')
+  const [row] = await db('client_recipients').where({ id }).update({ status: 'revoked', chat_id: null, updated_at: db.fn.now() }).returning('*')
   return row
 }
