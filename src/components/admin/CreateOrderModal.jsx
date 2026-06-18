@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useClientsStore } from '@/store/clientsStore'
 import { useOrdersStore } from '@/store/ordersStore'
-import { ItemsEditor } from '@/components/admin/ItemsEditor'
+import { useContainersStore } from '@/store/containersStore'
 import { Modal } from '@/components/admin/Modal'
 import { useToast } from '@/components/admin/Toast'
 import { TimeSlotSelect } from '@/components/admin/DesiredTime'
 import { DateField } from '@/components/admin/DateField'
 import api from '@/lib/api'
 
+const ACTIONS = [['place', 'Установить'], ['replace', 'Заменить'], ['haul', 'Забрать']]
 const needsSize = (action) => action === 'place' || action === 'replace'
 const clientLabel = (c) => c.legal_name || `Клиент #${c.id}`
 // Лейбл объекта: неформальное имя без дубля заказчика. Объекты часто названы
@@ -29,7 +30,7 @@ const objLabel = (o, clientNames = []) => {
   return inf || addr || `Объект №${o.id}`
 }
 
-const newItem = () => ({ action: 'place', section_id: null, quantity: 1, container_type_id: null, container_numbers: '' })
+const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_type_id: '', container_numbers: '' })
 // Номер контейнера значим только когда забираем существующий (Заменить/Забрать).
 const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 
@@ -37,6 +38,7 @@ const needsContainerNo = (action) => action === 'replace' || action === 'haul'
 export function CreateOrderModal({ onClose, onCreated }) {
   const { clients, fetchClients, objectsByClient, fetchObjects, trustedByClient, fetchTrusted } = useClientsStore()
   const { addOrder } = useOrdersStore()
+  const { types: contTypes, fetchTypes } = useContainersStore()
   const toast = useToast()
 
   const [clientId, setClientId] = useState('')
@@ -53,7 +55,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchClients() }, [fetchClients])
+  useEffect(() => { fetchClients(); fetchTypes() }, [fetchClients, fetchTypes])
   useEffect(() => { api.get('/vehicle-types', { params: { active: 1 } }).then(({ data }) => setVtypes(data)).catch(() => {}) }, [])
 
   // Смена клиента → грузим его объекты и доверенных лиц, сбрасываем зависимые поля.
@@ -96,6 +98,10 @@ export function CreateOrderModal({ onClose, onCreated }) {
     setTrustedId(def ? String(def.id) : '')
   }, [objectId, objects])
 
+  const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  const addRow = () => setItems((arr) => [...arr, newItem()])
+  const delRow = (i) => setItems((arr) => arr.filter((_, idx) => idx !== i))
+
   const canSave = useMemo(() => Number(objectId) > 0 && !saving, [objectId, saving])
 
   // Навальный вывоз = любой тип ≠ 'container' (грейфер/газель/самосвал): без контейнеров.
@@ -107,9 +113,9 @@ export function CreateOrderModal({ onClose, onCreated }) {
       .filter((it) => Number(it.quantity) > 0)
       .map((it) => ({
         action: it.action,
-        section_id: it.section_id ? Number(it.section_id) : null,
+        section_id: it.section_id === '' ? null : Number(it.section_id),
         quantity: Number(it.quantity),
-        container_type_id: needsSize(it.action) && it.container_type_id != null ? Number(it.container_type_id) : null,
+        container_type_id: needsSize(it.action) && it.container_type_id !== '' ? Number(it.container_type_id) : null,
         container_numbers: needsContainerNo(it.action) ? (it.container_numbers?.trim() || null) : null,
       }))
     const payload = {
@@ -182,7 +188,47 @@ export function CreateOrderModal({ onClose, onCreated }) {
       ) : (
       <>
       <div className="a-section-title">Позиции</div>
-      <ItemsEditor items={items} onChange={setItems} sections={sections} />
+      {items.map((it, i) => (
+        <div key={i} className="a-field-row a-posrow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label className="a-field" style={{ minWidth: 140 }}><span>Действие</span>
+            <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
+              {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+          {sections.length > 0 && (
+            <label className="a-field" style={{ minWidth: 140 }}><span>Участок</span>
+              <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
+                <option value="">Весь объект</option>
+                {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
+          {needsSize(it.action) && (
+            <label className="a-field" style={{ minWidth: 150 }}><span>Размер контейнера</span>
+              <select className="a-select" value={it.container_type_id}
+                onChange={(e) => setItem(i, { container_type_id: e.target.value })}
+                title="По размеру подбирается машина">
+                <option value="">— размер —</option>
+                {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.name}{ct.volume ? ` (${ct.volume} м³)` : ''}</option>)}
+              </select>
+            </label>
+          )}
+          {needsContainerNo(it.action) && (
+            <label className="a-field" style={{ minWidth: 150 }}><span>№ контейнера</span>
+              <input className="a-input" value={it.container_numbers}
+                onChange={(e) => setItem(i, { container_numbers: e.target.value })}
+                placeholder="напр. 12, 15" title="Номер(а) контейнера, который забрать/заменить" />
+            </label>
+          )}
+          <label className="a-field" style={{ flex: '0 0 auto', width: 90 }}><span>Кол-во</span>
+            <input className="a-input" type="number" min={1} value={it.quantity}
+              onChange={(e) => setItem(i, { quantity: e.target.value })} />
+          </label>
+          <button type="button" className="a-x"
+            onClick={() => delRow(i)} disabled={items.length === 1} title="Удалить позицию">✕</button>
+        </div>
+      ))}
+      <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={addRow}>+ Позиция</button>
       </>
       )}
 
