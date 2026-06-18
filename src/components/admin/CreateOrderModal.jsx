@@ -29,7 +29,7 @@ const objLabel = (o, clientNames = []) => {
   return inf || addr || `Объект №${o.id}`
 }
 
-const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_type_id: '', container_numbers: '' })
+const newItem = () => ({ action: 'replace', section_id: '', quantity: 1, container_type_id: '', container_numbers: '', trusted_person_id: '' })
 
 // Ручное создание заявки менеджером (статус new → дальше распределяется как обычно).
 export function CreateOrderModal({ onClose, onCreated }) {
@@ -73,11 +73,21 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const clientNames = [selectedClient?.legal_name]
   const currentObject = objects.find((o) => o.id === Number(objectId))
   const sections = currentObject?.sections || []
+  // Доверенные лица объекта (с привязкой к участку): для контакта на месте в позиции.
+  const persons = currentObject?.trusted_persons || []
 
   // Стандартный размер: отмеченный в настройках (is_default), иначе первый из справочника.
   // Если в позиции размер не выбран — подставляем стандартный (и в отображении, и при сохранении).
   const defaultTypeId = useMemo(() => (contTypes.find((t) => t.is_default) || contTypes[0])?.id ?? '', [contTypes])
   const sizeOf = (it) => (it.container_type_id !== '' ? it.container_type_id : (defaultTypeId !== '' ? String(defaultTypeId) : ''))
+
+  // Доверенное лицо по умолчанию для позиции: привязанное к её участку, иначе «на весь объект».
+  const defaultPersonFor = (sectionId) => {
+    const sid = sectionId === '' || sectionId == null ? null : Number(sectionId)
+    const match = persons.find((p) => (p.section_id ?? null) === sid) || persons.find((p) => p.section_id == null)
+    return match ? String(match.id) : ''
+  }
+  const personOf = (it) => (it.trusted_person_id !== '' ? it.trusted_person_id : defaultPersonFor(it.section_id))
 
   const changeObject = (id) => setObjectId(id)
 
@@ -102,6 +112,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
         // (размер подставляется стандартным; номер уходит как есть, даже на «Установить»).
         container_type_id: sizeOf(it) !== '' ? Number(sizeOf(it)) : null,
         container_numbers: it.container_numbers?.trim() || null,
+        trusted_person_id: personOf(it) !== '' ? Number(personOf(it)) : null,
       }))
     const payload = {
       object_id: Number(objectId),
@@ -173,7 +184,8 @@ export function CreateOrderModal({ onClose, onCreated }) {
       <>
       <div className="a-section-title">Позиции</div>
       {items.map((it, i) => (
-        <div key={i} className="a-posrow" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <div key={i} style={{ marginBottom: 12 }}>
+        <div className="a-posrow" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
           <label className="a-field" style={{ flex: '0 0 auto', width: 140 }}><span>Действие</span>
             <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
               {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -206,6 +218,19 @@ export function CreateOrderModal({ onClose, onCreated }) {
           </label>
           <button type="button" className="a-x" style={{ flex: '0 0 auto' }}
             onClick={() => delRow(i)} disabled={items.length === 1} title="Удалить позицию">✕</button>
+        </div>
+        <label className="a-field" style={{ marginTop: 6, maxWidth: 400 }}><span>Доверенное лицо (контакт на месте)</span>
+          <select className="a-select" value={personOf(it)} disabled={!persons.length}
+            onChange={(e) => setItem(i, { trusted_person_id: e.target.value })}
+            title="По умолчанию — лицо, привязанное к участку в «Клиентах»; можно переопределить">
+            <option value="">{persons.length ? '— не указано —' : 'нет лиц у объекта'}</option>
+            {persons.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}{p.phone ? ` · ${p.phone}` : ''}{p.section_id ? '' : ' · на весь объект'}
+              </option>
+            ))}
+          </select>
+        </label>
         </div>
       ))}
       <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={addRow}>+ Позиция</button>

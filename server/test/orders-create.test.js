@@ -60,21 +60,37 @@ describe('orders create', () => {
     expect(res.body.items.find((i) => i.section_id === sec.id).section_name).toBe('Участок 58')
   })
 
-  it('container_numbers: для Заменить/Забрать сохраняется, для Поставить → null', async () => {
+  it('container_numbers: сохраняется для любого действия (вкл. Установить)', async () => {
     const { obj } = await fixtures()
     const res = await request(app).post('/api/orders').send({
       object_id: obj.id,
       items: [
         { action: 'replace', quantity: 1, container_numbers: '12, 15' },
         { action: 'haul', quantity: 1, container_numbers: '7' },
-        { action: 'place', quantity: 1, container_numbers: '99' }, // для «Поставить» игнорируется
+        { action: 'place', quantity: 1, container_numbers: '99' }, // номер уходит и для «Установить»
       ],
     })
     expect(res.status).toBe(201)
     const byAction = Object.fromEntries(res.body.items.map((i) => [i.action, i.container_numbers]))
     expect(byAction.replace).toBe('12, 15')
     expect(byAction.haul).toBe('7')
-    expect(byAction.place).toBeNull()
+    expect(byAction.place).toBe('99')
+  })
+
+  it('trusted_person_id у позиции сохраняется и отдаётся с именем/телефоном', async () => {
+    const { cl, obj } = await fixtures()
+    const [sec] = await db('sections').insert({ object_id: obj.id, name: 'Участок 58' }).returning('*')
+    const [person] = await db('trusted_persons')
+      .insert({ client_id: cl.id, name: 'Иван Иванов', phone: '+79180001122' }).returning('*')
+    const res = await request(app).post('/api/orders').send({
+      object_id: obj.id,
+      items: [{ action: 'replace', quantity: 1, section_id: sec.id, trusted_person_id: person.id }],
+    })
+    expect(res.status).toBe(201)
+    const it0 = res.body.items[0]
+    expect(it0.trusted_person_id).toBe(person.id)
+    expect(it0.trusted_person_name).toBe('Иван Иванов')
+    expect(it0.trusted_person_phone).toBe('+79180001122')
   })
 
   it('container_numbers: пустая строка нормализуется в null', async () => {

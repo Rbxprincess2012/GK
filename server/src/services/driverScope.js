@@ -30,8 +30,10 @@ export async function orderCardForDriver(orderId, driverId) {
   if (!order) return null
   order.items = await db('order_items as oi')
     .leftJoin('sections as s', 's.id', 'oi.section_id')
+    .leftJoin('trusted_persons as tp', 'tp.id', 'oi.trusted_person_id')
     .where('oi.order_id', orderId)
-    .select('oi.*', 's.name as section_name').orderBy('oi.id')
+    .select('oi.*', 's.name as section_name',
+      'tp.name as trusted_person_name', 'tp.phone as trusted_person_phone').orderBy('oi.id')
   order.subtasks = await db('order_subtasks as st')
     .leftJoin('sections as s', 's.id', 'st.section_id')
     .where('st.order_id', orderId)

@@ -7,8 +7,9 @@ import { sendInWorkNotice } from './clientMessaging.js'
 
 // Номер(а) контейнера значимы только для «Заменить»/«Забрать» (забираем существующий).
 // Для «Поставить» — null (ставим новый). Пустую строку нормализуем в null.
+// Номер контейнера сохраняем для любого действия (менеджер мог указать и при «Установить» —
+// пусть так и уйдёт водителю и в отчёт). Пустую строку нормализуем в null.
 function containerNumbersFor(it) {
-  if (!['replace', 'haul'].includes(it.action)) return null
   const v = (it.container_numbers ?? '').trim()
   return v || null
 }
@@ -41,8 +42,10 @@ async function assembleOrder(q, id) {
   const items = await q('order_items as oi')
     .leftJoin('container_types as ct', 'ct.id', 'oi.container_type_id')
     .leftJoin('sections as sec', 'sec.id', 'oi.section_id')
+    .leftJoin('trusted_persons as itp', 'itp.id', 'oi.trusted_person_id')
     .where('oi.order_id', id)
-    .select('oi.*', 'ct.name as type_name', 'sec.name as section_name')
+    .select('oi.*', 'ct.name as type_name', 'sec.name as section_name',
+      'itp.name as trusted_person_name', 'itp.phone as trusted_person_phone')
     .orderBy('oi.id')
   for (const it of items) {
     const reqs = await q('order_item_containers').where({ order_item_id: it.id })
@@ -163,6 +166,7 @@ export async function createOrder(payload) {
         quantity: it.quantity,
         waste_class: it.waste_class ?? null,
         container_numbers: containerNumbersFor(it),
+        trusted_person_id: it.trusted_person_id ?? null,
       }).returning('*')
 
       if (it.requested_container_ids?.length) {
@@ -319,6 +323,7 @@ export async function updateOrder(id, payload) {
           container_type_id: it.container_type_id ?? null,
           quantity: it.quantity, waste_class: it.waste_class ?? null,
           container_numbers: containerNumbersFor(it),
+          trusted_person_id: it.trusted_person_id ?? null,
         })
       }
       await syncSubtasks(id, trx)

@@ -27,6 +27,8 @@ export const createOrderInput = z.object({
     requested_container_ids: z.array(z.number().int()).optional(),
     // номер(а) контейнера для «Заменить»/«Забрать» — свободный текст, опционально
     container_numbers: z.string().nullable().optional(),
+    // доверенное лицо позиции (контакт на месте по участку); по умолч. берётся из привязки
+    trusted_person_id: z.number().int().nullable().optional(),
   })).optional(),
 }).strict()
 
@@ -49,6 +51,7 @@ export const updateOrderInput = z.object({
     quantity: z.number().int().positive(),
     waste_class: z.enum(['4', '5']).nullable().optional(),
     container_numbers: z.string().nullable().optional(),
+    trusted_person_id: z.number().int().nullable().optional(),
   })).min(1).optional(),
 }).strict()
 
