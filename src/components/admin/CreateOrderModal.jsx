@@ -80,6 +80,11 @@ export function CreateOrderModal({ onClose, onCreated }) {
   const currentObject = objects.find((o) => o.id === Number(objectId))
   const sections = currentObject?.sections || []
 
+  // Стандартный размер: отмеченный в настройках (is_default), иначе первый из справочника.
+  // Если в позиции размер не выбран — подставляем стандартный (и в отображении, и при сохранении).
+  const defaultTypeId = useMemo(() => (contTypes.find((t) => t.is_default) || contTypes[0])?.id ?? '', [contTypes])
+  const sizeOf = (it) => (it.container_type_id !== '' ? it.container_type_id : (defaultTypeId !== '' ? String(defaultTypeId) : ''))
+
   const changeObject = (id) => setObjectId(id)
 
   // Дефолтное доверенное лицо при выборе объекта — реактивно, а не в onChange:
@@ -115,7 +120,7 @@ export function CreateOrderModal({ onClose, onCreated }) {
         action: it.action,
         section_id: it.section_id === '' ? null : Number(it.section_id),
         quantity: Number(it.quantity),
-        container_type_id: needsSize(it.action) && it.container_type_id !== '' ? Number(it.container_type_id) : null,
+        container_type_id: needsSize(it.action) && sizeOf(it) !== '' ? Number(sizeOf(it)) : null,
         container_numbers: needsContainerNo(it.action) ? (it.container_numbers?.trim() || null) : null,
       }))
     const payload = {
@@ -204,12 +209,12 @@ export function CreateOrderModal({ onClose, onCreated }) {
             </label>
           )}
           {needsSize(it.action) && (
-            <label className="a-field" style={{ minWidth: 150 }}><span>Размер контейнера</span>
-              <select className="a-select" value={it.container_type_id}
+            <label className="a-field" style={{ minWidth: 150 }}><span>Размер</span>
+              <select className="a-select" value={sizeOf(it)}
                 onChange={(e) => setItem(i, { container_type_id: e.target.value })}
                 title="По размеру подбирается машина">
                 <option value="">— размер —</option>
-                {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.name}{ct.volume ? ` (${ct.volume} м³)` : ''}</option>)}
+                {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${Number(ct.volume)} м³` : ct.name}</option>)}
               </select>
             </label>
           )}
