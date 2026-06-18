@@ -289,7 +289,7 @@ export default function Distribution() {
                 <div className="a-section-title" style={{ marginTop: 0 }}>{city}</div>
                 <div className="a-orderrow a-orderrow--head">
                   <span className="a-orderrow-num">№</span>
-                  <span className="a-orderrow-street">Улица</span>
+                  <span className="a-orderrow-street">Адрес</span>
                   <span className="a-orderrow-obj">Объект</span>
                   <span className="a-orderrow-client">Заказчик</span>
                   <span />
@@ -360,7 +360,7 @@ export default function Distribution() {
                 <table className="a-table">
                   <thead>
                     <tr>
-                      <th>№</th><th>Улица</th><th>Объект</th><th>Заказчик</th>
+                      <th>№</th><th>Адрес</th><th>Объект</th><th>Заказчик</th>
                       <th></th>
                     </tr>
                   </thead>
