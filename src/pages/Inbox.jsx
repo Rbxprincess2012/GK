@@ -12,7 +12,7 @@ const isUrgent = (t) => /срочн|кровь из носу|сегодня|asap
 
 function objName(o) {
   if (!o) return ''
-  return o.informal_name || [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ') || `#${o.id}`
+  return o.informal_name || (o.street_name ? [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ') : '') || o.address_raw || `#${o.id}`
 }
 
 export default function Inbox() {

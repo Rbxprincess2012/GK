@@ -737,8 +737,8 @@ function objName(o) {
 
 // Адрес объекта одной строкой. Фолбэк на свободный address_raw (DaData, любой город).
 function objAddr(o) {
-  const parts = [o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`].filter(Boolean)
-  return parts.join(', ') || o.address_raw || '—'
+  if (o.street_name) return [o.street_name, o.house && `д. ${o.house}`, o.building && `к. ${o.building}`].filter(Boolean).join(', ')
+  return o.address_raw || (o.house ? `д. ${o.house}` : '—')
 }
 
 // Участки объекта + доверенные лица (с уровнем: весь объект или конкретный участок).

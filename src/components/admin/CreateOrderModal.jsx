@@ -25,7 +25,7 @@ const objLabel = (o, clientNames = []) => {
       if (rest) { inf = rest; break }
     }
   }
-  const addr = [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ')
+  const addr = (o.street_name ? [o.street_name, o.house && `д. ${o.house}`].filter(Boolean).join(', ') : '') || o.address_raw
   return inf || addr || `Объект №${o.id}`
 }
 
@@ -185,21 +185,21 @@ export function CreateOrderModal({ onClose, onCreated }) {
       <div className="a-section-title">Позиции</div>
       {items.map((it, i) => (
         <div key={i} style={{ marginBottom: 12 }}>
-        <div className="a-posrow" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-          <label className="a-field" style={{ flex: '0 0 auto', width: 140 }}><span>Действие</span>
+        <div className="a-posrow" style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+          <label className="a-field" style={{ flex: '1 1 120px', minWidth: 0 }}><span>Действие</span>
             <select className="a-select" value={it.action} onChange={(e) => setItem(i, { action: e.target.value })}>
               {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
           {sections.length > 0 && (
-            <label className="a-field" style={{ flex: '0 0 auto', width: 150 }}><span>Участок</span>
+            <label className="a-field" style={{ flex: '1 1 130px', minWidth: 0 }}><span>Участок</span>
               <select className="a-select" value={it.section_id} onChange={(e) => setItem(i, { section_id: e.target.value })}>
                 <option value="">Весь объект</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </label>
           )}
-          <label className="a-field" style={{ flex: '0 0 auto', width: 100 }}><span>Размер</span>
+          <label className="a-field" style={{ flex: '1 1 90px', minWidth: 0 }}><span>Размер</span>
             <select className="a-select" value={sizeOf(it)}
               onChange={(e) => setItem(i, { container_type_id: e.target.value })}
               title="По размеру подбирается машина">
@@ -207,12 +207,12 @@ export function CreateOrderModal({ onClose, onCreated }) {
               {contTypes.map((ct) => <option key={ct.id} value={ct.id}>{ct.volume != null ? `${Number(ct.volume)} м³` : ct.name}</option>)}
             </select>
           </label>
-          <label className="a-field" style={{ flex: '0 0 auto', width: 120 }}><span>№ контейнера</span>
+          <label className="a-field" style={{ flex: '1 1 120px', minWidth: 0 }}><span>№ контейнера</span>
             <input className="a-input" value={it.container_numbers}
               onChange={(e) => setItem(i, { container_numbers: e.target.value })}
               placeholder="напр. 12, 15" title="Номер(а) контейнера" />
           </label>
-          <label className="a-field" style={{ flex: '0 0 auto', width: 72 }}><span>Кол-во</span>
+          <label className="a-field" style={{ flex: '0 0 64px' }}><span>Кол-во</span>
             <input className="a-input" type="number" min={1} value={it.quantity}
               onChange={(e) => setItem(i, { quantity: e.target.value })} />
           </label>

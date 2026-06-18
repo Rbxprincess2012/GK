@@ -85,11 +85,17 @@ export function plural(n, one, few, many) {
 // Заказчик — всегда официальное юр. наименование (неофициальный ник клиента выпилен из проекта).
 export function clientName(o) { return o?.client_legal_name || '—' }
 export function clientLegal(o) { return o?.client_legal_name || '—' }
+// Адрес из справочника (улица + дом) — собираем ТОЛЬКО при наличии улицы. Без street_name
+// огрызок «д. N» неинформативен — там нужен полный свободный адрес из DaData (address_raw).
+function composedAddr(o) {
+  if (!o?.street_name) return ''
+  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
+}
 // Улица + дом — главное для водителя, выводим первым/сверху. Фолбэк на address_raw
 // (свободный адрес из DaData для объектов вне справочника улиц Краснодара).
 export function streetLine(o) {
-  return [o?.street_name, o?.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
-    || o?.address_raw || o?.city || '—'
+  return composedAddr(o) || o?.address_raw || o?.city
+    || (o?.object_house ? `д. ${o.object_house}` : '—')
 }
 // Ссылка на точку объекта в Яндекс.Картах: по координатам (приоритет) или по тексту адреса.
 export function yandexMapsUrl(o) {
@@ -97,15 +103,16 @@ export function yandexMapsUrl(o) {
   if (lat != null && lat !== '' && lng != null && lng !== '') {
     return `https://yandex.ru/maps/?ll=${lng},${lat}&z=17&pt=${lng},${lat}`
   }
-  const addr = [o?.street_name, o?.object_house && `д. ${o.object_house}`, o?.city].filter(Boolean).join(', ')
-    || o?.address_raw
+  const composed = o?.street_name
+    ? [o.street_name, o.object_house && `д. ${o.object_house}`, o.city].filter(Boolean).join(', ')
+    : ''
+  const addr = composed || o?.address_raw
   return addr ? `https://yandex.ru/maps/?text=${encodeURIComponent(addr)}` : null
 }
 // Имя объекта (неформальное), второй по приоритету.
 export function objectLine(o) { return o?.object_name || `Объект #${o?.object_id}` }
 export function orderTitle(o) {
-  return o?.object_name || [o?.street_name, o?.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
-    || o?.address_raw || `Объект #${o?.object_id}`
+  return o?.object_name || composedAddr(o) || o?.address_raw || `Объект #${o?.object_id}`
 }
 export function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

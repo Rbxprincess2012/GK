@@ -19,8 +19,8 @@ function tomorrow() { return shiftYmd(ymd(new Date()), 1) }
 function clientLegal(o) { return o.client_legal_name || '—' }
 function objectName(o) { return o.object_name || `Объект #${o.object_id}` }
 function addressLine(o) {
-  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ')
-    || o.address_raw || o.city || '—'
+  return (o.street_name ? [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') : '')
+    || o.address_raw || o.city || (o.object_house ? `д. ${o.object_house}` : '—')
 }
 
 // «В работе» = заявки, отправленные водителям (in_progress). Заблокированы (замок),

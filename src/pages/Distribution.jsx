@@ -18,7 +18,7 @@ function shiftYmd(s, n) { const [y, m, d] = s.split('-').map(Number); return ymd
 function tomorrow() { return shiftYmd(ymd(new Date()), 1) }
 function clientLegal(o) { return o.client_legal_name || '—' }
 function streetLine(o) {
-  return [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') || o.address_raw || o.city || '—'
+  return (o.street_name ? [o.street_name, o.object_house && `д. ${o.object_house}`].filter(Boolean).join(', ') : '') || o.address_raw || o.city || (o.object_house ? `д. ${o.object_house}` : '—')
 }
 function objectLine(o) { return o.object_name || `Объект #${o.object_id}` }
 
