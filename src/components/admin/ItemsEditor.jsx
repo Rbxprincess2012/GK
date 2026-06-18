@@ -19,6 +19,19 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
   // Стандартный размер: отмеченный в настройках (is_default), иначе первый из справочника.
   const defaultTypeId = (contTypes.find((t) => t.is_default) || contTypes[0])?.id ?? null
 
+  // Автоподстановка стандартного размера для позиций, где он нужен, но не выбран
+  // (стартовая позиция, или справочник догрузился позже). Идемпотентно: после заполнения
+  // container_type_id != null → больше не трогаем; для «Забрать» размер не нужен — не трогаем.
+  useEffect(() => {
+    if (defaultTypeId == null) return
+    let changed = false
+    const next = items.map((it) => {
+      if (needsSize(it.action) && it.container_type_id == null) { changed = true; return { ...it, container_type_id: defaultTypeId } }
+      return it
+    })
+    if (changed) onChange(next)
+  }, [defaultTypeId, items, onChange])
+
   // При смене действия на «нужен размер» подставляем стандартный, если ещё не выбран.
   const set = (i, patch) => onChange(items.map((it, j) => {
     if (j !== i) return it
@@ -26,7 +39,7 @@ export function ItemsEditor({ items, onChange, sections = [] }) {
     if (patch.action && needsSize(patch.action) && !next.container_type_id) next.container_type_id = defaultTypeId
     return next
   }))
-  const add = () => onChange([...items, { action: 'haul', quantity: 1, section_id: null, container_numbers: '', container_type_id: defaultTypeId }])
+  const add = () => onChange([...items, { action: 'place', quantity: 1, section_id: null, container_numbers: '', container_type_id: defaultTypeId }])
   const del = (i) => onChange(items.filter((_, j) => j !== i))
 
   // Для предпросмотра подставляем имя участка по его id.
